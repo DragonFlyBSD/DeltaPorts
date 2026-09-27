@@ -1,69 +1,28 @@
 port lang/rust
 type port
-reason "DragonFly: allow OPSYS, point bootstrap at avalon, materialize the dragonfly patch lane and the shared cargo crate patches"
+reason "DragonFly: allow OPSYS, add the avalon bootstrap, and carry the dragonfly patch lane plus the shared cargo crate patches"
+
+# Each base builds the rust its own branch ships. The DragonFly source
+# patches track the rust version, so they cannot be shared between
+# targets: none of the fourteen patches common to both sets is identical
+# across 1.96.1 and 1.98.1. Nothing here rewrites PORTVERSION.
+
+# =======================================================================
+# Independent of the rust version.
+# =======================================================================
 target @any
 
 # --- diffs/Makefile.diff equivalent -------------------------------------
 mk replace-if from "${OPSYS} != FreeBSD" \
-              to   "${OPSYS} != FreeBSD && ${OPSYS} != DragonFly"
-
-# --- Makefile.DragonFly equivalent --------------------------------------
-# Bootstrap tarballs are self-hosted (no cross-build port exists for
-# DragonFly); avalon lays them out under <version>/ rather than the
-# <compiler_date>/ FreeBSD uses, so BOOTSTRAPS_DATE carries the version.
-# RUST_BOOTSTRAP_VERSION already defaults to 1.95.0 upstream.
-mk add MASTER_SITES "https://avalon.dragonflybsd.org/misc/distfiles/rust-bootstrap/:bootstrap"
-mk set BOOTSTRAPS_DATE "1.95.0"
-
-# ld.gold cannot link std into the rustc driver.
-mk add MAKE_ENV "LDVER=ld.bfd"
-# The stage0 rustc/cargo need their own shared libs plus base libgcc.
-mk add MAKE_ENV "LD_LIBRARY_PATH=${WRKDIR}/bootstrap/lib:/usr/lib/gcc80"
-
-# --- diffs/distinfo.diff equivalent -------------------------------------
-# Chained so each line anchors on the one inserted before it.
-text line-insert-after file distinfo \
-     anchor "SIZE (rust/rustc-1.96.1-src.tar.xz) = 241602032" \
-     line   "SHA256 (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 03693380bf72e839ff5d7c2b0e9626c48baebca08667bef197a5c9ac1adf3595"
-text line-insert-after file distinfo \
-     anchor "SHA256 (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 03693380bf72e839ff5d7c2b0e9626c48baebca08667bef197a5c9ac1adf3595" \
-     line   "SIZE (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 67955352"
-text line-insert-after file distinfo \
-     anchor "SIZE (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 67955352" \
-     line   "SHA256 (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 98d3e167dff45e14bf34529dee6bab0d551b1a6045299e029d164786bc1a3ea8"
-text line-insert-after file distinfo \
-     anchor "SHA256 (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 98d3e167dff45e14bf34529dee6bab0d551b1a6045299e029d164786bc1a3ea8" \
-     line   "SIZE (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 24177544"
-text line-insert-after file distinfo \
-     anchor "SIZE (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 24177544" \
-     line   "SHA256 (rust/1.95.0/cargo-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 96f567a18864c3bcb577984409134edce661c625a99dcd186e3388da8e6b4faa"
-text line-insert-after file distinfo \
-     anchor "SHA256 (rust/1.95.0/cargo-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 96f567a18864c3bcb577984409134edce661c625a99dcd186e3388da8e6b4faa" \
-     line   "SIZE (rust/1.95.0/cargo-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 11309856"
-
-# --- dragonfly/ lane: DragonFly patches for the rust source tree --------
-# do-patch applies every dragonfly/patch-* via DFLY_PATCHDIR.
-file materialize dragonfly/patch-compiler_rustc_codegen_ssa_src_back_link.rs -> dragonfly/patch-compiler_rustc_codegen_ssa_src_back_link.rs
-file materialize dragonfly/patch-compiler_rustc_codegen_ssa_src_back_linker.rs -> dragonfly/patch-compiler_rustc_codegen_ssa_src_back_linker.rs
-file materialize dragonfly/patch-compiler_rustc_target_src_spec_targets_x86_64_unknown_dragonfly.rs -> dragonfly/patch-compiler_rustc_target_src_spec_targets_x86_64_unknown_dragonfly.rs
-file materialize dragonfly/patch-library_backtrace_src_symbolize_gimli.rs -> dragonfly/patch-library_backtrace_src_symbolize_gimli.rs
-file materialize dragonfly/patch-library_std_src_sys_io_error_unix.rs -> dragonfly/patch-library_std_src_sys_io_error_unix.rs
-file materialize dragonfly/patch-library_std_src_sys_io_mod.rs -> dragonfly/patch-library_std_src_sys_io_mod.rs
-file materialize dragonfly/patch-library_std_src_sys_pal_unix_futex.rs -> dragonfly/patch-library_std_src_sys_pal_unix_futex.rs
-file materialize dragonfly/patch-library_std_src_sys_pal_unix_stack_overflow.rs -> dragonfly/patch-library_std_src_sys_pal_unix_stack_overflow.rs
-file materialize dragonfly/patch-library_std_src_sys_thread_local_key_racy.rs -> dragonfly/patch-library_std_src_sys_thread_local_key_racy.rs
-file materialize dragonfly/patch-library_std_src_sys_thread_local_mod.rs -> dragonfly/patch-library_std_src_sys_thread_local_mod.rs
-file materialize dragonfly/patch-src_bootstrap_src_bin_main.rs -> dragonfly/patch-src_bootstrap_src_bin_main.rs
-file materialize dragonfly/patch-src_bootstrap_src_core_builder_mod.rs -> dragonfly/patch-src_bootstrap_src_core_builder_mod.rs
-file materialize dragonfly/patch-src_llvm-project_llvm_lib_Support_Unix_Path.inc -> dragonfly/patch-src_llvm-project_llvm_lib_Support_Unix_Path.inc
-file materialize dragonfly/patch-src_tools_rust-analyzer_crates_proc-macro-srv_src_dylib.rs -> dragonfly/patch-src_tools_rust-analyzer_crates_proc-macro-srv_src_dylib.rs
-file materialize dragonfly/patch-vendor_notify-8.2.0_Cargo.toml -> dragonfly/patch-vendor_notify-8.2.0_Cargo.toml
+              to "${OPSYS} != FreeBSD && ${OPSYS} != DragonFly"
 
 # --- dragonfly/ lane: tree-wide cargo crate patches ---------------------
 # Mk/Uses/cargo-extra.mk sets CARGO_EXTRA_PATCHDIR=${PORTSDIR}/lang/rust/dragonfly
 # and pulls extra-<crate>-<version> into EXTRA_PATCHES for EVERY cargo port
 # in the tree, so these must keep composing even though lang/rust itself
-# never reads them. A new crate patch dropped here needs a line added below.
+# never reads them. They pin crate versions, not rust versions, which is
+# why they stay at the top of dragonfly/ and out of the per-target dirs.
+# A new crate patch dropped here needs a line added below.
 file materialize dragonfly/extra-cpal-0.10.0 -> dragonfly/extra-cpal-0.10.0
 file materialize dragonfly/extra-get_if_addrs-0.5.3 -> dragonfly/extra-get_if_addrs-0.5.3
 file materialize dragonfly/extra-getrandom-0.1.12 -> dragonfly/extra-getrandom-0.1.12
@@ -121,3 +80,121 @@ file materialize dragonfly/extra-webbrowser-0.5.5 -> dragonfly/extra-webbrowser-
 file materialize dragonfly/extra-winit-0.19.4 -> dragonfly/extra-winit-0.19.4
 file materialize dragonfly/extra-winit-0.19.5 -> dragonfly/extra-winit-0.19.5
 file materialize dragonfly/ring-0.16.11 -> dragonfly/ring-0.16.11
+
+# =======================================================================
+# Wherever a DragonFly bootstrap is fetched. Same site and same build
+# environment for either version; only the version differs, below.
+# =======================================================================
+target @2026Q3,@main
+
+# Bootstrap tarballs are self-hosted (no cross-build port exists for
+# DragonFly); avalon lays them out under <version>/ rather than the
+# <compiler_date>/ FreeBSD uses, so BOOTSTRAPS_DATE carries the version.
+mk add MASTER_SITES "https://avalon.dragonflybsd.org/misc/distfiles/rust-bootstrap/:bootstrap"
+
+# ld.gold cannot link std into the rustc driver.
+mk add MAKE_ENV "LDVER=ld.bfd"
+# The stage0 rustc/cargo need their own shared libs plus base libgcc.
+mk add MAKE_ENV "LD_LIBRARY_PATH=${WRKDIR}/bootstrap/lib:/usr/lib/gcc80"
+
+# =======================================================================
+# @2026Q3: rust 1.96.1, bootstrap 1.95.0.
+# =======================================================================
+target @2026Q3
+
+mk set BOOTSTRAPS_DATE "1.95.0"
+
+# Chained so each line anchors on the one inserted before it. The first
+# anchors on the branch's own source SIZE line, so this fails loudly if
+# the base moves off 1.96.1 rather than writing a wrong distinfo.
+text line-insert-after file distinfo \
+     anchor "SIZE (rust/rustc-1.96.1-src.tar.xz) = 241602032" \
+     line "SHA256 (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 03693380bf72e839ff5d7c2b0e9626c48baebca08667bef197a5c9ac1adf3595"
+text line-insert-after file distinfo \
+     anchor "SHA256 (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 03693380bf72e839ff5d7c2b0e9626c48baebca08667bef197a5c9ac1adf3595" \
+     line "SIZE (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 67955352"
+text line-insert-after file distinfo \
+     anchor "SIZE (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 67955352" \
+     line "SHA256 (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 98d3e167dff45e14bf34529dee6bab0d551b1a6045299e029d164786bc1a3ea8"
+text line-insert-after file distinfo \
+     anchor "SHA256 (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 98d3e167dff45e14bf34529dee6bab0d551b1a6045299e029d164786bc1a3ea8" \
+     line "SIZE (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 24177544"
+text line-insert-after file distinfo \
+     anchor "SIZE (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 24177544" \
+     line "SHA256 (rust/1.95.0/cargo-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 96f567a18864c3bcb577984409134edce661c625a99dcd186e3388da8e6b4faa"
+text line-insert-after file distinfo \
+     anchor "SHA256 (rust/1.95.0/cargo-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 96f567a18864c3bcb577984409134edce661c625a99dcd186e3388da8e6b4faa" \
+     line "SIZE (rust/1.95.0/cargo-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 11309856"
+
+# do-patch applies every dragonfly/patch-* via DFLY_PATCHDIR. Cut against
+# the 1.96.1 source; the composed name is flat, only the source is scoped.
+file materialize dragonfly/@2026Q3/patch-compiler_rustc_codegen_ssa_src_back_link.rs -> dragonfly/patch-compiler_rustc_codegen_ssa_src_back_link.rs
+file materialize dragonfly/@2026Q3/patch-compiler_rustc_codegen_ssa_src_back_linker.rs -> dragonfly/patch-compiler_rustc_codegen_ssa_src_back_linker.rs
+file materialize dragonfly/@2026Q3/patch-compiler_rustc_target_src_spec_targets_x86_64_unknown_dragonfly.rs -> dragonfly/patch-compiler_rustc_target_src_spec_targets_x86_64_unknown_dragonfly.rs
+file materialize dragonfly/@2026Q3/patch-library_backtrace_src_symbolize_gimli.rs -> dragonfly/patch-library_backtrace_src_symbolize_gimli.rs
+file materialize dragonfly/@2026Q3/patch-library_std_src_sys_io_error_unix.rs -> dragonfly/patch-library_std_src_sys_io_error_unix.rs
+file materialize dragonfly/@2026Q3/patch-library_std_src_sys_io_mod.rs -> dragonfly/patch-library_std_src_sys_io_mod.rs
+file materialize dragonfly/@2026Q3/patch-library_std_src_sys_pal_unix_futex.rs -> dragonfly/patch-library_std_src_sys_pal_unix_futex.rs
+file materialize dragonfly/@2026Q3/patch-library_std_src_sys_pal_unix_stack_overflow.rs -> dragonfly/patch-library_std_src_sys_pal_unix_stack_overflow.rs
+file materialize dragonfly/@2026Q3/patch-library_std_src_sys_thread_local_key_racy.rs -> dragonfly/patch-library_std_src_sys_thread_local_key_racy.rs
+file materialize dragonfly/@2026Q3/patch-library_std_src_sys_thread_local_mod.rs -> dragonfly/patch-library_std_src_sys_thread_local_mod.rs
+file materialize dragonfly/@2026Q3/patch-src_bootstrap_src_bin_main.rs -> dragonfly/patch-src_bootstrap_src_bin_main.rs
+file materialize dragonfly/@2026Q3/patch-src_bootstrap_src_core_builder_mod.rs -> dragonfly/patch-src_bootstrap_src_core_builder_mod.rs
+file materialize dragonfly/@2026Q3/patch-src_llvm-project_llvm_lib_Support_Unix_Path.inc -> dragonfly/patch-src_llvm-project_llvm_lib_Support_Unix_Path.inc
+file materialize dragonfly/@2026Q3/patch-src_tools_rust-analyzer_crates_proc-macro-srv_src_dylib.rs -> dragonfly/patch-src_tools_rust-analyzer_crates_proc-macro-srv_src_dylib.rs
+file materialize dragonfly/@2026Q3/patch-vendor_notify-8.2.0_Cargo.toml -> dragonfly/patch-vendor_notify-8.2.0_Cargo.toml
+
+# =======================================================================
+# @main: rust 1.98.1, bootstrap 1.97.1.
+# =======================================================================
+target @main
+
+# rustc 1.98.1 needs LLVM 22. @2026Q3 keeps the 20/21 its own port pins.
+mk set LLVM_VERSION "22"
+mk set _LLVM_VERSION "22"
+
+mk set BOOTSTRAPS_DATE "1.97.1"
+
+# 1.98.1 vendors enough crates that the glob exceeds ARG_MAX.
+text replace-once file Makefile \
+     from "@${REINPLACE_CMD} 's,\"files\":{[^}]*},\"files\":{},'" \
+     to "@${FIND} ${CARGO_VENDOR_DIR} -name .cargo-checksum.json -exec ${REINPLACE_CMD} 's,\"files\":{[^}]*},\"files\":{},'"
+text replace-once file Makefile \
+     from "${CARGO_VENDOR_DIR}/*/.cargo-checksum.json" \
+     to "{} +"
+
+# Same chain as @2026Q3, against this branch's own source SIZE line.
+text line-insert-after file distinfo \
+     anchor "SIZE (rust/rustc-1.98.1-src.tar.xz) = 244440824" \
+     line "SHA256 (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 3ae8e16224118083cd089aa5318a00a0ca57f11d7a58aa4dd782a75394ad1db4"
+text line-insert-after file distinfo \
+     anchor "SHA256 (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 3ae8e16224118083cd089aa5318a00a0ca57f11d7a58aa4dd782a75394ad1db4" \
+     line "SIZE (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 68662392"
+text line-insert-after file distinfo \
+     anchor "SIZE (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 68662392" \
+     line "SHA256 (rust/1.97.1/rust-std-1.97.1-x86_64-unknown-dragonfly.tar.xz) = f11578b7ec1aa67dc1299cbdcb7c60d3a5dee528085bf322cbc37c6c7efca7bd"
+text line-insert-after file distinfo \
+     anchor "SHA256 (rust/1.97.1/rust-std-1.97.1-x86_64-unknown-dragonfly.tar.xz) = f11578b7ec1aa67dc1299cbdcb7c60d3a5dee528085bf322cbc37c6c7efca7bd" \
+     line "SIZE (rust/1.97.1/rust-std-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 24595676"
+text line-insert-after file distinfo \
+     anchor "SIZE (rust/1.97.1/rust-std-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 24595676" \
+     line "SHA256 (rust/1.97.1/cargo-1.97.1-x86_64-unknown-dragonfly.tar.xz) = eaa880eac5c00b16d64c41d92b0b02bd97be4ac95b6c1ecda5cdbee85af53562"
+text line-insert-after file distinfo \
+     anchor "SHA256 (rust/1.97.1/cargo-1.97.1-x86_64-unknown-dragonfly.tar.xz) = eaa880eac5c00b16d64c41d92b0b02bd97be4ac95b6c1ecda5cdbee85af53562" \
+     line "SIZE (rust/1.97.1/cargo-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 11460860"
+
+# Cut against the 1.98.1 source.
+file materialize dragonfly/@main/patch-compiler_rustc_codegen_ssa_src_back_link.rs -> dragonfly/patch-compiler_rustc_codegen_ssa_src_back_link.rs
+file materialize dragonfly/@main/patch-compiler_rustc_codegen_ssa_src_back_linker.rs -> dragonfly/patch-compiler_rustc_codegen_ssa_src_back_linker.rs
+file materialize dragonfly/@main/patch-compiler_rustc_target_src_spec_targets_x86_64_unknown_dragonfly.rs -> dragonfly/patch-compiler_rustc_target_src_spec_targets_x86_64_unknown_dragonfly.rs
+file materialize dragonfly/@main/patch-library_backtrace_src_symbolize_gimli.rs -> dragonfly/patch-library_backtrace_src_symbolize_gimli.rs
+file materialize dragonfly/@main/patch-library_std_src_sys_io_error_unix.rs -> dragonfly/patch-library_std_src_sys_io_error_unix.rs
+file materialize dragonfly/@main/patch-library_std_src_sys_io_mod.rs -> dragonfly/patch-library_std_src_sys_io_mod.rs
+file materialize dragonfly/@main/patch-library_std_src_sys_pal_unix_futex.rs -> dragonfly/patch-library_std_src_sys_pal_unix_futex.rs
+file materialize dragonfly/@main/patch-library_std_src_sys_pal_unix_stack_overflow.rs -> dragonfly/patch-library_std_src_sys_pal_unix_stack_overflow.rs
+file materialize dragonfly/@main/patch-library_std_src_sys_thread_local_key_racy.rs -> dragonfly/patch-library_std_src_sys_thread_local_key_racy.rs
+file materialize dragonfly/@main/patch-library_std_src_sys_thread_local_mod.rs -> dragonfly/patch-library_std_src_sys_thread_local_mod.rs
+file materialize dragonfly/@main/patch-src_bootstrap_src_bin_main.rs -> dragonfly/patch-src_bootstrap_src_bin_main.rs
+file materialize dragonfly/@main/patch-src_bootstrap_src_core_builder_mod.rs -> dragonfly/patch-src_bootstrap_src_core_builder_mod.rs
+file materialize dragonfly/@main/patch-src_llvm-project_llvm_lib_Support_Unix_Path.inc -> dragonfly/patch-src_llvm-project_llvm_lib_Support_Unix_Path.inc
+file materialize dragonfly/@main/patch-vendor_notify-8.2.0_Cargo.toml -> dragonfly/patch-vendor_notify-8.2.0_Cargo.toml
