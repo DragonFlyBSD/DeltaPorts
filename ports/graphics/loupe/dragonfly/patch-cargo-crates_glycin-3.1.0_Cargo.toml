@@ -1,0 +1,11 @@
+--- cargo-crates/glycin-3.1.0/Cargo.toml.orig
++++ cargo-crates/glycin-3.1.0/Cargo.toml
+@@ -137,7 +137,7 @@
+ [dependencies.libc]
+ version = "0.2.152"
+ 
+-[dependencies.libseccomp]
++[target.'cfg(target_os = "linux")'.dependencies.libseccomp]
+ version = "0.4.0"
+ 
+ [dependencies.memfd]

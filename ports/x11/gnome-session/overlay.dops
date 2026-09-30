@@ -1,0 +1,45 @@
+port x11/gnome-session
+type port
+reason "gnome-session 42 -> 50.1 (GNOME 50), forked for DragonFly. GNOME 50 made systemd mandatory and deleted the non-systemd launch path; we set -Dsystemd=false, guard systemd usage behind ENABLE_SYSTEMD, and add a DragonFly init-worker (leader-dragonfly.c) that launches the session manager, the Wayland compositor and the gsd helpers directly. All base 47.0.1 patches are dropped."
+target @any
+
+mk unset PORTVERSION
+mk unset PORTSCOUT
+mk unset BUILD_DEPENDS
+mk set LIB_DEPENDS "libgnome-desktop-4.so:x11/gnome-desktop"
+mk set RUN_DEPENDS "dbus-daemon:devel/dbus"
+mk set USES "compiler:c11 gettext gnome localbase:ldflags meson pkgconfig python:build tar:xz"
+mk set USE_GNOME "glib20 gnomedesktop4 libxslt:build"
+mk unset USE_XORG
+mk unset USE_GL
+mk set MESON_ARGS "-Ddocbook=false -Dman=false -Dsystemd=false -Dsystemduserunitdir=${PREFIX}/lib/systemd/user"
+mk target remove post-patch
+patch apply diffs/Makefile.structure.diff
+# Set the version after removing the legacy loop so it remains outside blocks.
+mk set DISTVERSION "50.1" on-missing warn
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
+file remove files/patch-data_meson.build
+file remove files/patch-doc_man_gnome-session.1
+file remove files/patch-gnome-session_gsm-app.c
+file remove files/patch-gnome-session_gsm-autostart-app.c
+file remove files/patch-gnome-session_gsm-consolekit.c
+file remove files/patch-gnome-session_gsm-consolekit.h
+file remove files/patch-gnome-session_gsm-manager.c
+file remove files/patch-gnome-session_gsm-system.c
+file remove files/patch-gnome-session_gsm-systemd.c
+file remove files/patch-gnome-session_gsm-util.c
+file remove files/patch-gnome-session_gsm-util.h
+file remove files/patch-gnome-session_main.c
+file remove files/patch-gnome-session_meson.build
+file remove files/patch-meson.build
+file remove files/patch-meson__options.txt
+file remove files/patch-tools_meson.build
+file materialize dragonfly/patch-gnome-session_gsm-manager.c -> dragonfly/patch-gnome-session_gsm-manager.c
+file materialize dragonfly/patch-gnome-session_gsm-system.c -> dragonfly/patch-gnome-session_gsm-system.c
+file materialize dragonfly/patch-gnome-session_leader-dragonfly.c -> dragonfly/patch-gnome-session_leader-dragonfly.c
+file materialize dragonfly/patch-gnome-session_meson.build -> dragonfly/patch-gnome-session_meson.build
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-meson__options.txt -> dragonfly/patch-meson__options.txt
+file materialize dragonfly/patch-tools_gnome-session-ctl.c -> dragonfly/patch-tools_gnome-session-ctl.c
+file materialize dragonfly/patch-data_gnome.desktop.in.in -> dragonfly/patch-data_gnome.desktop.in.in

@@ -1,0 +1,13 @@
+# gdm-autologin settings for pam(3) on DragonFly.
+# No ConsoleKit: session tracking is not used on this platform.
+
+auth		required	pam_permit.so
+auth		optional	%%PREFIX%%/lib/pam_gnome_keyring.so
+
+account		required	pam_nologin.so
+account		include		system
+
+password	include		system
+
+session		include		system
+session		optional	%%PREFIX%%/lib/pam_gnome_keyring.so auto_start

@@ -1,0 +1,12 @@
+port deskutils/gnome-clocks
+type port
+reason "GNOME Clocks 50.0 matches the GNOME 50 desktop stack and directly requires ICU for internationalized time formatting"
+target @any
+
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.0"
+mk set PORTSCOUT "limit:^50\\."
+mk add LIB_DEPENDS "libicui18n.so:devel/icu"
+mk add BUILD_DEPENDS "oggenc:audio/vorbis-tools"
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff

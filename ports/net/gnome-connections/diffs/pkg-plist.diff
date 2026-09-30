@@ -1,0 +1,15 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -13,7 +13,6 @@
+ share/help/C/gnome-connections/figures/org.gnome.Connections.svg
+ share/help/C/gnome-connections/index.page
+ share/help/C/gnome-connections/legal.xml
+-share/help/bg/gnome-connections/connect.page
+ share/help/bg/gnome-connections/figures/org.gnome.Connections.svg
+ share/help/bg/gnome-connections/index.page
+ share/help/bg/gnome-connections/legal.xml
+@@ -174,3 +173,4 @@
+ share/mime/packages/org.gnome.Connections.xml
+ share/vala/vapi/gtk-frdp-0.2.deps
+ share/vala/vapi/gtk-frdp-0.2.vapi
++share/help/bg/gnome-connections/connect.page

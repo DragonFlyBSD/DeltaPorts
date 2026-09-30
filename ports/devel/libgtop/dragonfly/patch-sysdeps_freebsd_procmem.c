@@ -1,4 +1,4 @@
---- sysdeps/freebsd/procmem.c.orig	2016-11-27 18:05:03 UTC
+--- sysdeps/freebsd/procmem.c.orig
 +++ sysdeps/freebsd/procmem.c
 @@ -34,8 +34,10 @@
  #include <vm/vm_map.h>
@@ -11,7 +11,7 @@
  
  #include <sys/ucred.h>
  #include <sys/user.h>
-@@ -92,12 +94,23 @@ glibtop_get_proc_mem_p (glibtop *server,
+@@ -92,12 +94,23 @@
  
  #define        PROC_VMSPACE   ki_vmspace
  
@@ -22,12 +22,12 @@
 +#endif
  
 +#ifdef __DragonFly__
-+       buf->vsize = buf->size = (guint64)
+        buf->vsize = buf->size = (guint64)
 +	       pinfo [0].kp_vm_map_size;
 +       buf->resident = buf->rss = (guint64)
 +	       ps_pgtok (pinfo [0].kp_vm_rssize) * 1024;
 +#else
-        buf->vsize = buf->size = (guint64)
++       buf->vsize = buf->size = (guint64)
  	       pinfo [0].ki_size;
         buf->resident = buf->rss = (guint64)
  	       ps_pgtok (pinfo [0].ki_rssize) * 1024;

@@ -1,3 +1,4 @@
 PORT
-Last attempt: 47.1
-Last success: 47.1
+Last attempt: 50.0_1
+Last success: 50.0_1
+Last validation: 2026-07-21 serial clean package/check-plist and installation passed with external blueprint-compiler 0.20.4 as BUILD_DEPENDS; `gcalccmd '1 + 1'` returned 2 and libgcalc linked with no missing libraries.

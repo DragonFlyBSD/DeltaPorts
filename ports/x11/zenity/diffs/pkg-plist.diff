@@ -1,0 +1,38 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -1,5 +1,5 @@
+-bin/gdialog
+ bin/zenity
++share/applications/org.gnome.Zenity.desktop
+ share/help/C/zenity/calendar.page
+ share/help/C/zenity/color-selection.page
+ share/help/C/zenity/entry.page
+@@ -828,6 +828,7 @@
+ share/help/zh_CN/zenity/text.page
+ share/help/zh_CN/zenity/usage.page
+ share/help/zh_CN/zenity/warning.page
++share/icons/hicolor/48x48/apps/zenity.png
+ share/locale/ab/LC_MESSAGES/zenity.mo
+ share/locale/af/LC_MESSAGES/zenity.mo
+ share/locale/am/LC_MESSAGES/zenity.mo
+@@ -914,19 +915,9 @@
+ share/locale/tr/LC_MESSAGES/zenity.mo
+ share/locale/ug/LC_MESSAGES/zenity.mo
+ share/locale/uk/LC_MESSAGES/zenity.mo
++share/locale/uz/LC_MESSAGES/zenity.mo
+ share/locale/vi/LC_MESSAGES/zenity.mo
+ share/locale/xh/LC_MESSAGES/zenity.mo
+ share/locale/zh_CN/LC_MESSAGES/zenity.mo
+ share/locale/zh_HK/LC_MESSAGES/zenity.mo
+ share/locale/zh_TW/LC_MESSAGES/zenity.mo
+-share/man/man1/zenity.1.gz
+-%%DATADIR%%/zenity-calendar.png
+-%%DATADIR%%/zenity-entry.png
+-%%DATADIR%%/zenity-file.png
+-%%DATADIR%%/zenity-list.png
+-%%DATADIR%%/zenity-notification.png
+-%%DATADIR%%/zenity-progress.png
+-%%DATADIR%%/zenity-scale.png
+-%%DATADIR%%/zenity-text.png
+-%%DATADIR%%/zenity.png
+-%%DATADIR%%/zenity.ui

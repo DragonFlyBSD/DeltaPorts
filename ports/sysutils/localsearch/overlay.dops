@@ -1,6 +1,17 @@
 port sysutils/localsearch
 type port
-reason "meson.build hard-requires GNU sha256sum, absent on BSD; allow missing + portable calculate-hash.sh"
+reason "localsearch 3.8.2 on DragonFly: enable the GStreamer media extractor for GNOME audio/image metadata; disable seccomp and landlock; compute real SHA256 with native tools and propagate input failures; guard the libcue/disc-generic extractor on media handler != none; use kern.proc fallback when D-Bus cannot report a DragonFly service PID."
 target @any
+
+mk unset PORTVERSION
+mk unset PORTREVISION
+mk remove LIB_DEPENDS "libgexiv2.so:graphics/gexiv2"
+mk add LIB_DEPENDS "libgexiv2-0.16.so:graphics/gexiv2_016"
+mk add MESON_ARGS "-Dgeneric_media_extractor=gstreamer -Dseccomp=false"
+mk set DISTVERSION "3.8.2"
+patch apply diffs/pkg-plist.diff
+file materialize dragonfly/patch-src_tracker-extract_meson.build -> dragonfly/patch-src_tracker-extract_meson.build
+file materialize dragonfly/patch-src_tracker_tracker-process.c -> dragonfly/patch-src_tracker_tracker-process.c
 file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
 file materialize dragonfly/patch-src_tracker-extract_calculate-hash.sh -> dragonfly/patch-src_tracker-extract_calculate-hash.sh
+file materialize dragonfly/patch-src_tracker-extract_tracker-extract-raw.c -> dragonfly/patch-src_tracker-extract_tracker-extract-raw.c

@@ -1,0 +1,10 @@
+port devel/gsettings-desktop-schemas
+type port
+reason "gsettings-desktop-schemas 50.0 for gnome-shell 50"
+target @any
+
+mk set DISTVERSION "50.0"
+mk unset PORTREVISION
+mk add GLIB_SCHEMAS "org.gnome.desktop.screen-time-limits.gschema.xml"
+file materialize distinfo -> distinfo
+text line-insert-after file pkg-plist anchor "share/locale/uk/LC_MESSAGES/gsettings-desktop-schemas.mo" line "share/locale/uz/LC_MESSAGES/gsettings-desktop-schemas.mo"

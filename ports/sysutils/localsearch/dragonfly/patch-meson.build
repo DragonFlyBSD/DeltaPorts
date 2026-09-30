@@ -1,11 +1,14 @@
---- meson.build.orig	2024-12-10 07:54:30 UTC
+--- meson.build.orig
 +++ meson.build
-@@ -69,7 +69,7 @@ if get_option('man')
-   a2x = find_program('a2x')
- endif
- 
+@@ -19,7 +19,7 @@
+ tracker_sparql = dependency('tinysparql-3.0', version: '>=3.8')
+ dbus = dependency('dbus-1', version: '>= 1.3.1')
+ exempi = dependency('exempi-2.0', version: '>= 2.1.0', required: get_option('xmp'))
+-gexiv2 = dependency('gexiv2', required: get_option('raw'))
++gexiv2 = dependency('gexiv2-0.16', required: get_option('raw'))
+ gio = dependency('gio-2.0', version: '>=' + glib_required)
+ gio_unix = dependency('gio-unix-2.0', version: '>=' + glib_required)
+ glib = dependency('glib-2.0', version: '>=' + glib_required)
+@@ -72 +72 @@
 -sha256sum = find_program('sha256sum')
 +sha256sum = find_program('sha256sum', required: false)
- 
- add_project_arguments('-Wformat', '-Wformat-security', language: 'c')
- 

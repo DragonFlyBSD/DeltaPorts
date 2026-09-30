@@ -1,12 +1,85 @@
 port devel/glib20
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "Update GLib to 2.88.2 for GNOME 50; carry DragonFly GIO, module and faccessat fixes"
+# Keep upstream dlopen(NULL): RTLD_DEFAULT exposes RTLD_LOCAL plugin symbols
+# on DragonFly and fails gmodule's /module/local-binding regression test.
 target @any
 
-mk add MAKE_ENV "LC_ALL=C"
-
+mk set DISTVERSION "2.88.2"
+text replace-once file Makefile from "${WRKSRC}/glib/tests/utils-unisolated.c" to "${WRKSRC}/glib/tests/utils.c"
+mk add MESON_ARGS "-Dlibelf=disabled"
+text replace-once file distinfo from "TIMESTAMP = 1771651323" to "TIMESTAMP = 1784586749"
+text replace-once file distinfo from "SHA256 (gnome/glib-2.86.4.tar.xz) = d4e2b5d791d5015ffd8c6971ad8e975a0a55c1a14926cdb25cf843ff00682260" to "SHA256 (gnome/glib-2.88.2.tar.xz) = cf3f215a640c8a4257f14317586b8f1fdd25a10a93cb4bdda147c0f9ad88e74f"
+text replace-once file distinfo from "SIZE (gnome/glib-2.86.4.tar.xz) = 5692304" to "SIZE (gnome/glib-2.88.2.tar.xz) = 5782636"
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-gio_gunixmount.c
 file materialize dragonfly/patch-gio_gunixmount.c -> dragonfly/patch-gio_gunixmount.c
 file materialize dragonfly/patch-gio_gunixmounts.c -> dragonfly/patch-gio_gunixmounts.c
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-gio_gunixvolume.c
 file materialize dragonfly/patch-gio_gunixvolume.c -> dragonfly/patch-gio_gunixvolume.c
-file materialize dragonfly/patch-gio_meson.build -> dragonfly/patch-gio_meson.build
-file materialize dragonfly/patch-gmodule_gmodule-dl.c -> dragonfly/patch-gmodule_gmodule-dl.c
+file materialize dragonfly/patch-gio_glocalfile.c -> dragonfly/patch-gio_glocalfile.c
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-glib_glib-unix.c
+file materialize dragonfly/patch-glib_glib-unix.c -> dragonfly/patch-glib_glib-unix.c
+file materialize dragonfly/patch-gmodule_gmodule.c -> dragonfly/patch-gmodule_gmodule.c
+
+text line-remove file pkg-plist exact "%%DOCS%%share/doc/gio-2.0/enum.IOModuleScopeFlags.html"
+text line-remove file pkg-plist exact "%%DOCS%%share/doc/gio-2.0/enum.TlsCertificateRequestFlags.html"
+text line-remove file pkg-plist exact "%%DOCS%%share/doc/gio-2.0/enum.TlsDatabaseLookupFlags.html"
+text line-remove file pkg-plist exact "%%DOCS%%@comment %%DOCSDIR%%-2.0/const.VA_COPY_AS_ARRAY.html"
+text line-remove file pkg-plist exact "%%DOCS%%%%DOCSDIR%%-2.0/file-name-encodings.png"
+text line-remove file pkg-plist exact "%%DOCS%%%%DOCSDIR%%-2.0/func.closefrom.html"
+text line-remove file pkg-plist exact "%%DOCS%%%%DOCSDIR%%-2.0/func.fdwalk_set_cloexec.html"
+text line-remove file pkg-plist exact "%%DOCS%%%%DOCSDIR%%-2.0/method.Bytes.new_from_bytes.html"
+text line-remove file pkg-plist exact "%%DOCS%%%%DOCSDIR%%-unix-2.0/type_func.Pipe.clear.html"
+text line-remove file pkg-plist exact "%%DOCS%%%%DOCSDIR%%-unix-2.0/type_func.Pipe.close.html"
+text line-remove file pkg-plist exact "%%DOCS%%%%DOCSDIR%%-unix-2.0/type_func.Pipe.get.html"
+text line-remove file pkg-plist exact "%%DOCS%%%%DOCSDIR%%-unix-2.0/type_func.Pipe.open.html"
+text line-remove file pkg-plist exact "%%DOCS%%%%DOCSDIR%%-unix-2.0/type_func.Pipe.steal.html"
+text line-insert-after file pkg-plist anchor "@dir share/GConf/gsettings" line "%%DOCS%%share/doc/glib-2.0/const.VA_COPY_AS_ARRAY.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-2.0/const.VA_COPY_AS_ARRAY.html" line "include/glib-2.0/gio/giptosmessage.h"
+text line-insert-after file pkg-plist anchor "include/glib-2.0/gio/giptosmessage.h" line "include/glib-2.0/gio/gipv6tclassmessage.h"
+text line-insert-after file pkg-plist anchor "include/glib-2.0/gio/gipv6tclassmessage.h" line "%%DOCS%%share/doc/gio-2.0/class.IPTosMessage.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/class.IPTosMessage.html" line "%%DOCS%%share/doc/gio-2.0/class.IPv6TclassMessage.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/class.IPv6TclassMessage.html" line "%%DOCS%%share/doc/gio-2.0/ctor.IPTosMessage.new.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/ctor.IPTosMessage.new.html" line "%%DOCS%%share/doc/gio-2.0/ctor.IPv6TclassMessage.new.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/ctor.IPv6TclassMessage.new.html" line "%%DOCS%%share/doc/gio-2.0/enum.EcnCodePoint.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/enum.EcnCodePoint.html" line "%%DOCS%%share/doc/gio-2.0/flags.IOModuleScopeFlags.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/flags.IOModuleScopeFlags.html" line "%%DOCS%%share/doc/gio-2.0/flags.TlsCertificateRequestFlags.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/flags.TlsCertificateRequestFlags.html" line "%%DOCS%%share/doc/gio-2.0/flags.TlsDatabaseLookupFlags.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/flags.TlsDatabaseLookupFlags.html" line "%%DOCS%%share/doc/gio-2.0/func.DEPRECATED_ENUMERATOR_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/func.DEPRECATED_ENUMERATOR_IN_2_88_FOR.html" line "%%DOCS%%share/doc/gio-2.0/func.DEPRECATED_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/func.DEPRECATED_IN_2_88_FOR.html" line "%%DOCS%%share/doc/gio-2.0/func.DEPRECATED_MACRO_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/func.DEPRECATED_MACRO_IN_2_88_FOR.html" line "%%DOCS%%share/doc/gio-2.0/func.DEPRECATED_TYPE_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/func.DEPRECATED_TYPE_IN_2_88_FOR.html" line "%%DOCS%%share/doc/gio-2.0/method.IPTosMessage.get_dscp.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/method.IPTosMessage.get_dscp.html" line "%%DOCS%%share/doc/gio-2.0/method.IPTosMessage.get_ecn.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/method.IPTosMessage.get_ecn.html" line "%%DOCS%%share/doc/gio-2.0/method.IPv6TclassMessage.get_dscp.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/method.IPv6TclassMessage.get_dscp.html" line "%%DOCS%%share/doc/gio-2.0/method.IPv6TclassMessage.get_ecn.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/method.IPv6TclassMessage.get_ecn.html" line "%%DOCS%%share/doc/gio-2.0/vfunc.DBusInterfaceSkeleton.method_dispatch.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gio-2.0/vfunc.DBusInterfaceSkeleton.method_dispatch.html" line "%%DOCS%%share/doc/girepository-2.0/func.DEPRECATED_ENUMERATOR_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/girepository-2.0/func.DEPRECATED_ENUMERATOR_IN_2_88_FOR.html" line "%%DOCS%%share/doc/girepository-2.0/func.DEPRECATED_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/girepository-2.0/func.DEPRECATED_IN_2_88_FOR.html" line "%%DOCS%%share/doc/girepository-2.0/func.DEPRECATED_MACRO_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/girepository-2.0/func.DEPRECATED_MACRO_IN_2_88_FOR.html" line "%%DOCS%%share/doc/girepository-2.0/func.DEPRECATED_TYPE_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/girepository-2.0/func.DEPRECATED_TYPE_IN_2_88_FOR.html" line "%%DOCS%%share/doc/glib-2.0/const.NSEC_PER_SEC.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-2.0/const.NSEC_PER_SEC.html" line "%%DOCS%%share/doc/glib-2.0/ctor.Bytes.new_from_bytes.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-2.0/ctor.Bytes.new_from_bytes.html" line "%%DOCS%%share/doc/glib-2.0/file-name-encodings-dark.svg"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-2.0/file-name-encodings-dark.svg" line "%%DOCS%%share/doc/glib-2.0/file-name-encodings-light.svg"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-2.0/file-name-encodings-light.svg" line "%%DOCS%%share/doc/glib-2.0/func.get_monotonic_time_ns.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-2.0/func.get_monotonic_time_ns.html" line "%%DOCS%%share/doc/glib-2.0/func.test_trap_has_skipped.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-2.0/func.test_trap_has_skipped.html" line "%%DOCS%%share/doc/glib-2.0/method.MarkupParseContext.get_offset.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-2.0/method.MarkupParseContext.get_offset.html" line "%%DOCS%%share/doc/glib-2.0/method.MarkupParseContext.get_tag_start.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-2.0/method.MarkupParseContext.get_tag_start.html" line "%%DOCS%%share/doc/glib-unix-2.0/func.fd_query_path.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-unix-2.0/func.fd_query_path.html" line "%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.clear.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.clear.html" line "%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.close.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.close.html" line "%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.get.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.get.html" line "%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.open.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.open.html" line "%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.steal.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/glib-unix-2.0/method.Pipe.steal.html" line "%%DOCS%%share/doc/gmodule-2.0/func.DEPRECATED_ENUMERATOR_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gmodule-2.0/func.DEPRECATED_ENUMERATOR_IN_2_88_FOR.html" line "%%DOCS%%share/doc/gmodule-2.0/func.DEPRECATED_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gmodule-2.0/func.DEPRECATED_IN_2_88_FOR.html" line "%%DOCS%%share/doc/gmodule-2.0/func.DEPRECATED_MACRO_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gmodule-2.0/func.DEPRECATED_MACRO_IN_2_88_FOR.html" line "%%DOCS%%share/doc/gmodule-2.0/func.DEPRECATED_TYPE_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gmodule-2.0/func.DEPRECATED_TYPE_IN_2_88_FOR.html" line "%%DOCS%%share/doc/gobject-2.0/func.DEPRECATED_ENUMERATOR_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gobject-2.0/func.DEPRECATED_ENUMERATOR_IN_2_88_FOR.html" line "%%DOCS%%share/doc/gobject-2.0/func.DEPRECATED_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gobject-2.0/func.DEPRECATED_IN_2_88_FOR.html" line "%%DOCS%%share/doc/gobject-2.0/func.DEPRECATED_MACRO_IN_2_88_FOR.html"
+text line-insert-after file pkg-plist anchor "%%DOCS%%share/doc/gobject-2.0/func.DEPRECATED_MACRO_IN_2_88_FOR.html" line "%%DOCS%%share/doc/gobject-2.0/func.DEPRECATED_TYPE_IN_2_88_FOR.html"

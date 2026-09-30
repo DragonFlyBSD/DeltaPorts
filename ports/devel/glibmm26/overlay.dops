@@ -1,0 +1,13 @@
+port devel/glibmm26
+type port
+reason "GNOME 50 requires glibmm 2.88.1 with DragonFly GCC 13 and C++17 settings"
+target @any
+
+mk unset PORTVERSION
+mk remove USES "compiler:c++11-lang"
+mk add USES "compiler:c++17-lang"
+mk add MESON_ARGS "-Dbuild-examples=false"
+mk set DISTVERSION "2.88.1"
+mk set USE_CXXSTD "c++17"
+mk set USE_GCC_VERSION "13"
+file materialize distinfo -> distinfo

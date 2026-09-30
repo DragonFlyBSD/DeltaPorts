@@ -1,0 +1,9 @@
+--- meson.build.orig
++++ meson.build
+@@ -14,6 +14,8 @@ dependency('gweather4', version: '>=4.0.0')
+ # Required by glycin crate
+ dependency('lcms2', version: '>=2.12.0')
+-dependency('libseccomp', version: '>= 2.5.0')
++if host_machine.system() == 'linux'
++  dependency('libseccomp', version: '>= 2.5.0')
++endif

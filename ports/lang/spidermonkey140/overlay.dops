@@ -1,0 +1,10 @@
+port lang/spidermonkey140
+type port
+reason "DragonFly target triple, bfd linker and XP_UNIX mozjs metadata; inherit upstream ICU configuration"
+target @any
+
+mk add CONFIGURE_ARGS "--enable-linker=bfd"
+mk target append post-patch <<'MK'
+	@${REINPLACE_CMD} -e 's|^Cflags: |Cflags: -DXP_UNIX |' ${WRKSRC}/js/src/build/js.pc.in
+MK
+text replace-once file Makefile from "CONFIGURE_TARGET=\tx86_64-portbld-freebsd${OSREL}" to "CONFIGURE_TARGET=\tx86_64-portbld-dragonfly${OSREL}"

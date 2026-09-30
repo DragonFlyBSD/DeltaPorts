@@ -1,0 +1,11 @@
+--- src/tracker-extract/meson.build.orig	2026-07-05 04:55:36 UTC
++++ src/tracker-extract/meson.build
+@@ -97,7 +97,7 @@ if libgxps.found()
+   modules += [['extract-xps', 'tracker-extract-xps.c', ['10-xps.rule'], [libgxps, tracker_miners_common_dep]]]
+ endif
+ 
+-if libcue.found()
++if libcue.found() and generic_media_handler_name != 'none'
+   modules += [['extract-disc-generic', 'tracker-extract-disc-generic.c', ['90-disc-generic.rule'], dependencies]]
+ endif
+ 

@@ -1,0 +1,90 @@
+port x11/gdm
+type port
+reason "gdm 47.0 -> 50.1 (GNOME 50) for DragonFly: built against a null sd-login shim (no logind, no ConsoleKit; one static seat0, no session tracking -- seat/DRM handover is seatd/libseat's job inside mutter), VT juggling compiled out, session worker provisions XDG_RUNTIME_DIR=/tmp/runtime-<uid>. Wayland-only (x11-support=false). Autologin path first; greeter (needs gnome-shell rebuilt with libgdm) deferred. All base 47.0 X11/ConsoleKit patches dropped."
+target @any
+
+mk unset PORTVERSION
+mk unset PORTREVISION
+mk unset PORTSCOUT
+mk set BUILD_DEPENDS "itstool:textproc/itstool"
+mk set LIB_DEPENDS "libaccountsservice.so:sysutils/accountsservice libgudev-1.0.so:devel/libgudev libjson-glib-1.0.so:devel/json-glib libpolkit-gobject-1.so:sysutils/polkit"
+mk set USES "cpe gettext gnome localbase:ldflags meson pathfix pkgconfig tar:xz"
+mk set USE_GNOME "dconf glib20 introspection:build"
+mk unset USE_XORG
+mk set MESON_ARGS "-Dat-spi-registryd-dir=${PREFIX}/libexec -Dcustom-conf=${PREFIX}/etc/gdm/custom.conf -Ddefault-pam-config=none -Ddmconfdir=${PREFIX}/share/xsessions -Ddyn-home-dir=/var/cache/gdm -Dgdm-xsession=false -Dgroup=gdm -Dlibaudit=disabled -Dlog-dir=/var/log/gdm -Dpam-mod-dir=${PREFIX}/lib -Dpid-file=/var/run/gdm.pid -Dplymouth=disabled -Drun-dir=/var/run/gdm -Dselinux=disabled -Dsystemd-journal=false -Dsystemdsystemunitdir=no -Dsystemduserunitdir=no -Dworking-dir=/var/cache/gdm -Dx11-support=false"
+mk unset OPTIONS_DEFINE
+mk unset IPV6_MESON_TRUE
+mk set DISTVERSION "50.1"
+mk target remove post-patch
+mk target set pre-install <<'MK'
+	${MKDIR} ${STAGEDIR}/var/cache/gdm ${STAGEDIR}/var/log/gdm \
+		${STAGEDIR}/var/run/gdm
+MK
+mk target set post-install <<'MK'
+	${INSTALL_SCRIPT} ${FILESDIR}/gnome-session-dragonfly \
+		${STAGEDIR}${PREFIX}/libexec/gnome-session-dragonfly
+	${MV} ${STAGEDIR}${PREFIX}/etc/gdm/custom.conf \
+		${STAGEDIR}${PREFIX}/etc/gdm/custom.conf.sample
+	${MV} ${STAGEDIR}${PREFIX}/etc/dbus-1/system.d/gdm.conf \
+		${STAGEDIR}${PREFIX}/etc/dbus-1/system.d/gdm.conf.sample
+	@${MKDIR} ${STAGEDIR}${PREFIX}/etc/pam.d
+	${INSTALL_DATA} ${WRKDIR}/gdm-autologin \
+		${STAGEDIR}${PREFIX}/etc/pam.d/gdm-autologin.sample
+	${INSTALL_DATA} ${WRKDIR}/gdm-launch-environment \
+		${STAGEDIR}${PREFIX}/etc/pam.d/gdm-launch-environment.sample
+	${INSTALL_DATA} ${WRKDIR}/gdm-password \
+		${STAGEDIR}${PREFIX}/etc/pam.d/gdm-password.sample
+	${INSTALL_DATA} ${FILESDIR}/15_org.gnome.login-screen.gschema.override \
+		${STAGEDIR}${PREFIX}/share/glib-2.0/schemas/
+MK
+mk target set post-extract <<'MK'
+	@${MKDIR} ${WRKSRC}/common/dragonfly-compat/systemd
+	${INSTALL_DATA} ${FILESDIR}/dragonfly-sd-login.h \
+		${WRKSRC}/common/dragonfly-compat/systemd/sd-login.h
+	${INSTALL_DATA} ${FILESDIR}/dragonfly-sd-daemon.h \
+		${WRKSRC}/common/dragonfly-compat/systemd/sd-daemon.h
+MK
+patch apply diffs/Makefile.structure.diff
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
+file remove files/patch-build-aux_find-x-server.sh
+file remove files/patch-common_gdm-common.c
+file remove files/patch-common_gdm-common.h
+file remove files/patch-common_gdm-log.c
+file remove files/patch-daemon_gdm-display-access-file.c
+file remove files/patch-daemon_gdm-launch-environment.c
+file remove files/patch-daemon_gdm-local-display-factory.c
+file remove files/patch-daemon_gdm-manager.c
+file remove files/patch-daemon_gdm-server.c
+file remove files/patch-daemon_gdm-session-record.c
+file remove files/patch-daemon_gdm-session-worker-job.c
+file remove files/patch-daemon_gdm-session-worker.c
+file remove files/patch-daemon_gdm-session.c
+file remove files/patch-daemon_gdm-wayland-session.c
+file remove files/patch-daemon_gdm-x-session.c
+file remove files/patch-daemon_main.c
+file remove files/patch-daemon_meson.build
+file remove files/patch-data_PostSession.in
+file remove files/patch-data_gdm.conf-custom.in
+file remove files/patch-data_meson.build
+file remove files/patch-libgdm_gdm-sessions.c
+file remove files/patch-meson.build
+file remove files/patch-pam__gdm_pam__gdm.c
+file remove files/locale.conf.in
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-daemon_meson.build -> dragonfly/patch-daemon_meson.build
+file materialize dragonfly/patch-daemon_gdm-session-worker.c -> dragonfly/patch-daemon_gdm-session-worker.c
+file materialize dragonfly/patch-daemon_gdm-dynamic-user-store.c -> dragonfly/patch-daemon_gdm-dynamic-user-store.c
+file materialize dragonfly/patch-daemon_gdm-local-display-factory.c -> dragonfly/patch-daemon_gdm-local-display-factory.c
+file materialize dragonfly/patch-daemon_gdm-manager.c -> dragonfly/patch-daemon_gdm-manager.c
+file materialize dragonfly/patch-daemon_gdm-wayland-session.c -> dragonfly/patch-daemon_gdm-wayland-session.c
+file materialize dragonfly/patch-common_gdm-common.c -> dragonfly/patch-common_gdm-common.c
+file materialize dragonfly/patch-pam__gdm_pam__gdm.c -> dragonfly/patch-pam__gdm_pam__gdm.c
+file materialize dragonfly/gnome-session-dragonfly -> files/gnome-session-dragonfly
+file materialize dragonfly/dragonfly-sd-login.h -> files/dragonfly-sd-login.h
+file materialize dragonfly/dragonfly-sd-daemon.h -> files/dragonfly-sd-daemon.h
+file materialize dragonfly/gdm.in -> files/gdm.in
+file materialize dragonfly/gdm-autologin.in -> files/gdm-autologin.in
+file materialize dragonfly/gdm-password.in -> files/gdm-password.in
+patch apply diffs/pkg-install.diff
+file materialize dragonfly/patch-data_gnome-greeter.desktop.in -> dragonfly/patch-data_gnome-greeter.desktop.in

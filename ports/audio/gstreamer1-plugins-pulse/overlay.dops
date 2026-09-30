@@ -1,6 +1,6 @@
 port audio/gstreamer1-plugins-pulse
 type port
-reason "mark broken: uses pulseaudio which is not supported on DragonFly"
+reason "enable the GStreamer Pulse sink: DragonFly now has the libpulse client library, while PipeWire provides the session Pulse server"
 target @any
 
-mk set BROKEN "uses pulseaudio"
+mk unset BROKEN on-missing noop

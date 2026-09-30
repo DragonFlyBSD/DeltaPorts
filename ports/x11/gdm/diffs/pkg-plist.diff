@@ -1,0 +1,98 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -1,13 +1,6 @@
+ bin/gdm-config
+-bin/gdmflexiserver
+ @sample etc/dbus-1/system.d/gdm.conf.sample
+-@sample %%ETCDIR%%/Init/Default.sample
+-@sample %%ETCDIR%%/PostLogin/Default.sample
+-@sample %%ETCDIR%%/PostSession/Default.sample
+-@sample %%ETCDIR%%/PreSession/Default.sample
+-@sample %%ETCDIR%%/Xsession.sample
+ @sample %%ETCDIR%%/custom.conf.sample
+-@sample %%ETCDIR%%/locale.conf.sample
+ @sample etc/pam.d/gdm-autologin.sample
+ @sample etc/pam.d/gdm-launch-environment.sample
+ @sample etc/pam.d/gdm-password.sample
+@@ -19,15 +12,13 @@
+ lib/libgdm.so
+ lib/libgdm.so.1
+ lib/libgdm.so.1.0.0
+-lib/security/pam_gdm.so
+-lib/udev/rules.d/61-gdm.rules
++lib/pam_gdm.so
+ libdata/pkgconfig/gdm.pc
+-libexec/gdm-host-chooser
++libexec/gdm-new-session
+ libexec/gdm-runtime-config
+ libexec/gdm-session-worker
+-libexec/gdm-simple-chooser
+ libexec/gdm-wayland-session
+-libexec/gdm-x-session
++libexec/gnome-session-dragonfly
+ sbin/gdm
+ share/dconf/profile/gdm
+ %%DATADIR%%/gdb-cmd
+@@ -35,7 +26,8 @@
+ %%DATADIR%%/greeter-dconf-defaults
+ %%DATADIR%%/greeter/applications/mime-dummy-handler.desktop
+ %%DATADIR%%/greeter/applications/mimeapps.list
+-%%DATADIR%%/greeter/autostart/orca-autostart.desktop
++%%DATADIR%%/greeter/wayland-sessions/gnome-greeter.desktop
++%%DATADIR%%/greeter/wayland-sessions/gnome-initial-setup.desktop
+ %%DATADIR%%/locale.alias
+ share/gir-1.0/Gdm-1.0.gir
+ share/gnome-session/sessions/gnome-login.session
+@@ -69,6 +61,8 @@
+ share/help/it/gdm/legal.xml
+ share/help/ka/gdm/index.docbook
+ share/help/ka/gdm/legal.xml
++share/help/kk/gdm/index.docbook
++share/help/kk/gdm/legal.xml
+ share/help/ko/gdm/index.docbook
+ share/help/ko/gdm/legal.xml
+ share/help/nl/gdm/index.docbook
+@@ -81,8 +75,12 @@
+ share/help/ro/gdm/legal.xml
+ share/help/ru/gdm/index.docbook
+ share/help/ru/gdm/legal.xml
++share/help/sk/gdm/index.docbook
++share/help/sk/gdm/legal.xml
+ share/help/sl/gdm/index.docbook
+ share/help/sl/gdm/legal.xml
++share/help/sr/gdm/index.docbook
++share/help/sr/gdm/legal.xml
+ share/help/sv/gdm/index.docbook
+ share/help/sv/gdm/legal.xml
+ share/help/te/gdm/index.docbook
+@@ -141,6 +139,7 @@
+ share/locale/hr/LC_MESSAGES/gdm.mo
+ share/locale/hu/LC_MESSAGES/gdm.mo
+ share/locale/hy/LC_MESSAGES/gdm.mo
++share/locale/ia/LC_MESSAGES/gdm.mo
+ share/locale/id/LC_MESSAGES/gdm.mo
+ share/locale/is/LC_MESSAGES/gdm.mo
+ share/locale/it/LC_MESSAGES/gdm.mo
+@@ -152,7 +151,9 @@
+ share/locale/kn/LC_MESSAGES/gdm.mo
+ share/locale/ko/LC_MESSAGES/gdm.mo
+ share/locale/ku/LC_MESSAGES/gdm.mo
++share/locale/kw/LC_MESSAGES/gdm.mo
+ share/locale/ky/LC_MESSAGES/gdm.mo
++share/locale/lo/LC_MESSAGES/gdm.mo
+ share/locale/lt/LC_MESSAGES/gdm.mo
+ share/locale/lv/LC_MESSAGES/gdm.mo
+ share/locale/mai/LC_MESSAGES/gdm.mo
+@@ -204,10 +205,11 @@
+ share/locale/zh_HK/LC_MESSAGES/gdm.mo
+ share/locale/zh_TW/LC_MESSAGES/gdm.mo
+ share/locale/zu/LC_MESSAGES/gdm.mo
++share/polkit-1/actions/org.gnome.displaymanager.policy
++share/polkit-1/rules.d/20-gdm.rules
+ @postexec mkdir -p %D/share/xsessions
+ @postexec dconf update
+ @postunexec dconf update
+ @dir /var/cache/gdm
+-@dir /var/run/gdm/greeter
+ @dir /var/run/gdm
+ @dir /var/log/gdm

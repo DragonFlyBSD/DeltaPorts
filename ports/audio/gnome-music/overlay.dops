@@ -1,0 +1,10 @@
+port audio/gnome-music
+type port
+reason "Update GNOME Music to 50.0 for GNOME 50"
+target @any
+
+mk unset PORTVERSION on-missing noop
+mk set DISTVERSION "50.0"
+mk add LIB_DEPENDS "libsoup-3.0.so:devel/libsoup3"
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff

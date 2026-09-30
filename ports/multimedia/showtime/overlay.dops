@@ -1,0 +1,17 @@
+port multimedia/showtime
+type port
+reason "Update Showtime to 50.0 and include the GTK4 GStreamer sink"
+target @any
+
+file materialize distinfo -> distinfo
+patch apply diffs/pkg-plist.diff
+# Replaced by the carried, version-adjusted patch in the DragonFly lane.
+file remove files/patch-showtime_showtime.in
+file materialize dragonfly/patch-showtime_showtime.in -> dragonfly/patch-showtime_showtime.in
+file materialize dragonfly/patch-showtime_play.py -> dragonfly/patch-showtime_play.py
+mk set DISTVERSION "50.0"
+mk unset PORTREVISION
+mk set PORTSCOUT "limit:^50\\."
+mk remove USES "python"
+mk add USES "python:3.12+"
+mk set USE_GSTREAMER "assrender faad libav ogg opus plugins rust theora ttml vorbis vpx x264"

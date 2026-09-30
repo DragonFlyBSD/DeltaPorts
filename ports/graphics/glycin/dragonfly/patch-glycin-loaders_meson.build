@@ -1,0 +1,14 @@
+--- glycin-loaders/meson.build.orig
++++ glycin-loaders/meson.build
+@@ -1,7 +1,9 @@
+ if not get_option('glycin-loaders')
+   subdir_done()
+ endif
+ 
+-dependency('libseccomp', version: seccomp_req)
++if host_machine.system() == 'linux'
++  dependency('libseccomp', version: seccomp_req)
++endif
+ 
+ if 'glycin-heif' in get_option('loaders')
+   dependency('libheif', version: '>= 1.20.0')

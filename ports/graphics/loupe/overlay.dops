@@ -1,0 +1,12 @@
+port graphics/loupe
+type dport
+reason "Add GNOME Loupe 50.0 image viewer"
+target @any
+
+file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
+file materialize dragonfly/patch-cargo-crates_glycin-common-1.0.4_src_shared_memory.rs -> dragonfly/patch-cargo-crates_glycin-common-1.0.4_src_shared_memory.rs
+file materialize dragonfly/patch-cargo-crates_glycin-3.1.0_src_lib.rs -> dragonfly/patch-cargo-crates_glycin-3.1.0_src_lib.rs
+file materialize dragonfly/patch-cargo-crates_glycin-3.1.0_src_api_common.rs -> dragonfly/patch-cargo-crates_glycin-3.1.0_src_api_common.rs
+file materialize dragonfly/patch-cargo-crates_glycin-3.1.0_src_dbus.rs -> dragonfly/patch-cargo-crates_glycin-3.1.0_src_dbus.rs
+file materialize dragonfly/patch-cargo-crates_glycin-3.1.0_src_error.rs -> dragonfly/patch-cargo-crates_glycin-3.1.0_src_error.rs
+file materialize dragonfly/patch-cargo-crates_glycin-3.1.0_Cargo.toml -> dragonfly/patch-cargo-crates_glycin-3.1.0_Cargo.toml

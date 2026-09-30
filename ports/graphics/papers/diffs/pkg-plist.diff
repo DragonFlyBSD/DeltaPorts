@@ -1,0 +1,80 @@
+--- pkg-plist.orig
++++ pkg-plist
+@@ -50,6 +50,9 @@
+ include/papers/%%VERSION%%/libview/context/pps-metadata.h
+ include/papers/%%VERSION%%/libview/context/pps-search-context.h
+ include/papers/%%VERSION%%/libview/context/pps-search-result.h
++include/papers/%%VERSION%%/libview/context/pps-annotation-model.h
++include/papers/%%VERSION%%/libview/context/pps-undo-context.h
++include/papers/%%VERSION%%/libview/context/pps-undo-handler.h
+ include/papers/%%VERSION%%/libview/pps-job-scheduler.h
+ include/papers/%%VERSION%%/libview/pps-job.h
+ include/papers/%%VERSION%%/libview/pps-jobs.h
+@@ -57,25 +60,26 @@
+ include/papers/%%VERSION%%/libview/pps-view-presentation.h
+ include/papers/%%VERSION%%/libview/pps-view-type-builtins.h
+ include/papers/%%VERSION%%/libview/pps-view.h
++include/papers/%%VERSION%%/libview/pps-css-utils.h
+ include/papers/%%VERSION%%/papers-document.h
+ include/papers/%%VERSION%%/papers-view.h
+ lib/girepository-1.0/PapersDocument-%%VERSION%%.typelib
+ lib/girepository-1.0/PapersView-%%VERSION%%.typelib
+ lib/libppsdocument-%%VERSION%%.so
+-lib/libppsdocument-%%VERSION%%.so.5
+-lib/libppsdocument-%%VERSION%%.so.5.0.0
++lib/libppsdocument-%%VERSION%%.so.6
++lib/libppsdocument-%%VERSION%%.so.6.0.0
+ lib/libppsview-%%VERSION%%.so
+-lib/libppsview-%%VERSION%%.so.4
+-lib/libppsview-%%VERSION%%.so.4.0.0
++lib/libppsview-%%VERSION%%.so.5
++lib/libppsview-%%VERSION%%.so.5.0.0
+ %%NAUTILUS%%lib/nautilus/extensions-4/libpapers-document-properties.so
+-%%COMICS%%lib/papers/5/backends/comicsdocument.papers-backend
+-%%DJVU%%lib/papers/5/backends/djvudocument.papers-backend
+-%%COMICS%%lib/papers/5/backends/libcomicsdocument.so
+-%%DJVU%%lib/papers/5/backends/libdjvudocument.so
+-lib/papers/5/backends/libpdfdocument.so
+-lib/papers/5/backends/libtiffdocument.so
+-lib/papers/5/backends/pdfdocument.papers-backend
+-lib/papers/5/backends/tiffdocument.papers-backend
++%%COMICS%%lib/papers/6/backends/org.gnome.Papers.ComicsDocument.papers-backend
++%%DJVU%%lib/papers/6/backends/org.gnome.Papers.DjvuDocument.papers-backend
++%%COMICS%%lib/papers/6/backends/libcomicsdocument.so
++%%DJVU%%lib/papers/6/backends/libdjvudocument.so
++lib/papers/6/backends/libpdfdocument.so
++lib/papers/6/backends/libtiffdocument.so
++lib/papers/6/backends/org.gnome.Papers.PdfDocument.papers-backend
++lib/papers/6/backends/org.gnome.Papers.TiffDocument.papers-backend
+ libdata/pkgconfig/papers-document-%%VERSION%%.pc
+ libdata/pkgconfig/papers-view-%%VERSION%%.pc
+ share/applications/org.gnome.Papers-previewer.desktop
+@@ -114,6 +118,7 @@
+ share/locale/eu/LC_MESSAGES/papers.mo
+ share/locale/fa/LC_MESSAGES/papers.mo
+ share/locale/fi/LC_MESSAGES/papers.mo
++share/locale/fil/LC_MESSAGES/papers.mo
+ share/locale/fr/LC_MESSAGES/papers.mo
+ share/locale/fur/LC_MESSAGES/papers.mo
+ share/locale/ga/LC_MESSAGES/papers.mo
+@@ -126,6 +131,7 @@
+ share/locale/hu/LC_MESSAGES/papers.mo
+ share/locale/id/LC_MESSAGES/papers.mo
+ share/locale/ie/LC_MESSAGES/papers.mo
++share/locale/ia/LC_MESSAGES/papers.mo
+ share/locale/is/LC_MESSAGES/papers.mo
+ share/locale/it/LC_MESSAGES/papers.mo
+ share/locale/ja/LC_MESSAGES/papers.mo
+@@ -188,8 +194,8 @@
+ share/man/man1/papers-thumbnailer.1.gz
+ share/man/man1/papers.1.gz
+ share/metainfo/org.gnome.Papers.metainfo.xml
+-%%COMICS%%share/metainfo/papers-comicsdocument.metainfo.xml
+-%%DJVU%%share/metainfo/papers-djvudocument.metainfo.xml
+-share/metainfo/papers-pdfdocument.metainfo.xml
+-share/metainfo/papers-tiffdocument.metainfo.xml
++%%COMICS%%share/metainfo/org.gnome.Papers.ComicsDocument.metainfo.xml
++%%DJVU%%share/metainfo/org.gnome.Papers.DjvuDocument.metainfo.xml
++share/metainfo/org.gnome.Papers.PdfDocument.metainfo.xml
++share/metainfo/org.gnome.Papers.TiffDocument.metainfo.xml
+ share/thumbnailers/papers.thumbnailer

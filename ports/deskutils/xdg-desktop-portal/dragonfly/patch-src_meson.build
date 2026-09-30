@@ -1,0 +1,18 @@
+--- src/meson.build.orig
++++ src/meson.build
+@@ -213,6 +213,7 @@
+   validate_sound_c_args += '-DHELPER="@0@"'.format(bwrap.full_path())
+ endif
+ 
++if gst_pbutils_dep.found()
+ xdp_validate_sound = executable(
+   'xdg-desktop-portal-validate-sound',
+   'validate-sound.c',
+@@ -221,6 +222,7 @@
+   install: true,
+   install_dir: libexecdir,
+ )
++endif
+ 
+ configure_file(
+   input: 'xdg-desktop-portal-rewrite-launchers.service.in',

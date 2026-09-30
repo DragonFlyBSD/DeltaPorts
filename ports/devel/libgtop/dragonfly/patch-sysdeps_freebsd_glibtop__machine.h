@@ -1,4 +1,4 @@
---- sysdeps/freebsd/glibtop_machine.h.orig	2016-11-27 18:05:03 UTC
+--- sysdeps/freebsd/glibtop_machine.h.orig
 +++ sysdeps/freebsd/glibtop_machine.h
 @@ -26,7 +26,9 @@
  #include <nlist.h>

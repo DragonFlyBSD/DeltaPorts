@@ -1,0 +1,4 @@
+Glycin lets programs load images in a secure and modular way.
+This package provides libglycin (the glycin-2 C API used by mutter/GNOME 50).
+
+WWW: https://gitlab.gnome.org/GNOME/glycin

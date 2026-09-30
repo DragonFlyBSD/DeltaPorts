@@ -1,0 +1,13 @@
+--- daemon/meson.build.orig
++++ daemon/meson.build
+@@ -77,6 +77,10 @@
+   polkit_dep,
+ ]
+ 
++if libutil_dep.found()
++  gdm_daemon_deps += libutil_dep
++endif
++
+ # test-session-client
+ test_session_client_src = [
+   'test-session-client.c',

@@ -1,6 +1,6 @@
 port devel/libgtop
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "Apply DragonFly sysdeps to libgtop 2.41.3"
 target @any
 
 mk target set post-patch <<'MK'
@@ -13,6 +13,7 @@ file materialize dragonfly/patch-sysdeps_common_fsusage.c -> dragonfly/patch-sys
 file materialize dragonfly/patch-sysdeps_common_mountlist.c -> dragonfly/patch-sysdeps_common_mountlist.c
 file materialize dragonfly/patch-sysdeps_freebsd_glibtop__machine.h -> dragonfly/patch-sysdeps_freebsd_glibtop__machine.h
 file materialize dragonfly/patch-sysdeps_freebsd_mountlist.c -> dragonfly/patch-sysdeps_freebsd_mountlist.c
+file materialize dragonfly/patch-sysdeps_freebsd_mem.c -> dragonfly/patch-sysdeps_freebsd_mem.c
 file materialize dragonfly/patch-sysdeps_freebsd_netload.c -> dragonfly/patch-sysdeps_freebsd_netload.c
 file materialize dragonfly/patch-sysdeps_freebsd_open.c -> dragonfly/patch-sysdeps_freebsd_open.c
 file materialize dragonfly/patch-sysdeps_freebsd_procio.c -> dragonfly/patch-sysdeps_freebsd_procio.c
