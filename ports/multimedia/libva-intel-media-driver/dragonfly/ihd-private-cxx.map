@@ -1,0 +1,10 @@
+{
+    local:
+        _ZNSt*;
+        _ZNKSt*;
+        _ZSt*;
+        _ZTISt*;
+        _ZTSSt*;
+        _ZZNSt*;
+        _ZN9__gnu_cxx*;
+};
