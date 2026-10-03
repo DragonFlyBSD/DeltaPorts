@@ -1,0 +1,4 @@
+port graphics/mesa26-dri
+type dport
+reason "Optional Mesa 26.1.4 drivers with NVK for nvgpu. Use a separate mesa26 port so existing AMD/Intel users can retain the standard Mesa version until their DRM drivers support the newer requirements."
+target @any
