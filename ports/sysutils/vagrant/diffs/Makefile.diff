@@ -1,19 +1,19 @@
---- Makefile.orig	2023-01-16 23:35:24 UTC
+--- Makefile.orig	2026-10-05 00:00:00 UTC
 +++ Makefile
-@@ -78,6 +78,7 @@ REMOVE_TARGETS=	.envrc .runner.sh .vimrc
- 		vagrant.gemspec
+@@ -82,6 +82,7 @@ post-patch:
+ .include <bsd.port.pre.mk>
  
  post-patch:
 +	@${REINPLACE_CMD} -e 's|@DATADIR@|${DATADIR}|g' ${WRKSRC}/lib/vagrant/plugin/manager.rb
  	@${REINPLACE_CMD} -e 's|@PREFIX@|${PREFIX}|g' \
  		${WRKSRC}/bin/vagrant \
  		${WRKSRC}/plugins/providers/virtualbox/action/network.rb \
-@@ -96,6 +97,8 @@ do-build:
+@@ -100,6 +101,8 @@ post-install:
  		${STAGEDIR}${DATADIR}/embedded/rgloader/loader.rb
  
  post-install:
 +	${MKDIR} ${STAGEDIR}${DATADIR}/plugins.d
 +	${ECHO} '{}' > ${STAGEDIR}${DATADIR}/plugins.json
+ 	${FIND} ${STAGEDIR}${PREFIX}/lib/ruby/gems/${RUBY_VER} -name '*.so' -exec ${STRIP_CMD} {} +
  	${RMDIR} ${STAGEDIR}${PREFIX}/lib/ruby/gems/${RUBY_VER}/doc
- 	${RM} -r ${STAGEDIR}${PREFIX}/lib/ruby/gems/${RUBY_VER}/gems/${PORTNAME}-${PORTVERSION}/nix
- .for FILE in ${REMOVE_TARGETS}
+ 	${RM} -r ${STAGEDIR}${PREFIX}/lib/ruby/gems/${RUBY_VER}/gems/${PORTNAME}-${PORTVERSION}/ext

@@ -1,7 +1,7 @@
---- pkg-plist.orig	2022-09-10 14:36:55 UTC
+--- pkg-plist.orig	2026-10-05 00:00:00 UTC
 +++ pkg-plist
-@@ -1070,5 +1070,7 @@ bin/vagrant
- %%GEM_BASE_DIR%%/vagrant-%%PORTVERSION%%/version.txt
+@@ -1094,5 +1094,7 @@ bin/vagrant
+ %%GEMS_DIR%%/extensions/%%BUILD_TARGET%%/%%RUBY_VER%%/vagrant-%%PORTVERSION%%/vagrant/vagrant_ssl.so
  %%GEMS_DIR%%/specifications/vagrant-%%PORTVERSION%%.gemspec
  %%DATADIR%%/embedded/rgloader/loader.rb
 +%%DATADIR%%/plugins.json
