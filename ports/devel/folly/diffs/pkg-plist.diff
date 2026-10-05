@@ -1,9 +1,0 @@
---- pkg-plist.orig	2020-11-13 08:32:59 UTC
-+++ pkg-plist
-@@ -732,6 +726,0 @@
--lib/libfolly_exception_counter.so
--lib/libfolly_exception_counter.so.0.58.0-dev
--lib/libfolly_exception_tracer.so
--lib/libfolly_exception_tracer.so.0.58.0-dev
--lib/libfolly_exception_tracer_base.so
--lib/libfolly_exception_tracer_base.so.0.58.0-dev
