@@ -6,8 +6,23 @@ reason "DragonFly: gate FreeBSD-specific completions behind FREEBSD option"
 # On DragonFly, FREEBSD option should default to OFF since those
 # completions (freebsd-update, kldload, kldunload, pkg_*, port*)
 # are not installed on DragonFly. The pkg-plist entries are guarded
-# with %%FREEBSD%% so they are only packaged when the option is ON.
+# with %%FREEBSD%% so the default package does not list them.
+#
+# Why they are not installed: since bash-completion 2.15.0, configure.ac
+# sets the automake BSD conditional for a *bsd* host_os and FREEBSD for
+# *freebsd*. BSD installs pkg_delete plus its pkg_deinstall/pkg_info
+# symlinks; FREEBSD installs freebsd-update, kldload, kldunload,
+# portinstall, portsnap and portupgrade. A *-dragonfly* host matches
+# neither, so these nine are never staged, while the FreeBSD pkg-plist
+# lists them unconditionally. The port's FREEBSD option does not reach
+# configure (it only adds RUN_DEPENDS on shells/bash-completion-freebsd),
+# so turning it on would list the nine without installing them.
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NFREEBSD}"
+
+# =======================================================================
+# @2026Q3: bash-completion 2.17.0 installs them as completions/<name>.
+# =======================================================================
+target @2026Q3
 
 # Wrap FreeBSD-specific completion entries with %%FREEBSD%% guards
 text replace-once file pkg-plist \
@@ -45,3 +60,47 @@ text replace-once file pkg-plist \
 text replace-once file pkg-plist \
      from "%%DATADIR%%/completions/portupgrade" \
      to   "%%FREEBSD%%%%DATADIR%%/completions/portupgrade"
+
+# =======================================================================
+# @main: bash-completion 2.18.0 (ports d59713029004) moved every
+# completion to completions-core/<name>.bash. The same nine files sit
+# behind the same BSD/FREEBSD conditionals, now in
+# completions-core/Makefile.am, so only the plist paths change.
+# =======================================================================
+target @main
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/freebsd-update.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/freebsd-update.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/kldload.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/kldload.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/kldunload.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/kldunload.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/pkg_deinstall.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/pkg_deinstall.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/pkg_delete.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/pkg_delete.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/pkg_info.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/pkg_info.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/portinstall.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/portinstall.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/portsnap.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/portsnap.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/portupgrade.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/portupgrade.bash"
