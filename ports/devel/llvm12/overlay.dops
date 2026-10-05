@@ -20,7 +20,7 @@ file materialize dragonfly/clang-patch-tools_clang_lib_Basic_Targets_OSTargets.h
 # The Makefile edits are single, uniquely-anchored lines, so express
 # them rather than carrying a diff: no context to drift.
 text line-remove file Makefile exact "\t${LN} -s ld.lld ${STAGEDIR}${LLVM_PREFIX}/bin/ld"
-text line-remove file Makefile exact "TEST_CMD=\t'(cd ${WRKSRC}/test; ${SETENV} ${MAKE_ENV} LD_LIBRARY_PATH=${WRKSRC}/Release/lib ${MAKE_CMD} check-local-lit)'"
+mk unset TEST_CMD
 # pkg-plist edits are pure line deletions: express them directly so
 # there is no context to drift, and a line that vanishes upstream
 # fails loudly instead of rejecting a hunk.
@@ -36,8 +36,4 @@ text line-remove file pkg-plist exact "%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld"
 # =======================================================================
 target @2026Q3
 
-# Anchored on the whole GOLD_BUILD_DEPENDS line because "devel/binutils"
-# alone appears twice, and replace-once refuses an ambiguous match.
-text replace-once file Makefile \
-  from "GOLD_BUILD_DEPENDS=\t${LOCALBASE}/bin/ld.gold:devel/binutils" \
-  to   "GOLD_BUILD_DEPENDS=\t${LOCALBASE}/bin/ld.gold:devel/binutils@native"
+mk set GOLD_BUILD_DEPENDS "${LOCALBASE}/bin/ld.gold:devel/binutils@native"
