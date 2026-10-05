@@ -1,0 +1,7 @@
+port devel/samurai
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+# build.c/os-posix.c pin _POSIX_C_SOURCE 200809L, which hides SA_RESTART/getloadavg on DragonFly; skip it there.
+file materialize dragonfly/patch-build.c -> dragonfly/patch-build.c
+file materialize dragonfly/patch-os-posix.c -> dragonfly/patch-os-posix.c
