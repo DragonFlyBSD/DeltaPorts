@@ -1,6 +1,6 @@
---- distinfo.orig	Mon Mar  3 16:33:08 2025
-+++ distinfo	Mon Mar
-@@ -7,5 +7,5 @@ SHA256 (sbcl-1.2.7-x86-64-freebsd-binary.tar.bz2) = c6
+--- distinfo.orig
++++ distinfo
+@@ -7,7 +7,7 @@
  SIZE (sbcl-1.2.7-x86-64-freebsd-binary.tar.bz2) = 10463348
  SHA256 (sbcl-1.2.7-x86-freebsd-binary.tar.bz2) = cf68bfab780a14964d9593f5b47fa3e174cf43e95ae3e558712d218f1c37bdbe
  SIZE (sbcl-1.2.7-x86-freebsd-binary.tar.bz2) = 10322926
@@ -8,3 +8,5 @@
 -SIZE (sbcl-1.2.7-x86-64-dragonfly-binary.tar.bz2) = 10586301
 +SHA256 (sbcl-1.2.9-x86-64-dragonfly-binary.tar.bz2) = 788d3f51ead4422158357dcdd7591265bbfb3c36b1856122d60636bd43637874
 +SIZE (sbcl-1.2.9-x86-64-dragonfly-binary.tar.bz2) = 7603704
+ SHA256 (sbcl-2.5.7-powerpc64le-freebsd-binary.tar.bz2) = 3dc17885caa57fc10d972729dca6a5a1414a3043d3af406e8907659ac8ea856a
+ SIZE (sbcl-2.5.7-powerpc64le-freebsd-binary.tar.bz2) = 9973076
