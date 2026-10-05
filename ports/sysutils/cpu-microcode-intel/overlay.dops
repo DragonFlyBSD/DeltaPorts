@@ -1,6 +1,25 @@
 port sysutils/cpu-microcode-intel
 type port
-reason "auto-converted from Makefile.DragonFly"
 target @any
-
-mk add PLIST_FILES "\"@dir /boot/firmware\""
+reason "Use packaged firmware for early and late CPU microcode loading"
+mk set MAINTAINER "lileding@gmail.com"
+mk set DISTFILES ""
+mk set ONLY_FOR_ARCHS "x86_64"
+mk set UCODEDIR "${LOCALBASE}/lib/firmware/intel-ucode" on-missing noop
+mk set BUILD_DEPENDS "linux-firmware-nonfree>=20260622:sysutils/firmware@nonfree" on-missing noop
+mk unset USE_GITHUB
+mk unset GH_ACCOUNT
+mk unset GH_PROJECT
+mk add MAKE_ARGS "INTEL_UCODE=intel-ucode"
+mk target set post-extract <<'MK'
+	${CAT} ${UCODEDIR}/* ${UCODEDIR}-with-caveats/* > ${WRKSRC}/intel-ucode.bin
+MK
+mk target set post-extract-SPLIT-on <<'MK'
+	${CP} -p ${FILESDIR}/Makefile ${FILESDIR}/ucode-split.c ${WRKSRC}
+	${LN} -s ${UCODEDIR} ${WRKSRC}/intel-ucode
+MK
+file materialize dragonfly/pkg-message -> pkg-message
+mk target rename post-extract -> pre-configure
+mk target rename post-extract-SPLIT-on -> pre-configure-SPLIT-on
+file materialize dragonfly/LICENSE -> files/LICENSE
+mk add PLIST_DIRS "${FWDIR}"

@@ -1,0 +1,11 @@
+[
+{ type: install
+  message: <<EOM
+The split microcode files support late loading with cpucontrol(8).
+Enable the RC option to depend on sysutils/cpu-microcode-rc.
+
+The combined image is installed in /boot/firmware/intel-ucode.bin.
+Early Intel microcode loading is not yet supported by the DragonFly kernel.
+EOM
+}
+]
