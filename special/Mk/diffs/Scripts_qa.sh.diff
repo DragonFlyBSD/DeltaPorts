@@ -29,6 +29,27 @@
  	fi
  
  	return ${rc}
+@@ -123,7 +133,7 @@
+ 	# ${STAGEDIR} too, hence the cd ${STAGEDIR} before the whole pipeline.
+ 	#
+ 	# readelf prints "File:" headers only when given two or more operands,
+-	# hence the trailing ld-elf.so.1.
++	# hence the trailing ld-elf.so.2 (DragonFly's rtld).
+ 
+ 	[ "${PKGBASE}" = "pkg" -o "${PKGBASE}" = "pkg-devel" ] && return
+ 
+@@ -147,9 +157,9 @@
+ 	done <<-EOF
+ 	$(cd ${STAGEDIR} && list_stagedir_elfs | \
+ 		file -F $'\1' -f - | \
+-		grep -a 'ELF.*FreeBSD.*dynamically linked' | \
++		grep -a 'ELF.*SYSV.*dynamically linked' | \
+ 		cut -f 1 -d $'\1' | \
+-		{ tr '\n' '\000'; printf '%s\000' /libexec/ld-elf.so.1; } | \
++		{ tr '\n' '\000'; printf '%s\000' /libexec/ld-elf.so.2; } | \
+ 		xargs -0 readelf -d)
+ 	EOF
+ 
 @@ -219,6 +229,11 @@
  	$(find ${TMPPLIST} ${STAGEDIR} -type f -exec grep -l "${STAGEDIR}" {} +)
  	EOF
