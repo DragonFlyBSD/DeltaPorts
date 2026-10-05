@@ -1,6 +1,0 @@
-port math/slgrace
-type port
-reason "unset PORTDOCS to skip documentation build"
-target @any
-
-mk unset PORTDOCS on-missing noop
