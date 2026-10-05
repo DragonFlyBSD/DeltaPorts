@@ -1,0 +1,7 @@
+port devel/xxhash
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+# Upstream defaults MANDIR to $(PREFIX)/man/man1 on DragonFly but
+# pkg-plist expects share/man/man1: force the share path.
+mk add MAKE_ARGS "MANDIR=${PREFIX}/share/man/man1"
