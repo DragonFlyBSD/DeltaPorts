@@ -1,6 +1,18 @@
 port cad/ldraw
 type port
-reason "add models/ dir copy to do-install target"
+reason "install the models/ directory that upstream's do-install leaves out"
 target @any
 
-patch apply diffs/Makefile.diff
+# Upstream stopped installing ldraw/models/ in the 20181208 update
+# (45b2d115f454); DragonFly put it back (7ba49c733a1) for cad/brickutils,
+# whose RUN_DEPENDS was share/ldraw/models/car.dat.
+#
+# One recipe line serves every build line. complete.zip unpacks to
+# ${WRKDIR}/ldraw on both 20220211 (@2026Q3) and 20260831 (@main), but
+# only @main sets WRKSRC there. DATADIR is ${PREFIX}/share/ldraw on both.
+# Appending a line, rather than editing the copy list, is what fits both
+# do-install recipes: 20260831 collapsed 20220211's per-directory copies
+# into one COPYTREE_SHARE.
+mk target append do-install <<'MK'
+	cd ${WRKDIR}/ldraw && ${COPYTREE_SHARE} models ${STAGEDIR}${DATADIR}
+MK
