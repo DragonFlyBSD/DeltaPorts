@@ -1,14 +1,14 @@
---- Makefile.orig	Fri Feb 28 12:01:40 2025
-+++ Makefile	Fri Feb
-@@ -2,6 +2,7 @@ PORTNAME=	fpc
- PORTVERSION=	3.2.3
+--- Makefile.orig	2026-10-05 00:00:00 UTC
++++ Makefile
+@@ -3,6 +3,7 @@
+ PORTREVISION=	2
  CATEGORIES=	lang
  MASTER_SITES=	http://leaf.dragonflybsd.org/~marino/dports-src/:DragonFlybootstrap \
 +		http://avalon.dragonflybsd.org/misc/distfiles/freepascal/:DragonFlybootstrap \
  		LOCAL/acm/freepascal/:bootstrap \
  		LOCAL/acm/freepascal/:man
  DIST_SUBDIR=	freepascal
-@@ -12,7 +13,7 @@ WWW=		https://www.freepascal.org/
+@@ -13,7 +14,7 @@
  
  CONFLICTS=	fpc-devel
  
@@ -17,7 +17,7 @@
  
  ONLY_FOR_ARCHS=	amd64 i386
  
-@@ -37,7 +38,7 @@ FPC_ARCH=	i386
+@@ -39,7 +40,7 @@
  #OPT=		"-dFPC_USE_LIBC"
  PLIST_SUB+=	FPC_I386="" \
  		FPC_AMD64="@comment "
@@ -26,7 +26,7 @@
  PPNAME=		ppcx64
  FPC_ARCH=	x86_64
  #OPT=		"-dFPC_USE_LIBC"
-@@ -111,52 +112,86 @@ post-patch:
+@@ -113,52 +114,86 @@
  		${WRKDIR}/${FPCSRCDIR}/packages/fpmkunit/src/fpmkunit.pp
  
  # enable units
@@ -128,9 +128,9 @@
  do-build:
  # build fpc compiler
  	@${ECHO_MSG} "##### STARTING COMPILER #####"
- 	(cd ${WRKDIR}/${FPCSRCDIR}/compiler && ${SETENV} ${MAKE_ENV} \
--		${MAKE_CMD} cycle ${MAKE_ARGS} ${BOOTPPC})
-+		LDVER=ld.bfd ${MAKE_CMD} cycle ${MAKE_ARGS} ${BOOTPPC})
+ 	(cd ${WRKDIR}/${FPCSRCDIR}/compiler && ${SETENVI} ${WRK_ENV}  \
+-		${MAKE_ENV} ${MAKE_CMD} cycle ${MAKE_ARGS} ${BOOTPPC})
++		${MAKE_ENV} LDVER=ld.bfd ${MAKE_CMD} cycle ${MAKE_ARGS} ${BOOTPPC})
  	@${ECHO_MSG} "##### COMPLETE COMPILER #####"
  
  # build units
