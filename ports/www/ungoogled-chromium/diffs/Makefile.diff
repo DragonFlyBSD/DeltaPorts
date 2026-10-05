@@ -1,6 +1,6 @@
---- Makefile.orig	Mon Mar 10 21:48:32 2025
-+++ Makefile	Mon Mar
-@@ -113,8 +113,8 @@ GN_ARGS+=	enable_widevine=true \
+--- Makefile.orig	2026-10-05 00:00:00 UTC
++++ Makefile
+@@ -116,8 +116,8 @@
  		toolkit_views=true \
  		use_allocator_shim=false \
  		use_aura=true \
@@ -11,7 +11,7 @@
  		use_lld=true \
  		use_partition_alloc=true \
  		use_partition_alloc_as_malloc=false \
-@@ -257,7 +257,7 @@ BINARY_ALIAS+=		cpp=${LOCALBASE}/bin/clang-cpp${LLVM_D
+@@ -260,7 +260,7 @@
  .if ${ARCH} == aarch64
  PLIST_SUB+=	NOT_AARCH64="@comment "
  FFMPEG_TARGET=	arm64
@@ -20,7 +20,7 @@
  BUILD_DEPENDS+=	nasm:devel/nasm
  PLIST_SUB+=	NOT_AARCH64=""
  FFMPEG_TARGET=	x64
-@@ -267,8 +267,8 @@ PLIST_SUB+=	NOT_AARCH64=""
+@@ -270,8 +270,8 @@
  FFMPEG_TARGET=	ia32
  .endif
  
@@ -31,7 +31,7 @@
  
  # Allow relocations against read-only segments (override lld default)
  LDFLAGS_i386=	-Wl,-znotext
-@@ -313,7 +313,7 @@ pre-configure:
+@@ -319,7 +319,7 @@
  		libusb libwebp libxml libxslt openh264 opus || ${FALSE}
  	# Chromium uses an unreleased version of FFmpeg, so configure it
  	cd ${WRKSRC}/media/ffmpeg && \
@@ -40,7 +40,7 @@
  		--config-only --branding=${FFMPEG_BRAND}
  	cd ${FFMPEG_BDIR} && ${GMAKE} ffversion.h
  	${MKDIR} ${FFMPEG_CDIR}
-@@ -327,20 +327,21 @@ pre-configure:
+@@ -335,14 +335,15 @@
  do-configure:
  	# GN generator bootstrapping and generating ninja files
  	cd ${WRKSRC} && ${SETENV} ${CONFIGURE_ENV} CC=${CC} CXX=${CXX} LD=${CXX} \
@@ -57,6 +57,12 @@
 -	${LN} -sf ${LOCALBASE}/bin/node ${WRKSRC}/third_party/node/freebsd/node-freebsd/bin/node
 +	@${MKDIR} ${WRKSRC}/third_party/node/${OPSYS:tl}/node-${OPSYS:tl}/bin
 +	${LN} -sf ${LOCALBASE}/bin/node ${WRKSRC}/third_party/node/${OPSYS:tl}/node-${OPSYS:tl}/bin/node
+ 
+ 	# Setup rustc dependency
+ 	@${MKDIR} ${WRKSRC}/third_party/rust-toolchain/bin
+@@ -352,11 +353,11 @@
+ 	@${MKDIR} ${WRKSRC}/third_party/gperf/cipd/bin
+ 	${LN} -sf ${LOCALBASE}/bin/gperf ${WRKSRC}/third_party/gperf/cipd/bin/gperf
  
 -	# Setup buildtools/freebsd
 -	@${MKDIR} ${WRKSRC}/buildtools/freebsd
