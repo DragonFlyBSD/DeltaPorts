@@ -1,0 +1,29 @@
+Firmware images for devices whose drivers were derived from Linux.
+
+The free flavor is the Debian firmware-free subset and is packaged as
+linux-firmware.  The nonfree flavor is packaged as linux-firmware-nonfree;
+it contains the remaining linux-firmware images plus Intel CPU microcode and
+depends on the free flavor.
+
+Both flavors install plain files under ${PREFIX}/lib/firmware rather than
+kernel modules.  firmware(9) searches that directory before it tries a
+module of the same name, so drivers can use the Linux-firmware paths without
+rebuilding the kernel.
+
+The nonfree package also provides the raw Intel microcode files consumed by
+sysutils/cpu-microcode-intel.  That port creates the early-boot blob in
+/boot/firmware; the AMD equivalent is handled by
+sysutils/cpu-microcode-amd.
+
+The upstream linux-firmware project requires a licensing attestation for
+firmware submitted to the collection.  Some non-free entries have vendor
+EULAs, binary-only terms, or hardware-specific use restrictions; they remain
+in the nonfree flavor and their WHENCE/LICENSES terms are installed with the
+package.  Firmware without a redistribution grant is not included in the
+upstream collection and is not packaged here.
+
+The collection covers graphics, wireless, Bluetooth, sound, storage and
+network devices.  Only images a driver actually requests are read into
+kernel memory.
+
+WWW: https://gitlab.com/kernel-firmware/linux-firmware
