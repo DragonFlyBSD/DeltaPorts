@@ -1,0 +1,23 @@
+port devel/libccid
+type port
+reason "driver bundle lives in Contents/DragonFly, not Contents/FreeBSD"
+target @any
+
+# CCID's meson.build installs the driver into
+# ifd-ccid.bundle/Contents/<uname>/, and pcscd (devel/pcsc-lite) loads it
+# from Contents/<PCSC_ARCH>/ with PCSC_ARCH also taken from uname. On
+# DragonFly both say DragonFly, so upstream's FreeBSD plist entries name
+# files that are never installed.
+text replace-once file pkg-plist \
+     from "lib/pcsc/drivers/ifd-ccid.bundle/Contents/FreeBSD/libccid.so" \
+     to   "lib/pcsc/drivers/ifd-ccid.bundle/Contents/DragonFly/libccid.so"
+
+# The static archive lands in the same directory. Upstream lists it since
+# 1.8.4 (849610b8c0cb, MESON_ARGS=--default-library=both); 1.8.2 on
+# @2026Q3 builds the shared library only and has no such line (checked
+# 2026-10-05), hence noop rather than a @main block: any line that carries
+# the entry needs the same rename.
+text replace-once file pkg-plist \
+     from "lib/pcsc/drivers/ifd-ccid.bundle/Contents/FreeBSD/libccid.a" \
+     to   "lib/pcsc/drivers/ifd-ccid.bundle/Contents/DragonFly/libccid.a" \
+     on-missing noop
