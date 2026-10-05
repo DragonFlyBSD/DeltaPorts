@@ -1,10 +1,30 @@
 port devel/mongo-c-driver
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# =======================================================================
+# Independent of the mongo-c-driver version: patch-CMakeLists.txt applies
+# to both 1.30.8 and 2.3.3.
+# =======================================================================
 target @any
 
 mk add CFLAGS "-DZ_HAVE_UNISTD_H"
 file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
-file materialize dragonfly/patch-src_libmongoc_src_mongoc_mongoc-counters-private.h -> dragonfly/patch-src_libmongoc_src_mongoc_mongoc-counters-private.h
+
+# =======================================================================
+# @2026Q3: mongo-c-driver 1.30.8, HTML docs built with Sphinx dirhtml.
+# The two plist lines are dirhtml leftovers (the api.html redirect stub
+# and the empty html/index dir) that the DragonFly build does not
+# install. The counters patch adds <sys/sched.h> for sched_getcpu();
+# 1.30.8 already includes <sched.h>, a link to <sys/sched.h> on
+# DragonFly, so it is redundant here too but still applies; kept as is.
+# @main (2.3.3) needs none of this: it builds docs with -b html, so
+# api.html is the real page and html/index is gone from the plist
+# upstream; the counters patch no longer applies to 2.3.3, whose header
+# includes <sched.h> as well.
+# =======================================================================
+target @2026Q3
+
+file materialize dragonfly/@2026Q3/patch-src_libmongoc_src_mongoc_mongoc-counters-private.h -> dragonfly/patch-src_libmongoc_src_mongoc_mongoc-counters-private.h
 text line-remove file pkg-plist exact "%%PORTDOCS%%%%DOCSDIR%%/mongo-c-driver/html/api.html"
 text line-remove file pkg-plist exact "%%PORTDOCS%%@dir %%DOCSDIR%%/mongo-c-driver/html/index"
