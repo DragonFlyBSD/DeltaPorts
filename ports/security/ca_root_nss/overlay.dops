@@ -1,7 +1,18 @@
 port security/ca_root_nss
 type port
-reason "remove certctl rehash postexec/postunexec from pkg-plist"
+reason "DragonFly has no certctl(8): make the pkg scripts' certctl rehash a no-op"
 target @any
 
-text line-remove file pkg-plist exact "@postexec certctl rehash" on-missing noop
-text line-remove file pkg-plist exact "@postunexec certctl rehash" on-missing noop
+# files/pkg-install.in and files/pkg-deinstall.in run
+# "%%CERTCTL_CMD%% ${CERTCTL_ARGS} rehash" after install and deinstall, and
+# DragonFly base has no certctl. Upstream made the command overridable for
+# this and names ":" as the no-op value (freebsd-ports decf02f29df2). The
+# cert-sync hook in pkg-install stays.
+#
+# A token remove and add rather than mk set: mk set inserts the variable
+# when it is absent, so it could never fail if upstream dropped or renamed
+# CERTCTL_CMD, while mk remove fails naming the token. Both forms turn
+# upstream's ?= into =, which matters only to a make.conf that sets
+# CERTCTL_CMD.
+mk remove CERTCTL_CMD /usr/sbin/certctl
+mk add CERTCTL_CMD :
