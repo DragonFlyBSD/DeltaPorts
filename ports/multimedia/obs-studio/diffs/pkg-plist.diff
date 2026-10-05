@@ -1,14 +1,14 @@
---- pkg-plist.orig	Tue Apr  1 22:22:13 2025
-+++ pkg-plist	Tue Apr
-@@ -129,7 +129,6 @@ lib/obs-plugins/linux-capture.so
+--- pkg-plist.orig
++++ pkg-plist
+@@ -112,7 +112,6 @@
  %%JACK%%lib/obs-plugins/linux-jack.so
  %%PIPEWIRE%%lib/obs-plugins/linux-pipewire.so
  %%PULSEAUDIO%%lib/obs-plugins/linux-pulseaudio.so
 -lib/obs-plugins/linux-v4l2.so
  lib/obs-plugins/obs-ffmpeg.so
  lib/obs-plugins/obs-filters.so
- lib/obs-plugins/obs-outputs.so
-@@ -629,70 +628,6 @@ share/obs/obs-plugins/linux-capture/locale/zh-TW.ini
+ %%NVENC%%lib/obs-plugins/obs-nvenc.so
+@@ -543,72 +542,6 @@
  %%PULSEAUDIO%%share/obs/obs-plugins/linux-pulseaudio/locale/vi-VN.ini
  %%PULSEAUDIO%%share/obs/obs-plugins/linux-pulseaudio/locale/zh-CN.ini
  %%PULSEAUDIO%%share/obs/obs-plugins/linux-pulseaudio/locale/zh-TW.ini
@@ -48,6 +48,7 @@
 -share/obs/obs-plugins/linux-v4l2/locale/kab-KAB.ini
 -share/obs/obs-plugins/linux-v4l2/locale/kmr-TR.ini
 -share/obs/obs-plugins/linux-v4l2/locale/ko-KR.ini
+-share/obs/obs-plugins/linux-v4l2/locale/lo-LA.ini
 -share/obs/obs-plugins/linux-v4l2/locale/ms-MY.ini
 -share/obs/obs-plugins/linux-v4l2/locale/nb-NO.ini
 -share/obs/obs-plugins/linux-v4l2/locale/nl-NL.ini
@@ -61,6 +62,7 @@
 -share/obs/obs-plugins/linux-v4l2/locale/si-LK.ini
 -share/obs/obs-plugins/linux-v4l2/locale/sk-SK.ini
 -share/obs/obs-plugins/linux-v4l2/locale/sl-SI.ini
+-share/obs/obs-plugins/linux-v4l2/locale/sq-AL.ini
 -share/obs/obs-plugins/linux-v4l2/locale/sr-CS.ini
 -share/obs/obs-plugins/linux-v4l2/locale/sr-SP.ini
 -share/obs/obs-plugins/linux-v4l2/locale/sv-SE.ini
@@ -78,4 +80,4 @@
 -share/obs/obs-plugins/linux-v4l2/locale/zh-TW.ini
  share/obs/obs-plugins/obs-ffmpeg/locale/af-ZA.ini
  share/obs/obs-plugins/obs-ffmpeg/locale/ar-SA.ini
- share/obs/obs-plugins/obs-ffmpeg/locale/ba-RU.ini
+ share/obs/obs-plugins/obs-ffmpeg/locale/az-AZ.ini
