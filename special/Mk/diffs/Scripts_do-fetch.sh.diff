@@ -31,10 +31,10 @@
  . $dp_SITES_FILE
  
  # Read the list of files to fetch from stdin, one per line, instead of
-@@ -154,7 +178,8 @@
+@@ -180,7 +204,8 @@
  		case ${dp_TARGET} in
  			do-fetch|makesum)
- 				${dp_ECHO_MSG} "=> Attempting to fetch ${site}${file}"
+ 				${dp_ECHO_MSG} "=> Attempting to fetch ${url}"
 -				if env -S "${dp_FETCH_ENV}" ${_fetch_cmd}; then
 +# not				if env -S "${dp_FETCH_ENV}" ${_fetch_cmd}; then
 +				if /bin/sh "${dp_SCRIPTSDIR}/not_posix_env.sh" "${dp_FETCH_ENV}" ${_fetch_cmd}; then
