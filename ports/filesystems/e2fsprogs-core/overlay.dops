@@ -5,7 +5,9 @@ target @any
 
 mk add CFLAGS -D__BSD_VISIBLE
 
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSMALLTESTS} NOTESTS"
+mk remove OPTIONS_DEFAULT "SMALLTESTS" on-missing noop
+mk remove OPTIONS_DEFAULT "ALLTESTS" on-missing noop
+mk add OPTIONS_DEFAULT "NOTESTS"
 
 mk add USES "localbase:ldargs"
 
@@ -18,7 +20,7 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/e2fsck/Makefile.in
 MK
 
-patch apply diffs/Makefile.diff
+text replace-once file Makefile from "${_staticlibs} /usr/lib/libexecinfo.a /usr/lib/libelf.a" to "${_staticlibs} /usr/lib/libexecinfo.a"
 
 file materialize dragonfly/patch-lib_ext2fs_getsize.c -> dragonfly/patch-lib_ext2fs_getsize.c
 file materialize dragonfly/patch-lib_ext2fs_unix__io.c -> dragonfly/patch-lib_ext2fs_unix__io.c
