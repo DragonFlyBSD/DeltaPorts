@@ -1,6 +1,6 @@
---- library/std/src/sys/pal/unix/futex.rs.orig
-+++ library/std/src/sys/pal/unix/futex.rs
-@@ -200,18 +200,46 @@
+--- library/std/src/sys/sync/futex/unix.rs.orig
++++ library/std/src/sys/sync/futex/unix.rs
+@@ -190,17 +190,44 @@
  
  #[cfg(target_os = "dragonfly")]
  pub fn futex_wait(futex: &Atomic<u32>, expected: u32, timeout: Option<Duration>) -> bool {
@@ -9,20 +9,17 @@
 -    // Overflows are rounded up to an infinite timeout.
 -    let timeout_ms =
 -        timeout.and_then(|d| Some(i32::try_from(d.as_millis()).ok()?.max(1))).unwrap_or(0);
--
++    use crate::sys::time::Instant;
++    use crate::sync::atomic::Ordering::Relaxed;
+ 
 -    let r = unsafe {
 -        libc::umtx_sleep(futex as *const Atomic<u32> as *const i32, expected as i32, timeout_ms)
 -    };
--
--    r == 0 || crate::sys::io::errno() != libc::ETIMEDOUT
--}
-+    use crate::sys::time::Instant;
-+    use crate::sync::atomic::Ordering::Relaxed;
-+
 +    // DragonFly umtx_sleep takes a signed timeout in microseconds. A timeout of
 +    // 0 means infinite, and overflows are rounded up to an infinite timeout.
 +    let deadline = timeout.and_then(|d| Instant::now().checked_add_duration(&d));
-+
+ 
+-    r == 0 || crate::sys::io::errno() != libc::ETIMEDOUT
 +    loop {
 +        if futex.load(Relaxed) != expected {
 +            return true;
@@ -54,8 +51,6 @@
 +            _ => return true,
 +        }
 +    }
-+}
-+
+ }
  
  // DragonflyBSD doesn't tell us how many threads are woken up, so this always returns false.
- #[cfg(target_os = "dragonfly")]

@@ -145,7 +145,7 @@ file materialize dragonfly/@2026Q3/patch-src_tools_rust-analyzer_crates_proc-mac
 file materialize dragonfly/@2026Q3/patch-vendor_notify-8.2.0_Cargo.toml -> dragonfly/patch-vendor_notify-8.2.0_Cargo.toml
 
 # =======================================================================
-# @main: rust 1.98.1, bootstrap 1.97.1.
+# @main: rust 1.99.0, bootstrap 1.98.1.
 # =======================================================================
 target @main
 
@@ -153,9 +153,9 @@ target @main
 mk set LLVM_VERSION "22"
 mk set _LLVM_VERSION "22"
 
-mk set BOOTSTRAPS_DATE "1.97.1"
+mk set BOOTSTRAPS_DATE "1.98.1"
 
-# 1.98.1 vendors enough crates that the glob exceeds ARG_MAX.
+# 1.98.1 and later vendor enough crates that the glob exceeds ARG_MAX.
 text replace-once file Makefile \
      from "@${REINPLACE_CMD} 's,\"files\":{[^}]*},\"files\":{},'" \
      to "@${FIND} ${CARGO_VENDOR_DIR} -name .cargo-checksum.json -exec ${REINPLACE_CMD} 's,\"files\":{[^}]*},\"files\":{},'"
@@ -165,36 +165,36 @@ text replace-once file Makefile \
 
 # Same chain as @2026Q3, against this branch's own source SIZE line.
 text line-insert-after file distinfo \
-     anchor "SIZE (rust/rustc-1.98.1-src.tar.xz) = 244440824" \
-     line "SHA256 (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 3ae8e16224118083cd089aa5318a00a0ca57f11d7a58aa4dd782a75394ad1db4"
+     anchor "SIZE (rust/rustc-1.99.0-src.tar.xz) = 265258564" \
+     line "SHA256 (rust/1.98.1/rustc-1.98.1-x86_64-unknown-dragonfly.tar.xz) = a1c6681de742ac9736d8b99e7c52033643eba64eb95c98b9527983dbc53b7ab1"
 text line-insert-after file distinfo \
-     anchor "SHA256 (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 3ae8e16224118083cd089aa5318a00a0ca57f11d7a58aa4dd782a75394ad1db4" \
-     line "SIZE (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 68662392"
+     anchor "SHA256 (rust/1.98.1/rustc-1.98.1-x86_64-unknown-dragonfly.tar.xz) = a1c6681de742ac9736d8b99e7c52033643eba64eb95c98b9527983dbc53b7ab1" \
+     line "SIZE (rust/1.98.1/rustc-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 67429280"
 text line-insert-after file distinfo \
-     anchor "SIZE (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 68662392" \
-     line "SHA256 (rust/1.97.1/rust-std-1.97.1-x86_64-unknown-dragonfly.tar.xz) = f11578b7ec1aa67dc1299cbdcb7c60d3a5dee528085bf322cbc37c6c7efca7bd"
+     anchor "SIZE (rust/1.98.1/rustc-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 67429280" \
+     line "SHA256 (rust/1.98.1/rust-std-1.98.1-x86_64-unknown-dragonfly.tar.xz) = c73df8d1c7f82984888251d7cca5eca1d18e6f5521bad67414cd53756134786a"
 text line-insert-after file distinfo \
-     anchor "SHA256 (rust/1.97.1/rust-std-1.97.1-x86_64-unknown-dragonfly.tar.xz) = f11578b7ec1aa67dc1299cbdcb7c60d3a5dee528085bf322cbc37c6c7efca7bd" \
-     line "SIZE (rust/1.97.1/rust-std-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 24595676"
+     anchor "SHA256 (rust/1.98.1/rust-std-1.98.1-x86_64-unknown-dragonfly.tar.xz) = c73df8d1c7f82984888251d7cca5eca1d18e6f5521bad67414cd53756134786a" \
+     line "SIZE (rust/1.98.1/rust-std-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 25129860"
 text line-insert-after file distinfo \
-     anchor "SIZE (rust/1.97.1/rust-std-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 24595676" \
-     line "SHA256 (rust/1.97.1/cargo-1.97.1-x86_64-unknown-dragonfly.tar.xz) = eaa880eac5c00b16d64c41d92b0b02bd97be4ac95b6c1ecda5cdbee85af53562"
+     anchor "SIZE (rust/1.98.1/rust-std-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 25129860" \
+     line "SHA256 (rust/1.98.1/cargo-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 6acb8356e784a389a48ec6a3f560168c05da996f8a5a6528146397b3d0f004ba"
 text line-insert-after file distinfo \
-     anchor "SHA256 (rust/1.97.1/cargo-1.97.1-x86_64-unknown-dragonfly.tar.xz) = eaa880eac5c00b16d64c41d92b0b02bd97be4ac95b6c1ecda5cdbee85af53562" \
-     line "SIZE (rust/1.97.1/cargo-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 11460860"
+     anchor "SHA256 (rust/1.98.1/cargo-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 6acb8356e784a389a48ec6a3f560168c05da996f8a5a6528146397b3d0f004ba" \
+     line "SIZE (rust/1.98.1/cargo-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 11510100"
 
-# Cut against the 1.98.1 source.
+# Cut against the 1.99.0 source.
 file materialize dragonfly/@main/patch-compiler_rustc_codegen_ssa_src_back_link.rs -> dragonfly/patch-compiler_rustc_codegen_ssa_src_back_link.rs
 file materialize dragonfly/@main/patch-compiler_rustc_codegen_ssa_src_back_linker.rs -> dragonfly/patch-compiler_rustc_codegen_ssa_src_back_linker.rs
 file materialize dragonfly/@main/patch-compiler_rustc_target_src_spec_targets_x86_64_unknown_dragonfly.rs -> dragonfly/patch-compiler_rustc_target_src_spec_targets_x86_64_unknown_dragonfly.rs
 file materialize dragonfly/@main/patch-library_backtrace_src_symbolize_gimli.rs -> dragonfly/patch-library_backtrace_src_symbolize_gimli.rs
 file materialize dragonfly/@main/patch-library_std_src_sys_io_error_unix.rs -> dragonfly/patch-library_std_src_sys_io_error_unix.rs
 file materialize dragonfly/@main/patch-library_std_src_sys_io_mod.rs -> dragonfly/patch-library_std_src_sys_io_mod.rs
-file materialize dragonfly/@main/patch-library_std_src_sys_pal_unix_futex.rs -> dragonfly/patch-library_std_src_sys_pal_unix_futex.rs
 file materialize dragonfly/@main/patch-library_std_src_sys_pal_unix_stack_overflow.rs -> dragonfly/patch-library_std_src_sys_pal_unix_stack_overflow.rs
+file materialize dragonfly/@main/patch-library_std_src_sys_sync_futex_unix.rs -> dragonfly/patch-library_std_src_sys_sync_futex_unix.rs
 file materialize dragonfly/@main/patch-library_std_src_sys_thread_local_key_racy.rs -> dragonfly/patch-library_std_src_sys_thread_local_key_racy.rs
 file materialize dragonfly/@main/patch-library_std_src_sys_thread_local_mod.rs -> dragonfly/patch-library_std_src_sys_thread_local_mod.rs
-file materialize dragonfly/@main/patch-src_bootstrap_src_bin_main.rs -> dragonfly/patch-src_bootstrap_src_bin_main.rs
+file materialize dragonfly/@main/patch-src_bootstrap_src_cli_main.rs -> dragonfly/patch-src_bootstrap_src_cli_main.rs
 file materialize dragonfly/@main/patch-src_bootstrap_src_core_builder_mod.rs -> dragonfly/patch-src_bootstrap_src_core_builder_mod.rs
 file materialize dragonfly/@main/patch-src_llvm-project_llvm_lib_Support_Unix_Path.inc -> dragonfly/patch-src_llvm-project_llvm_lib_Support_Unix_Path.inc
 file materialize dragonfly/@main/patch-vendor_notify-8.2.0_Cargo.toml -> dragonfly/patch-vendor_notify-8.2.0_Cargo.toml

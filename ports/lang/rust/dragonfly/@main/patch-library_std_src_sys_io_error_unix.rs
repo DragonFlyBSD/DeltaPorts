@@ -1,11 +1,14 @@
 --- library/std/src/sys/io/error/unix.rs.orig
 +++ library/std/src/sys/io/error/unix.rs
-@@ -2,10 +2,11 @@
- use crate::io;
+@@ -5,7 +5,6 @@
  
  unsafe extern "C" {
--    #[cfg(not(any(target_os = "dragonfly", target_os = "vxworks", target_os = "rtems")))]
-+    #[cfg(not(any(target_os = "vxworks", target_os = "rtems")))]
+     #[cfg(not(any(
+-        target_os = "dragonfly",
+         target_os = "vxworks",
+         target_os = "rtems",
+         target_os = "wasi"
+@@ -13,6 +12,7 @@
      #[cfg_attr(
          any(
              target_os = "linux",
