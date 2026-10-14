@@ -9,3 +9,4 @@ mk target set dfly-patch <<'MK1'
 MK1
 file materialize dragonfly/patch-src_ConfigureChecks.cmake -> dragonfly/patch-src_ConfigureChecks.cmake
 file materialize dragonfly/patch-src_kpty.cpp -> dragonfly/patch-src_kpty.cpp
+file materialize dragonfly/patch-src_kptydevice.cpp -> dragonfly/patch-src_kptydevice.cpp
