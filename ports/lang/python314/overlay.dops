@@ -2,6 +2,12 @@ port lang/python314
 type port
 reason "DragonFly MACHDEP normalization plus companion DragonFly gaps for python 3.14"
 target @any
+# bmake keeps mtimes in whole seconds. With a warm ccache, python links in the
+# same second _bootstrap_python writes its dummy pybuilddir.txt; bmake calls
+# that up to date, generate-posix-vars never runs, and checksharedmods cannot
+# import _sysconfigdata. gmake compares sub-second mtimes.
+mk add USES "gmake"
+
 # sys.platform decision: normalize MACHDEP dragonfly6 -> dragonfly in
 # configure/configure.ac, mirroring what upstream did for FreeBSD at 3.14.
 # This stops the platform string changing on every DragonFly major release.

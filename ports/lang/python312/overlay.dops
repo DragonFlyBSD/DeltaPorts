@@ -3,6 +3,12 @@ type port
 reason "DragonFly: OPTIONS_EXCLUDE LTO, plist sysconfigdata/module adjustments"
 target @any
 
+# bmake keeps mtimes in whole seconds. With a warm ccache, python links in the
+# same second _bootstrap_python writes its dummy pybuilddir.txt; bmake calls
+# that up to date, generate-posix-vars never runs, and checksharedmods cannot
+# import _sysconfigdata. gmake compares sub-second mtimes.
+mk add USES "gmake"
+
 # Use bundled expat instead of the system library.
 mk remove LIB_DEPENDS "libexpat.so:textproc/expat2"
 text replace-once file Makefile from "--enable-shared --without-ensurepip --with-system-expat" to "--enable-shared --without-ensurepip"

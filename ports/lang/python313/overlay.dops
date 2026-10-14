@@ -2,6 +2,11 @@ port lang/python313
 type port
 reason "DragonFly: exclude LTO (no llvm-ar for thin-LTO), plist sysconfigdata platform, thread stack + multiprocessing fixes"
 target @any
+# bmake keeps mtimes in whole seconds. With a warm ccache, python links in the
+# same second _bootstrap_python writes its dummy pybuilddir.txt; bmake calls
+# that up to date, generate-posix-vars never runs, and checksharedmods cannot
+# import _sysconfigdata. gmake compares sub-second mtimes.
+mk add USES "gmake"
 mk add OPTIONS_EXCLUDE "LTO"
 text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-1.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-1.pyc"
 text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-2.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-2.pyc"

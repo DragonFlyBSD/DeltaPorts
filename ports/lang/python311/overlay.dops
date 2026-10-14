@@ -3,6 +3,12 @@ type port
 reason "DragonFly: OPTIONS_EXCLUDE LTO, plist sysconfigdata/elementtree adjustments"
 target @any
 
+# bmake keeps mtimes in whole seconds. With a warm ccache, python links in the
+# same second _bootstrap_python writes its dummy pybuilddir.txt; bmake calls
+# that up to date, generate-posix-vars never runs, and checksharedmods cannot
+# import _sysconfigdata. gmake compares sub-second mtimes.
+mk add USES "gmake"
+
 mk add OPTIONS_EXCLUDE "LTO"
 mk add PLIST_SUB "PYTHON_PLATFORM=dragonfly${OSREL:R}"
 
