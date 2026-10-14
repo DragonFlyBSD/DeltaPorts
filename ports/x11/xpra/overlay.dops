@@ -10,4 +10,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/setup.py
 MK1
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-xpra_os__util.py -> dragonfly/patch-xpra_os__util.py

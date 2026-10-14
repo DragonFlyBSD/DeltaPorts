@@ -12,10 +12,3 @@ mk target set dfly-patch <<'MK1'
 			 -e "s@CFLAGS_COMMON=@& -I${LOCALBASE}/include @g" \
 		${WRKSRC}/makefile.inc
 MK1
-file materialize dragonfly/patch-BSDmakefile -> dragonfly/patch-BSDmakefile
-file materialize dragonfly/patch-common.h -> dragonfly/patch-common.h
-file materialize dragonfly/patch-lhnet.c -> dragonfly/patch-lhnet.c
-file materialize dragonfly/patch-makefile -> dragonfly/patch-makefile
-file materialize dragonfly/patch-quakedef.h -> dragonfly/patch-quakedef.h
-file materialize dragonfly/patch-sys__linux.c -> dragonfly/patch-sys__linux.c
-file materialize dragonfly/patch-sys_shared.c -> dragonfly/patch-sys_shared.c

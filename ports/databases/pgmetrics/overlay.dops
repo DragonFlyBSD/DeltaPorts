@@ -1,6 +1,3 @@
 port databases/pgmetrics
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/XFAIL -> dragonfly/XFAIL

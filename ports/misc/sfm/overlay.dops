@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@-D_POSIX_C_SOURCE=200809L -D_XOPEN_SOURCE=700@@g' \
 		${WRKSRC}/config.mk
 MK1
-file materialize dragonfly/patch-sfm.c -> dragonfly/patch-sfm.c

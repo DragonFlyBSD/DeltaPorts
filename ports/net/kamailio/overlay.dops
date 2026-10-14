@@ -16,8 +16,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/src/modules/db_mysql/Makefile
 MK1
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-src_Makefile.defs -> dragonfly/patch-src_Makefile.defs
-file materialize dragonfly/patch-src_modules_tls_tls__bio.c -> dragonfly/patch-src_modules_tls_tls__bio.c
-file materialize dragonfly/patch-src_modules_tls_tls__mod.c -> dragonfly/patch-src_modules_tls_tls__mod.c
-file materialize dragonfly/patch-src_modules_tls_tls__rand.c -> dragonfly/patch-src_modules_tls_tls__rand.c
-file materialize dragonfly/patch-src_modules_tls_tls__rand.h -> dragonfly/patch-src_modules_tls_tls__rand.h

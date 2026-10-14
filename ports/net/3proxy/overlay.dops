@@ -6,5 +6,3 @@ target @any
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@LN \?=@LN =@g' ${WRKSRC}/Makefile.FreeBSD
 MK1
-file materialize dragonfly/patch-src_proxymain.c -> dragonfly/patch-src_proxymain.c
-file materialize dragonfly/patch-src_structures.h -> dragonfly/patch-src_structures.h

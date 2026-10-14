@@ -5,4 +5,3 @@ target @any
 
 mk add USES "alias"
 mk set IGNORE "various problems"
-file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

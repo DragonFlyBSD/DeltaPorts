@@ -5,4 +5,3 @@ target @any
 
 mk eval USES "${USES:S/cargo/cargo:extra/}"
 mk set WITHOUT_LTO "yes"
-file materialize dragonfly/patch-src_target.rs -> dragonfly/patch-src_target.rs

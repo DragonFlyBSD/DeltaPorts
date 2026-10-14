@@ -28,11 +28,3 @@ mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's@gtk+-wayland@&z@g' \
 		${WRKSRC}/toolkit/moz.configure
 MK
-
-file materialize dragonfly/patch-config_system-headers.mozbuild -> dragonfly/patch-config_system-headers.mozbuild
-file materialize dragonfly/patch-dom_webtransport_api_WebTransportDatagramDuplexStream.cpp -> dragonfly/patch-dom_webtransport_api_WebTransportDatagramDuplexStream.cpp
-file materialize dragonfly/patch-gfx_skia_skia_src_base_SkContainers.cpp -> dragonfly/patch-gfx_skia_skia_src_base_SkContainers.cpp
-file materialize dragonfly/patch-ipc_chromium_src_base_shared__memory__posix.cc -> dragonfly/patch-ipc_chromium_src_base_shared__memory__posix.cc
-file materialize dragonfly/patch-js_src_old-configure.in -> dragonfly/patch-js_src_old-configure.in
-file materialize dragonfly/patch-media_libcubeb_src_cubeb__jack.cpp -> dragonfly/patch-media_libcubeb_src_cubeb__jack.cpp
-file materialize dragonfly/patch-third__party_libwebrtc_build_build__config.h -> dragonfly/patch-third__party_libwebrtc_build_build__config.h

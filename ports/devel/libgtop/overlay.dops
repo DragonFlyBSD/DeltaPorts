@@ -9,19 +9,3 @@ mk target set post-patch <<'MK'
 	@${REINPLACE_CMD} -e 's,^        freebsd\*),        freebsd*|dragonfly*),' ${WRKSRC}/configure
 	@${PERL} -0777 -pi -e 's/#include <net\/if_sppp\.h>\n#else\n#include <i4b\/sppp\/if_sppp\.h>/#include <net\/if_sppp.h>\n#elif defined(__DragonFly__)\n#include <net\/sppp\/if_sppp.h>\n#else\n#include <i4b\/sppp\/if_sppp.h>/g' ${WRKSRC}/configure
 MK
-file materialize dragonfly/patch-sysdeps_common_fsusage.c -> dragonfly/patch-sysdeps_common_fsusage.c
-file materialize dragonfly/patch-sysdeps_common_mountlist.c -> dragonfly/patch-sysdeps_common_mountlist.c
-file materialize dragonfly/patch-sysdeps_freebsd_glibtop__machine.h -> dragonfly/patch-sysdeps_freebsd_glibtop__machine.h
-file materialize dragonfly/patch-sysdeps_freebsd_mountlist.c -> dragonfly/patch-sysdeps_freebsd_mountlist.c
-file materialize dragonfly/patch-sysdeps_freebsd_netload.c -> dragonfly/patch-sysdeps_freebsd_netload.c
-file materialize dragonfly/patch-sysdeps_freebsd_open.c -> dragonfly/patch-sysdeps_freebsd_open.c
-file materialize dragonfly/patch-sysdeps_freebsd_procio.c -> dragonfly/patch-sysdeps_freebsd_procio.c
-file materialize dragonfly/patch-sysdeps_freebsd_prockernel.c -> dragonfly/patch-sysdeps_freebsd_prockernel.c
-file materialize dragonfly/patch-sysdeps_freebsd_proclist.c -> dragonfly/patch-sysdeps_freebsd_proclist.c
-file materialize dragonfly/patch-sysdeps_freebsd_procmap.c -> dragonfly/patch-sysdeps_freebsd_procmap.c
-file materialize dragonfly/patch-sysdeps_freebsd_procmem.c -> dragonfly/patch-sysdeps_freebsd_procmem.c
-file materialize dragonfly/patch-sysdeps_freebsd_procsegment.c -> dragonfly/patch-sysdeps_freebsd_procsegment.c
-file materialize dragonfly/patch-sysdeps_freebsd_procsignal.c -> dragonfly/patch-sysdeps_freebsd_procsignal.c
-file materialize dragonfly/patch-sysdeps_freebsd_procstate.c -> dragonfly/patch-sysdeps_freebsd_procstate.c
-file materialize dragonfly/patch-sysdeps_freebsd_proctime.c -> dragonfly/patch-sysdeps_freebsd_proctime.c
-file materialize dragonfly/patch-sysdeps_freebsd_procuid.c -> dragonfly/patch-sysdeps_freebsd_procuid.c

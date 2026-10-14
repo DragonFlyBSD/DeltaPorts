@@ -9,5 +9,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/toonz/sources/common/tsystem/tsystempd.cpp \
 		${WRKSRC}/toonz/sources/toonzfarm/tnzcore_stuff/tsystem.cpp
 MK1
-file materialize dragonfly/patch-toonz_sources_common_tsystem_tsystempd.cpp -> dragonfly/patch-toonz_sources_common_tsystem_tsystempd.cpp
-file materialize dragonfly/patch-toonz_sources_toonzfarm_tfarm_ttcpipserver.cpp -> dragonfly/patch-toonz_sources_toonzfarm_tfarm_ttcpipserver.cpp

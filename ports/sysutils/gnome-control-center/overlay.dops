@@ -22,5 +22,3 @@ text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/click.o
 text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/hum.ogg" on-missing noop
 text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/string.ogg" on-missing noop
 text line-remove file pkg-plist exact "share/sounds/gnome/default/alerts/swing.ogg" on-missing noop
-
-file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build

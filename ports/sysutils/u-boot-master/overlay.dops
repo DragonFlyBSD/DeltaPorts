@@ -21,6 +21,3 @@ mk target set dfly-patch <<'MK'
 MK
 
 patch apply diffs/Makefile.diff
-
-file materialize dragonfly/patch-include_compiler.h -> dragonfly/patch-include_compiler.h
-file materialize dragonfly/patch-lib_bch.c -> dragonfly/patch-lib_bch.c

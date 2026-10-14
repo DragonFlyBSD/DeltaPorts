@@ -8,6 +8,3 @@ mk target set dfly-install <<'MK1'
 	${TOUCH} ${STAGEDIR}${LOCALBASE}/libexec/gnome-builder-clang
 	${TOUCH} ${STAGEDIR}${LOCALBASE}/share/glib-2.0/schemas/org.gnome.builder.clang.gschema.xml
 MK1
-file materialize dragonfly/patch-src_libide_io_ide-pty-intercept.c -> dragonfly/patch-src_libide_io_ide-pty-intercept.c
-file materialize dragonfly/patch-src_plugins_dspy_libdspy_dspy-names-model.c -> dragonfly/patch-src_plugins_dspy_libdspy_dspy-names-model.c
-file materialize dragonfly/patch-src_plugins_git_daemon_gnome-builder-git.c -> dragonfly/patch-src_plugins_git_daemon_gnome-builder-git.c

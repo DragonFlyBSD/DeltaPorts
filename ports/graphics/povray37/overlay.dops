@@ -1,6 +1,3 @@
 port graphics/povray37
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-vfe_unix_platformbase.cpp -> dragonfly/patch-vfe_unix_platformbase.cpp

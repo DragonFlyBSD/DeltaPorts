@@ -17,5 +17,3 @@ text line-remove file pkg-plist exact "etc/xdg/autostart/org.gnome.SettingsDaemo
 text line-remove file pkg-plist exact "etc/xdg/autostart/org.gnome.SettingsDaemon.Sound.desktop" on-missing noop
 text line-remove file pkg-plist exact "libexec/gsd-media-keys" on-missing noop
 text line-remove file pkg-plist exact "libexec/gsd-sound" on-missing noop
-
-file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build

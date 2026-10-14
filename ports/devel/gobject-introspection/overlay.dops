@@ -1,6 +1,3 @@
 port devel/gobject-introspection
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-giscanner_scannerlexer.l -> dragonfly/patch-giscanner_scannerlexer.l

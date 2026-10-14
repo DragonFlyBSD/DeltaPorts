@@ -10,5 +10,3 @@ mk target set dfly-patch <<'MK'
 MK
 
 patch apply diffs/Makefile.diff
-
-file materialize dragonfly/patch-conf.diff -> dragonfly/patch-conf.diff

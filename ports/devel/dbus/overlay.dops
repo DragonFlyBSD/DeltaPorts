@@ -1,7 +1,3 @@
 port devel/dbus
 type port
 reason "Use kernel SCM_CREDS PID/UID on DragonFly; its LOCAL_PEERCRED has no PID. Preserve native dbus-launch compatibility."
-target @any
-
-file materialize dragonfly/patch-dbus_dbus-sysdeps-unix.c -> dragonfly/patch-dbus_dbus-sysdeps-unix.c
-file materialize dragonfly/patch-tools_dbus-launch.c -> dragonfly/patch-tools_dbus-launch.c

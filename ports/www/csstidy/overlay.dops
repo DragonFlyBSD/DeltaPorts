@@ -5,4 +5,3 @@ target @any
 
 mk add USES "dos2unix"
 mk add DOS2UNIX_FILES "misc.cpp"
-file materialize dragonfly/patch-misc.cpp -> dragonfly/patch-misc.cpp

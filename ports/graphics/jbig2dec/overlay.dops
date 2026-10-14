@@ -17,6 +17,3 @@ MK
 mk remove LDFLAGS "-lmd"
 
 mk target remove post-patch on-missing noop
-
-file materialize dragonfly/patch-jbig2dec.c -> dragonfly/patch-jbig2dec.c
-file materialize dragonfly/patch-sha1.c -> dragonfly/patch-sha1.c

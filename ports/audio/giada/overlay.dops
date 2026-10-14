@@ -14,4 +14,3 @@ mk target set dfly-patch <<'MK1'
 			 -e 's@-lpulse-simple -lpulse@@g' \
 		${WRKSRC}/Makefile.am
 MK1
-file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac

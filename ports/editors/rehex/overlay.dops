@@ -8,5 +8,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/wxLua/modules/wxbind/setup/wxluasetup.h
 MK1
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile
-file materialize dragonfly/patch-include_portable__endian.h -> dragonfly/patch-include_portable__endian.h

@@ -11,4 +11,3 @@ mk target set post-extract <<'MK1'
 	    ${WRKSRC}/src/check_run.c \
 	    ${WRKSRC}/src/check.c
 MK1
-file materialize dragonfly/patch-lib_snprintf.c -> dragonfly/patch-lib_snprintf.c

@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e '/"atomic"/d' \
 		${WRKSRC}/rtgui/CMakeLists.txt
 MK1
-file materialize dragonfly/XFAIL -> dragonfly/XFAIL

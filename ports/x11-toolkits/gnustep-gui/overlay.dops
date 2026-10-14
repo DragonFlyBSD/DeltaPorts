@@ -14,5 +14,3 @@ mk target set dfly-install <<'MK'
 	cd ${STAGEDIR}/${PREFIX}/GNUstep/System/Library/Libraries/ && \
 		${LN} -s libgnustep-gui.so libgnustep-gui.so.0
 MK
-
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure

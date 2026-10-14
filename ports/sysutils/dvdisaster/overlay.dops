@@ -4,5 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-cacheprobe.c -> dragonfly/patch-cacheprobe.c
-file materialize dragonfly/patch-rs03-create.c -> dragonfly/patch-rs03-create.c

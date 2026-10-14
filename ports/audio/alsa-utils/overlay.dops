@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@NCURSESLIBSUFFIX="w"@NCURSESLIBSUFFIX=""@g' \
 		${WRKSRC}/configure
 MK1
-file materialize dragonfly/patch-axfer_container.h -> dragonfly/patch-axfer_container.h

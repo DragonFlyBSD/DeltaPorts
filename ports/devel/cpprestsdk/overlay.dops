@@ -5,4 +5,3 @@ target @any
 
 mk eval CXXFLAGS "${CXXFLAGS:N-Wno-c11-extensions}"
 mk add CXXFLAGS "-Wno-error=conversion -Wno-format-truncation -Wno-format-overflow"
-file materialize dragonfly/patch-tests_common_UnitTestpp_config.h -> dragonfly/patch-tests_common_UnitTestpp_config.h

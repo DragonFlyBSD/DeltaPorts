@@ -1,6 +1,3 @@
 port mail/qmail-conf
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-djbdns-1.05_error.h -> dragonfly/patch-djbdns-1.05_error.h

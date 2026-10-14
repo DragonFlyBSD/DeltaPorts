@@ -26,5 +26,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@ max(@ fmaxf(@g' \
 		${WRKSRC}/src/LV2/xputty/dialogs/xfile-dialog.cpp
 MK1
-file materialize dragonfly/patch-src_LV2_DSP_gx__common.h -> dragonfly/patch-src_LV2_DSP_gx__common.h
-file materialize dragonfly/patch-src_gx__head_gui_machine.cpp -> dragonfly/patch-src_gx__head_gui_machine.cpp

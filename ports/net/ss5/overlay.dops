@@ -24,4 +24,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@(void \*)clientSocket@(void *)(uintptr_t)clientSocket@g' \
 		${WRKSRC}/src/SS5Thread.c
 MK1
-file materialize dragonfly/patch-libressl -> dragonfly/patch-libressl

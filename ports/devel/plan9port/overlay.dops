@@ -13,5 +13,4 @@ MK1
 mk target set dfly-configure <<'MK2'
 	${REINPLACE_CMD} '/CC9=/d' ${WRKSRC}/LOCAL.config
 MK2
-file materialize dragonfly/patch-src_cmd_vbackup_mount-BSD.c -> dragonfly/patch-src_cmd_vbackup_mount-BSD.c
 mk set BUILD_DEPENDS "as:devel/binutils@native"

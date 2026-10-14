@@ -10,10 +10,3 @@ mk target set dfly-patch <<'MK'
 MK
 
 patch apply diffs/Makefile.diff
-
-file materialize dragonfly/extra-config.bfd -> dragonfly/extra-config.bfd
-file materialize dragonfly/extra-gas_configure -> dragonfly/extra-gas_configure
-file materialize dragonfly/extra-ld_configure.tgt -> dragonfly/extra-ld_configure.tgt
-file materialize dragonfly/patch-bfd_config.bfd -> dragonfly/patch-bfd_config.bfd
-file materialize dragonfly/patch-bfd_elfxx-x86.c -> dragonfly/patch-bfd_elfxx-x86.c
-file materialize dragonfly/patch-gold_x86__64.cc -> dragonfly/patch-gold_x86__64.cc

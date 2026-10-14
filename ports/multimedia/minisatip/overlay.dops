@@ -4,5 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-src_satipc.c -> dragonfly/patch-src_satipc.c
-file materialize dragonfly/patch-src_socketworks.c -> dragonfly/patch-src_socketworks.c

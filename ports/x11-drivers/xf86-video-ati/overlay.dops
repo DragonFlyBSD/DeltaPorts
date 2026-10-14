@@ -4,5 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add CONFIGURE_ARGS "--enable-glamor"
-file materialize dragonfly/patch-src_radeon__kms.c -> dragonfly/patch-src_radeon__kms.c
-file materialize dragonfly/patch-src_radeon__probe.c -> dragonfly/patch-src_radeon__probe.c

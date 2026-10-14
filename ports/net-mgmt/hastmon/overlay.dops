@@ -1,6 +1,3 @@
 port net-mgmt/hastmon
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-etc_rc.d_Makefile -> dragonfly/patch-etc_rc.d_Makefile

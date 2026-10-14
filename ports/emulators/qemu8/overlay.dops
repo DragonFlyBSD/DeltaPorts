@@ -49,10 +49,3 @@ mk target set dfly-install <<'MK'
 		${STAGEDIR}${PREFIX}/bin/qemu-arm
 .endif
 MK
-
-file materialize dragonfly/patch-block.c -> dragonfly/patch-block.c
-file materialize dragonfly/patch-hw_ppc_mac__oldworld.c -> dragonfly/patch-hw_ppc_mac__oldworld.c
-file materialize dragonfly/patch-hw-ppc_newworld.c -> dragonfly/patch-hw-ppc_newworld.c
-file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
-file materialize dragonfly/patch-util_coroutine-ucontext.c -> dragonfly/patch-util_coroutine-ucontext.c
-file materialize dragonfly/patch-util_meson.build -> dragonfly/patch-util_meson.build

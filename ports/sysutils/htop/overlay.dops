@@ -5,5 +5,3 @@ target @any
 
 mk set MAINTAINER "ddegroot@talon.nl"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLSOF}"
-file materialize dragonfly/patch-dragonflybsd_DragonFlyBSDProcessTable.c -> dragonfly/patch-dragonflybsd_DragonFlyBSDProcessTable.c
-file materialize dragonfly/patch-dragonflybsd_Platform.c -> dragonfly/patch-dragonflybsd_Platform.c

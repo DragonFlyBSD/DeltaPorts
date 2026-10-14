@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@extern int errno;@#include <errno.h>@g'	\
 		${WRKSRC}/src/*.c
 MK1
-file materialize dragonfly/pacth-src_globals.h -> dragonfly/pacth-src_globals.h

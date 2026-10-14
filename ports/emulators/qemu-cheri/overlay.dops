@@ -12,4 +12,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/configure
 MK1
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-include_qemu_bswap.h -> dragonfly/patch-include_qemu_bswap.h

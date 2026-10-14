@@ -10,4 +10,3 @@ mk target set dfly-patch <<'MK1'
 			 -e "/LIB_CURSES/s@-lcurses@\"-L${LOCALBASE}/lib -lncurses\"@g"	\
 		${WRKSRC}/configure
 MK1
-file materialize dragonfly/patch-src_dhcpcd-curses_queue.h -> dragonfly/patch-src_dhcpcd-curses_queue.h

@@ -9,6 +9,3 @@ mk target set dfly-patch <<'MK1'
 		${BUILD_WRKSRC}/build-oculusvr.xml	\
 		${PATCH_WRKSRC}/gluegen/Makefile
 MK1
-file materialize dragonfly/patch-gluegen_make_gluegen-cpptasks-base.xml -> dragonfly/patch-gluegen_make_gluegen-cpptasks-base.xml
-file materialize dragonfly/patch-gluegen_src_java_jogamp_common_os_PlatformPropsImpl.java -> dragonfly/patch-gluegen_src_java_jogamp_common_os_PlatformPropsImpl.java
-file materialize dragonfly/patch-jogl_src_nativewindow_native_JAWT__DrawingSurfaceInfo.c -> dragonfly/patch-jogl_src_nativewindow_native_JAWT__DrawingSurfaceInfo.c

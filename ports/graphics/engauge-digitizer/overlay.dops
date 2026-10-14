@@ -5,4 +5,3 @@ target @any
 
 mk add USES "gmake"
 mk add BUILD_DEPENDS "bash:shells/bash"
-file materialize dragonfly/patch-help_build.bash -> dragonfly/patch-help_build.bash

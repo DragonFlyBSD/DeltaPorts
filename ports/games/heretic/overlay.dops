@@ -9,4 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\<soundcard.h\>@<sys/soundcard.h>@g'	\
 		${WRKSRC}/sndserv/linux.c
 MK1
-file materialize dragonfly/patch-musserv_musserver.h -> dragonfly/patch-musserv_musserver.h

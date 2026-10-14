@@ -12,5 +12,3 @@ mk target set dfly-install <<'MK2'
 	${RM} -fv ${STAGEDIR}${PREFIX}/bin/passenger-install-apache2-module
 	${RM} -fv ${STAGEDIR}${PREFIX}/bin/passenger-install-nginx-module
 MK2
-file materialize dragonfly/patch-src_ruby__supportlib_phusion__passenger_platform__info_openssl.rb -> dragonfly/patch-src_ruby__supportlib_phusion__passenger_platform__info_openssl.rb
-file materialize dragonfly/patch-src_ruby__supportlib_phusion__passenger_platform__info_operating__system.rb -> dragonfly/patch-src_ruby__supportlib_phusion__passenger_platform__info_operating__system.rb

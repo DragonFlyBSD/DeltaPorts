@@ -11,9 +11,3 @@ mk target set dfly-patch <<'MK1'
 			 -e 's@[[:<:]]isnan[[:>:]]@std::isnan@g' \
 			 ${WRKSRC}/src/widgets/pool_browser_parametric.cpp
 MK1
-file materialize dragonfly/patch-src_canvas_canvas.cpp -> dragonfly/patch-src_canvas_canvas.cpp
-file materialize dragonfly/patch-src_canvas_render.cpp -> dragonfly/patch-src_canvas_render.cpp
-file materialize dragonfly/patch-src_canvas_triangle__renderer.cpp -> dragonfly/patch-src_canvas_triangle__renderer.cpp
-file materialize dragonfly/patch-src_core_tools_tool__round__off__vertex.cpp -> dragonfly/patch-src_core_tools_tool__round__off__vertex.cpp
-file materialize dragonfly/patch-src_imp_tuning__window.cpp -> dragonfly/patch-src_imp_tuning__window.cpp
-file materialize dragonfly/patch-src_util_util.cpp -> dragonfly/patch-src_util_util.cpp

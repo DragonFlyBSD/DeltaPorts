@@ -5,5 +5,3 @@ target @any
 
 mk add CXXFLAGS "-fpermissive"
 mk add CXXFLAGS "-Wno-parentheses"
-file materialize dragonfly/patch-src-Makefile -> dragonfly/patch-src-Makefile
-file materialize dragonfly/patch-test_SingletonDll_Makefile -> dragonfly/patch-test_SingletonDll_Makefile

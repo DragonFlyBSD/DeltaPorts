@@ -25,9 +25,6 @@ mk target set dfly-install <<'MK'
 	-${RM} -fv ${STAGEDIR}${PREFIX}/bin/llvm-omp-device-info${LLVM_SUFFIX}
 MK
 
-file materialize dragonfly/clang-patch-tools_clang_lib_Basic_Targets_OSTargets.h -> dragonfly/clang-patch-tools_clang_lib_Basic_Targets_OSTargets.h
-file materialize dragonfly/openmp-patch-openmp_runtime_src_kmp__wrapper__getpid.h -> dragonfly/openmp-patch-openmp_runtime_src_kmp__wrapper__getpid.h
-
 # Both Makefile edits are single, uniquely-anchored lines, so express
 # them rather than carrying a diff: no context to drift. Anchored on the
 # whole GOLD_BUILD_DEPENDS line because "devel/binutils" alone appears

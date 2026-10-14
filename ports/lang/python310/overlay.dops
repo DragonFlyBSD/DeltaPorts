@@ -24,6 +24,3 @@ text replace-once file pkg-plist \
 text replace-once file pkg-plist \
     from "%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_.py" \
     to   "%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_dragonfly%%OSMAJOR%%_.py"
-
-file materialize dragonfly/patch-Modules_ossaudiodev.c -> dragonfly/patch-Modules_ossaudiodev.c
-file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py

@@ -24,5 +24,3 @@ mk target set pre-patch-NAXSI-on <<'MK4'
 	-${REINPLACE_CMD} -e 's@__FreeBSD__@__DragonFly__@g' \
 		${WRKSRC_naxsi}/naxsi_src/naxsi_net.h
 MK4
-file materialize dragonfly/extra-auto_openssl.diff -> dragonfly/extra-auto_openssl.diff
-file materialize dragonfly/extra-njs-cli.diff -> dragonfly/extra-njs-cli.diff

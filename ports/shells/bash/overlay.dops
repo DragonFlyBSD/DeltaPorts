@@ -6,5 +6,3 @@ target @any
 mk add USES ncurses
 mk add MAKE_ARGS "TERMCAP_LIB=-ltinfo"
 patch apply diffs/files_pkg-message.in.diff
-
-file materialize dragonfly/patch-lib_readline_terminal.c -> dragonfly/patch-lib_readline_terminal.c

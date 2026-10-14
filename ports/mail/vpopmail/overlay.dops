@@ -6,4 +6,3 @@ target @any
 mk target set dfly-patch <<'MK1'
 	${ECHO} "#include <unistd.h>" >> ${WRKSRC}/cdb/cdb.h
 MK1
-file materialize dragonfly/patch-seek.h -> dragonfly/patch-seek.h

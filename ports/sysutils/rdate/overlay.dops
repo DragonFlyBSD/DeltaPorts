@@ -5,4 +5,3 @@ target @any
 
 mk eval CFLAGS "${CFLAGS:N-DNO_UTIL:N-D__dead=}"
 mk add CFLAGS "-D__dead=__dead2"
-file materialize dragonfly/patch-rdate.c -> dragonfly/patch-rdate.c

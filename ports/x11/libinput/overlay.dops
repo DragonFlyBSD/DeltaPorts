@@ -1,7 +1,6 @@
 port x11/libinput
 type port
 reason "auto-converted from Makefile.DragonFly"
-target @any
 
 # Formerly declared `mk add USES "alias"` -- a leftover from the auto-conversion.
 # DragonFly's bsd.port.mk has no Mk/Uses/alias.mk, so USES=alias fails
@@ -12,4 +11,4 @@ target @any
 # routes to the BSD compat header on __FreeBSD__.  Treat __DragonFly__ the
 # same so the vendored evdev constants (EV_REL, BUS_*, INPUT_PROP_*, struct
 # input_event) are visible on DragonFly too.
-file materialize dragonfly/patch-include_linux_input.h -> dragonfly/patch-include_linux_input.h
+# dragonfly/patch-include_linux_input.h

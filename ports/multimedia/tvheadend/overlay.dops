@@ -9,5 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@struct uuid@&___@g' \
 		${WRKSRC}/src/uuid.h
 MK1
-file materialize dragonfly/patch-src_udp.c -> dragonfly/patch-src_udp.c
-file materialize dragonfly/patch-sys_socket.h -> dragonfly/patch-sys_socket.h

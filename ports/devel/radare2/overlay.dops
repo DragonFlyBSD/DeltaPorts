@@ -5,4 +5,3 @@ target @any
 
 mk set MAKE_JOBS_UNSAFE "yes"
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-libr_io_Makefile -> dragonfly/patch-libr_io_Makefile

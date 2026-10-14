@@ -5,5 +5,3 @@ target @any
 
 mk add MAKE_ARGS "OSNAME=FreeBSD"
 mk add OPTIONS_DEFAULT "OPENMP"
-file materialize dragonfly/patch-common.h -> dragonfly/patch-common.h
-file materialize dragonfly/patch-ctest.c -> dragonfly/patch-ctest.c

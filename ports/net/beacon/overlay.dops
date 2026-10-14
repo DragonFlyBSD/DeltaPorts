@@ -7,4 +7,3 @@ mk add CFLAGS "-Wno-pointer-sign -Wno-stringop-truncation"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/@HAVE_FREEBSD_TRUE@//' ${WRKSRC}/src/Makefile.in
 MK1
-file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac

@@ -5,4 +5,3 @@ target @any
 
 mk add USES "autoreconf"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NOWFS}"
-file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac

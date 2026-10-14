@@ -4,5 +4,3 @@ reason "disable COLORD option to avoid polkit->spidermonkey->llvm dependency cha
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NCOLORD}"
-
-file materialize dragonfly/patch-gdk_wayland_gdkdevice-wayland.c -> dragonfly/patch-gdk_wayland_gdkdevice-wayland.c

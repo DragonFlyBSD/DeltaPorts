@@ -18,6 +18,3 @@ dfly-patch:
 MK
 
 mk set DFLY_UNMAINTAINED "yes"
-
-file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
-file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

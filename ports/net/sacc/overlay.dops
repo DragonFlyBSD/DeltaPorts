@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@-lcurses@-lncurses@g' \
 		${WRKSRC}/config.mk
 MK1
-file materialize dragonfly/patch-ui__ti.c -> dragonfly/patch-ui__ti.c

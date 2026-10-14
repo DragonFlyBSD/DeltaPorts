@@ -6,4 +6,3 @@ target @any
 mk target set pre-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/freebsd\*/freebsd*|dragonfly*/g' ${WRKSRC}/configure
 MK1
-file materialize dragonfly/patch-srelay.h -> dragonfly/patch-srelay.h

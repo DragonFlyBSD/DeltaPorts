@@ -12,11 +12,3 @@ mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's@ curses@ ncurses@g'	\
 		${WRKSRC}/CMakeLists.txt
 MK
-file materialize dragonfly/patch-bitcode2cpp.py -> dragonfly/patch-bitcode2cpp.py
-file materialize dragonfly/patch-cmake_GenerateBuiltins.cmake -> dragonfly/patch-cmake_GenerateBuiltins.cmake
-file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
-file materialize dragonfly/patch-src_ispc.cpp -> dragonfly/patch-src_ispc.cpp
-file materialize dragonfly/patch-src_ispc.h -> dragonfly/patch-src_ispc.h
-file materialize dragonfly/patch-src_target__enums.cpp -> dragonfly/patch-src_target__enums.cpp
-file materialize dragonfly/patch-src_target__enums.h -> dragonfly/patch-src_target__enums.h
-file materialize dragonfly/patch-src_target__registry.cpp -> dragonfly/patch-src_target__registry.cpp

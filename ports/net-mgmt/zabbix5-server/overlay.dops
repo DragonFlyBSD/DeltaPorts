@@ -10,11 +10,6 @@ mk block set condition "${ZABBIX_BUILD} != java" <<'MK'
 CFLAGS+=        -I${OPENSSLINC}
 LDFLAGS+=       -L${OPENSSLLIB}
 MK
-file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
-file materialize dragonfly/patch-src_libs_zbxsysinfo_dragonfly_proc.c -> dragonfly/patch-src_libs_zbxsysinfo_dragonfly_proc.c
-file materialize dragonfly/patch-src_libs_zbxsysinfo_Makefile.am -> dragonfly/patch-src_libs_zbxsysinfo_Makefile.am
-file materialize dragonfly/patch-src_zabbix__agent_Makefile.am -> dragonfly/patch-src_zabbix__agent_Makefile.am
-file materialize dragonfly/patch-src_zabbix__proxy_Makefile.am -> dragonfly/patch-src_zabbix__proxy_Makefile.am
 patch apply diffs/Makefile.diff
 mk target set pre-patch <<'MK'
 	${CP} -rv ${WRKSRC}/src/libs/zbxsysinfo/freebsd \

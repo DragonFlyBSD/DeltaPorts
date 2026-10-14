@@ -20,5 +20,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@ifdef \(__FreeBSD__\)@if (defined(\1)||defined(__DragonFly__))@g'	\
 		${WRKSRC}/Modules/ThirdParty/VNL/src/vxl/v3p/netlib/libf2c/sysdep1.h0
 MK1
-file materialize dragonfly/patch-Modules_IO_TransformBase_include_itkTransformIOBase.h -> dragonfly/patch-Modules_IO_TransformBase_include_itkTransformIOBase.h
-file materialize dragonfly/patch-Modules_ThirdParty_libLBFGS_src_CMakeLists.txt -> dragonfly/patch-Modules_ThirdParty_libLBFGS_src_CMakeLists.txt

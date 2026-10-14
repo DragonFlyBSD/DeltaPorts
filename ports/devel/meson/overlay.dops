@@ -3,7 +3,6 @@ type port
 reason "Enable coexisting Python flavors; only the default flavor owns the global Polkit action; retain DragonFly CPU detection"
 target @any
 
-file materialize dragonfly/patch-mesonbuild_environment.py -> dragonfly/patch-mesonbuild_environment.py
 mk add USE_PYTHON "allflavors concurrent"
 # Upstream @main already includes bsd.port.pre.mk and has this .if block
 # (2351a5ec9f5b); there the include is a no-op and the block replaces

@@ -6,6 +6,3 @@ target @any
 mk set MAKE_JOBS_UNSAFE "yes"
 mk add USES "gmake"
 mk add CXXFLAGS "-Wno-error=sign-compare"
-file materialize dragonfly/patch-src_phonenumbers_base_memory_singleton.h -> dragonfly/patch-src_phonenumbers_base_memory_singleton.h
-file materialize dragonfly/patch-src_phonenumbers_base_synchronization_lock.h -> dragonfly/patch-src_phonenumbers_base_synchronization_lock.h
-file materialize dragonfly/patch-src_phonenumbers_base_thread__checker.h -> dragonfly/patch-src_phonenumbers_base_thread__checker.h

@@ -23,14 +23,6 @@ MK
 mk set DPMSG "${WRKDIR}/dports-message"
 mk set PKGMESSAGE "${DPMSG}"
 
-file materialize dragonfly/patch-lib_eu-config.h -> dragonfly/patch-lib_eu-config.h
-file materialize dragonfly/patch-libelf_elf.h -> dragonfly/patch-libelf_elf.h
-file materialize dragonfly/patch-src_ar.c -> dragonfly/patch-src_ar.c
-file materialize dragonfly/patch-src_elflint.c -> dragonfly/patch-src_elflint.c
-file materialize dragonfly/patch-src_readelf.c -> dragonfly/patch-src_readelf.c
-file materialize dragonfly/patch-src_string.c -> dragonfly/patch-src_string.c
-file materialize dragonfly/patch-tests_saridx.c -> dragonfly/patch-tests_saridx.c
-
 mk target set dfly-patch <<'MK'
 	@${ECHO} "[" > ${DPMSG}
 	@${ECHO} "{ type: install" >> ${DPMSG}

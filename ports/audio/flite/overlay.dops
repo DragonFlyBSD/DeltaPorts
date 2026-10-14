@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e "/-shared -Wl/s/)$$/ -lm)/g"	\
 		${WRKSRC}/config/common_make_rules
 MK1
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure

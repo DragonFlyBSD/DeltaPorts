@@ -15,4 +15,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@machine/endian.h@sys/endian.h@g' \
 		${WRKSRC}/configure
 MK1
-file materialize dragonfly/patch-camlibs_st2205_st2205.c -> dragonfly/patch-camlibs_st2205_st2205.c

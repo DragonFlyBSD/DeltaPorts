@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 		${REINPLACE_CMD} -e 's@__DragonFly__@&z@g' \
 		${WRKSRC}/usertable.cpp
 MK1
-file materialize dragonfly/patch-usertable.cpp -> dragonfly/patch-usertable.cpp

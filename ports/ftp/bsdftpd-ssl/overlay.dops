@@ -5,4 +5,3 @@ target @any
 
 mk add USES "ncurses"
 mk add CFLAGS "-DSMALL"
-file materialize dragonfly/patch-ftpd_logwtmp.c -> dragonfly/patch-ftpd_logwtmp.c

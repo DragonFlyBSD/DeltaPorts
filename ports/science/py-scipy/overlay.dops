@@ -6,5 +6,3 @@ target @any
 mk add BUILD_DEPENDS "libstdthreads>0:misc/libstdthreads"
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 mk set PEP517_BUILD_CONFIG_SETTING "-Csetup-args=-Duse-system-libraries=auto"
-file materialize dragonfly/patch-scipy_spatial___ckdtree.pyx -> dragonfly/patch-scipy_spatial___ckdtree.pyx
-file materialize dragonfly/patch-scipy_special_wright.cc -> dragonfly/patch-scipy_special_wright.cc

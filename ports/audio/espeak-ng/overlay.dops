@@ -3,7 +3,6 @@ type port
 reason "Disable optional ronn-generated manpages deterministically, independent of installed build-host tools; retain documentation and avoid re-stripping the upstream-stripped executable"
 target @any
 
-file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
 text line-remove file pkg-plist exact "share/man/man1/espeak-ng.1.gz"
 text line-remove file pkg-plist exact "share/man/man1/espeak.1.gz"
 text line-remove file pkg-plist exact "share/man/man1/speak-ng.1.gz"

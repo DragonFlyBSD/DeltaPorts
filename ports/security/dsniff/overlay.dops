@@ -30,11 +30,3 @@ mk target set dfly-patch <<'MK'
 MK
 
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-
-file materialize dragonfly/patch-arp.c -> dragonfly/patch-arp.c
-file materialize dragonfly/patch-buf.c -> dragonfly/patch-buf.c
-file materialize dragonfly/patch-decode__aim.c -> dragonfly/patch-decode__aim.c
-file materialize dragonfly/patch-decode__pptp.c -> dragonfly/patch-decode__pptp.c
-file materialize dragonfly/patch-decode__tds.c -> dragonfly/patch-decode__tds.c
-file materialize dragonfly/patch-decode__vrrp.c -> dragonfly/patch-decode__vrrp.c
-file materialize dragonfly/patch-record.c -> dragonfly/patch-record.c

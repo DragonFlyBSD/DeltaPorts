@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\(OpenBSD | FreeBSD | NetBSD\))@\1 | DragonFly)@g'	\
 		${WRKSRC}/configure
 MK1
-file materialize dragonfly/patch-console_ftp.c -> dragonfly/patch-console_ftp.c

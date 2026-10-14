@@ -41,7 +41,8 @@ mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_VERSION}"
 # Abseil gates LowLevelAlloc/per-thread-sem (needed by libxul's mutex code) on
 # ABSL_HAVE_MMAP, which upstream enables for FreeBSD but not DragonFly; both
 # have POSIX mmap, so extend the condition.
-file materialize dragonfly/patch-third__party_abseil-cpp_absl_base_config.h -> dragonfly/patch-third__party_abseil-cpp_absl_base_config.h
+# dragonfly/patch-third__party_abseil-cpp_absl_base_config.h
+
 # DragonFly's target triple has kernel "DragonFly", so -fvisibility=hidden is
 # never applied upstream (visibility_flags only lists Darwin/FreeBSD/OpenBSD
 # kernels) while dport libc++19 still marks basic_string append/insert/push_back
@@ -53,7 +54,8 @@ file materialize dragonfly/patch-third__party_abseil-cpp_absl_base_config.h -> d
 # TU-local definitions are hidden-visibility too and resolve link-side (same
 # approach as the dport libcxx19 __DragonFly__ defines; link-only change, no
 # header override possible since libc++ __config defines the macro unconditionally).
-file materialize dragonfly/patch-build_moz.configure_toolchain.configure -> dragonfly/patch-build_moz.configure_toolchain.configure
+# dragonfly/patch-build_moz.configure_toolchain.configure
+
 # Host build-script binaries (e.g. webrender's build-script-build) link the
 # default libstdc++: cc-rs emits `rustc-link-lib=stdc++` when CXXSTDLIB is
 # unset, the cargo-linker wrapper then links with clang++ without
@@ -85,43 +87,51 @@ mk add CONFIGURE_ENV "BINDGEN_CFLAGS=\"-I${LOCALBASE}/include -stdlib=libc++ -cx
 # both valid on DragonFly. (The XP_FREEBSD profiler thread-id branches need
 # <sys/thr.h>/thr_self, which DragonFly lacks; separate patches below give
 # those two files a pthread_self fallback.)
-file materialize dragonfly/patch-build_moz.configure_init.configure -> dragonfly/patch-build_moz.configure_init.configure
+# dragonfly/patch-build_moz.configure_init.configure
+
 # DragonFly has no <sys/thr.h>/thr_self, so inside the XP_FREEBSD profiler
 # thread-id branches (enabled here by the XP_FREEBSD define above) DragonFly
 # identifies the thread by its pthread pointer, which fits the FreeBSD `long`
 # ThreadIdType.
-file materialize dragonfly/patch-mozglue_baseprofiler_core_ProfilerUtils.cpp -> dragonfly/patch-mozglue_baseprofiler_core_ProfilerUtils.cpp
-file materialize dragonfly/patch-tools_profiler_core_ProfilerUtils.cpp -> dragonfly/patch-tools_profiler_core_ProfilerUtils.cpp
+# dragonfly/patch-mozglue_baseprofiler_core_ProfilerUtils.cpp
+# dragonfly/patch-tools_profiler_core_ProfilerUtils.cpp
+
 # DragonFly's <sys/mman.h> has no MAP_NORESERVE (same as FreeBSD).
-file materialize dragonfly/patch-ipc_glue_SharedMemoryPlatform__posix.cpp -> dragonfly/patch-ipc_glue_SharedMemoryPlatform__posix.cpp
+# dragonfly/patch-ipc_glue_SharedMemoryPlatform__posix.cpp
+
 # Abseil GetTID() fallback static_casts pthread_t (a pointer on DragonFly) to
 # pid_t; DragonFly provides pthread_getthreadid_np() like FreeBSD (same fix as
 # www/chromium, www/qt6-webengine, www/node*).
-file materialize dragonfly/patch-third__party_abseil-cpp_absl_base_internal_sysinfo.cc -> dragonfly/patch-third__party_abseil-cpp_absl_base_internal_sysinfo.cc
+# dragonfly/patch-third__party_abseil-cpp_absl_base_internal_sysinfo.cc
+
 # Abseil vdso_support.cc includes bare <syscall.h> (Linux-only); DragonFly has
 # no VDSO, so disable ABSL_HAVE_ELF_MEM_IMAGE there like www/chromium does.
-file materialize dragonfly/patch-third__party_abseil-cpp_absl_debugging_internal_elf__mem__image.h -> dragonfly/patch-third__party_abseil-cpp_absl_debugging_internal_elf__mem__image.h
+# dragonfly/patch-third__party_abseil-cpp_absl_debugging_internal_elf__mem__image.h
+
 # _POSIX_C_SOURCE=202405L hides isascii() (needed by libc++ <istream>) on
 # DragonFly just as on FreeBSD; files/patch-toolkit_compontents_protobuf_*
 # only exempts __FreeBSD__.
-file materialize dragonfly/patch-toolkit_components_protobuf_src_google_protobuf_io_zero__copy__stream__impl.cc -> dragonfly/patch-toolkit_components_protobuf_src_google_protobuf_io_zero__copy__stream__impl.cc
+# dragonfly/patch-toolkit_components_protobuf_src_google_protobuf_io_zero__copy__stream__impl.cc
+
 # DragonFly lacks the Linux syscall shims (sys_mmap/sys_munmap) and the sized
 # Elf32_Nhdr/Elf64_Nhdr aliases that the Breakpad profiler TU (elfutils.cc via
 # elfutils.h/memory_allocator.h) expects: extend the existing __FreeBSD__
 # branches to __DragonFly__ and alias the note types to DragonFly's Elf_Note
 # (same layout; mirrors patch-mozglue_baseprofiler_core_shared-libraries-linux.cc).
-file materialize dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_memory__allocator.h -> dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_memory__allocator.h
-file materialize dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_elfutils.h -> dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_elfutils.h
-file materialize dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_elfutils.cc -> dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_elfutils.cc
+# dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_memory__allocator.h
+# dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_elfutils.h
+# dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_elfutils.cc
+
 # Same FreeBSD equivalence for memory_mapped_file.cc: its body uses the LSS
 # sys_* shims and kernel_stat that DragonFly lacks; FreeBSD already stubs
 # Map/Unmap out here, so extend that stub to DragonFly (crashreporter path is
 # compiled only for interface reasons, same as on FreeBSD).
-file materialize dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_memory__mapped__file.cc -> dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_memory__mapped__file.cc
+# dragonfly/patch-toolkit_crashreporter_google-breakpad_src_common_linux_memory__mapped__file.cc
+
 # Same GP_OS_freebsd -> GP_OS_dragonfly widening for the LUL ELF-mapping helper
 # compiled on DragonFly: uses SharedLibraryInfo (already dragonfly-enabled via
 # shared-libraries-linux.cc), otherwise hits #error "Unknown platform".
-file materialize dragonfly/patch-tools_profiler_lul_platform-linux-lul.cpp -> dragonfly/patch-tools_profiler_lul_platform-linux-lul.cpp
+# dragonfly/patch-tools_profiler_lul_platform-linux-lul.cpp
 
 mk set BINARY_ALIAS "clang=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang clang++=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang++ wasm-ld=${LOCALBASE}/llvm${LLVM_VERSION}/bin/wasm-ld"
 
@@ -149,23 +159,3 @@ mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's@gtk+-wayland@&z@g' \
 		${WRKSRC}/toolkit/moz.configure
 MK
-
-file materialize dragonfly/patch-dom_webserial_moz.build -> dragonfly/patch-dom_webserial_moz.build
-file materialize dragonfly/patch-dom_webtransport_api_WebTransportDatagramDuplexStream.cpp -> dragonfly/patch-dom_webtransport_api_WebTransportDatagramDuplexStream.cpp
-file materialize dragonfly/patch-hal_moz.build -> dragonfly/patch-hal_moz.build
-file materialize dragonfly/patch-image_imgFrame.h -> dragonfly/patch-image_imgFrame.h
-file materialize dragonfly/patch-media_libcubeb_src_cubeb__jack.cpp -> dragonfly/patch-media_libcubeb_src_cubeb__jack.cpp
-file materialize dragonfly/patch-mozglue_baseprofiler_core_shared-libraries-linux.cc -> dragonfly/patch-mozglue_baseprofiler_core_shared-libraries-linux.cc
-file materialize dragonfly/patch-mozglue_baseprofiler_moz.build -> dragonfly/patch-mozglue_baseprofiler_moz.build
-file materialize dragonfly/patch-mozglue_baseprofiler_public_ProfilerPlatformMacros.h -> dragonfly/patch-mozglue_baseprofiler_public_ProfilerPlatformMacros.h
-file materialize dragonfly/patch-netwerk_dns_moz.build -> dragonfly/patch-netwerk_dns_moz.build
-file materialize dragonfly/patch-third__party_angle_angle__common__gn_moz.build -> dragonfly/patch-third__party_angle_angle__common__gn_moz.build
-file materialize dragonfly/patch-third__party_angle_angle__program__version__id__gn_moz.build -> dragonfly/patch-third__party_angle_angle__program__version__id__gn_moz.build
-file materialize dragonfly/patch-third__party_rust_mtu_build.rs -> dragonfly/patch-third__party_rust_mtu_build.rs
-file materialize dragonfly/patch-third__party_rust_mtu_src_bsd.rs -> dragonfly/patch-third__party_rust_mtu_src_bsd.rs
-file materialize dragonfly/patch-third__party_rust_mtu_src_lib.rs -> dragonfly/patch-third__party_rust_mtu_src_lib.rs
-file materialize dragonfly/patch-third__party_sqlite3_src_moz.build -> dragonfly/patch-third__party_sqlite3_src_moz.build
-file materialize dragonfly/patch-tools_profiler_lul_LulElfInt.h -> dragonfly/patch-tools_profiler_lul_LulElfInt.h
-file materialize dragonfly/patch-tools_profiler_moz.build -> dragonfly/patch-tools_profiler_moz.build
-file materialize dragonfly/patch-toolkit_library_gen__buildid.py -> dragonfly/patch-toolkit_library_gen__buildid.py
-file materialize dragonfly/patch-toolkit_xre_nsAppRunner.cpp -> dragonfly/patch-toolkit_xre_nsAppRunner.cpp

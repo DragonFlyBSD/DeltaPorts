@@ -9,4 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\(\*freebsd\*\))@\1|*dragonfly*)@g' \
 		${WRKSRC}/configure.ac
 MK1
-file materialize dragonfly/patch-librfxcodec_m4_nasm.m4 -> dragonfly/patch-librfxcodec_m4_nasm.m4

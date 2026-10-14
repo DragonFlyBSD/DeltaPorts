@@ -3,7 +3,6 @@ type port
 reason "add ncurses private lib support; materialize dragonfly patch; fix do-configure"
 target @any
 
-file materialize dragonfly/patch-mixedlist.h -> dragonfly/patch-mixedlist.h
 patch apply diffs/Makefile.diff
 mk block set condition "exists(/usr/lib/priv/libprivate_ncursesw.so)" <<'MK'
 CFLAGS+=	-I/usr/include/priv/ncurses

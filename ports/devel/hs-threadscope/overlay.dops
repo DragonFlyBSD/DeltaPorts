@@ -15,4 +15,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/_cabal_deps/pango-*/pango.cabal
 MK1
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-__thread_in_CAST.hs -> dragonfly/patch-__thread_in_CAST.hs

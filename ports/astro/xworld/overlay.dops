@@ -1,6 +1,3 @@
 port astro/xworld
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-compile__world.c -> dragonfly/patch-compile__world.c

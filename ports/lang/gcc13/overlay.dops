@@ -4,6 +4,3 @@ reason "DragonFly: binutils@native dep fix"
 target @any
 
 patch apply diffs/Makefile.diff
-
-file materialize dragonfly/patch-gcc_configure -> dragonfly/patch-gcc_configure
-file materialize dragonfly/patch-gcc_defaults.h -> dragonfly/patch-gcc_defaults.h

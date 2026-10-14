@@ -5,4 +5,3 @@ target @any
 
 mk set USB_INCLUDE "${LOCALBASE}/include"
 mk add MAKE_ENV "LDVER=ld.bfd"
-file materialize dragonfly/patch-scan_sane_OrbliteScan_MacCommon.h -> dragonfly/patch-scan_sane_OrbliteScan_MacCommon.h

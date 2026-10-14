@@ -5,4 +5,3 @@ target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDEBUGGERS}"
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-src_third-party_zlib_contrib_minizip_ioapi.h -> dragonfly/patch-src_third-party_zlib_contrib_minizip_ioapi.h

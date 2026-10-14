@@ -9,7 +9,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/lives-plugins/plugins/decoders/asf_decoder.c \
 		${WRKSRC}/lives-plugins/plugins/decoders/mpegts_decoder.c
 MK1
-file materialize dragonfly/patch-lives-plugins_plugins_decoders_decplugin.h -> dragonfly/patch-lives-plugins_plugins_decoders_decplugin.h
-file materialize dragonfly/patch-src_machinestate.c -> dragonfly/patch-src_machinestate.c
-file materialize dragonfly/patch-src_main.h -> dragonfly/patch-src_main.h
-file materialize dragonfly/patch-src_mainwindow.h -> dragonfly/patch-src_mainwindow.h

@@ -18,8 +18,6 @@ mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--without-kmem-usage}"
 # --with-ldflags into libtool link. Drop those tokens; LOCALBASE covers it.
 text replace-once file Makefile from " -I${PKG_PREFIX}/include" to ""
 text replace-once file Makefile from "-L${PKG_PREFIX}/lib" to ""
-file materialize dragonfly/cpu_dragonfly.c -> dragonfly/cpu_dragonfly.c
-file materialize dragonfly/patch-agent_kernel.c -> dragonfly/patch-agent_kernel.c
 patch apply diffs/Makefile.diff
 mk target set dfly-patch <<'MK'
 	cp ${DFLY_FILESDIR}/cpu_dragonfly.c \

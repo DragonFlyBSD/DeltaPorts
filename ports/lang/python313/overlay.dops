@@ -12,5 +12,3 @@ text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache
 text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-2.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-2.pyc"
 text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.pyc"
 text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd%%OSMAJOR%%_.py" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_.py"
-file materialize dragonfly/patch-Python_thread__pthread.h -> dragonfly/patch-Python_thread__pthread.h
-file materialize dragonfly/patch-Lib_multiprocessing_util.py -> dragonfly/patch-Lib_multiprocessing_util.py

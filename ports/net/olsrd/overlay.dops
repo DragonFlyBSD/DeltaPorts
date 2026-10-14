@@ -9,4 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\(freebsd\*\))@\1|dragonfly*)@g'	\
 		${WRKSRC}/make/guess_os.sh
 MK1
-file materialize dragonfly/patch-src_olsr_types.h -> dragonfly/patch-src_olsr_types.h

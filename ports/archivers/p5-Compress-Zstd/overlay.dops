@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@CCVER@zstd&@g' \
 		${WRKSRC}/ext/zstd/lib/Makefile
 MK1
-file materialize dragonfly/patch-builder_MyBuilder.pm -> dragonfly/patch-builder_MyBuilder.pm

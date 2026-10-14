@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@/lib64@/lib@g' \
 		${WRKSRC}/installer.sh
 MK1
-file materialize dragonfly/patch-files_rkhunter -> dragonfly/patch-files_rkhunter

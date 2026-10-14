@@ -1,6 +1,3 @@
 port devel/log4cpp
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-src_PThreads.cpp -> dragonfly/patch-src_PThreads.cpp

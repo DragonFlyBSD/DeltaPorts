@@ -3,8 +3,6 @@ type port
 reason "add dfly-patch target; remove libpcap and netmap plist entries; materialize dragonfly patches"
 target @any
 
-file materialize dragonfly/patch-modules_fst_PMurHash.c -> dragonfly/patch-modules_fst_PMurHash.c
-file materialize dragonfly/patch-modules_trace_daq__trace.c -> dragonfly/patch-modules_trace_daq__trace.c
 text line-remove file Makefile exact "LIB_DEPENDS=	libpcap.so:net/libpcap	# avoid base libpcap" on-missing noop
 text line-remove file pkg-plist exact "lib/daq/daq_netmap.so" on-missing noop
 text line-remove file pkg-plist exact "lib/libdaq_static_netmap.a" on-missing noop

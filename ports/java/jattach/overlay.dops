@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
 		${WRKSRC}/Makefile
 MK1
-file materialize dragonfly/patch-src_posix_psutil.c -> dragonfly/patch-src_posix_psutil.c

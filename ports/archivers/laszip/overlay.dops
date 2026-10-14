@@ -1,6 +1,3 @@
 port archivers/laszip
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-src_bytestreamin__file.hpp -> dragonfly/patch-src_bytestreamin__file.hpp

@@ -12,6 +12,3 @@ mk target set dfly-patch <<'MK1'
 	${CP} -v ${.CURDIR:H}/sagittarius-scheme/pkg-plist ${DFLY_PLIST}
 	${REINPLACE_CMD} -e 's/pc-freebsd/pc-dragonfly/g' ${DFLY_PLIST}
 MK1
-file materialize dragonfly/patch-cmake_FindBoehm__GC.cmake -> dragonfly/patch-cmake_FindBoehm__GC.cmake
-file materialize dragonfly/patch-ext_socket_sagittarius-socket.c -> dragonfly/patch-ext_socket_sagittarius-socket.c
-file materialize dragonfly/patch-src_number.c -> dragonfly/patch-src_number.c

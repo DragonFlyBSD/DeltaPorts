@@ -13,7 +13,3 @@ MK
 text line-remove file pkg-plist exact "lib/gnome-shell/Gvc-1.0.typelib" on-missing noop
 text line-remove file pkg-plist exact "lib/gnome-shell/libgvc.so" on-missing noop
 text line-remove file pkg-plist exact "%%DATADIR%%/Gvc-1.0.gir" on-missing noop
-
-file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
-file materialize dragonfly/patch-src_meson.build -> dragonfly/patch-src_meson.build
-file materialize dragonfly/patch-src_shell-global.c -> dragonfly/patch-src_shell-global.c

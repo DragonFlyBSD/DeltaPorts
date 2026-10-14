@@ -13,5 +13,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@-Werror=redundant-move@@g' -e 's@-Werror=pessimizing-move@@g' \
 		${WRKSRC}/src/video_core/CMakeLists.txt
 MK1
-file materialize dragonfly/XFAIL -> dragonfly/XFAIL
-file materialize dragonfly/patch-externals_dynarmic_src_dynarmic_backend_x64_exception__handler__posix.cpp -> dragonfly/patch-externals_dynarmic_src_dynarmic_backend_x64_exception__handler__posix.cpp

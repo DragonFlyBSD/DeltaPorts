@@ -9,4 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@"\(FreeBSD\)"@"\1|DragonFly"@g'		\
 		${WRKSRC}/cegui/src/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-cegui_src_System.cpp -> dragonfly/patch-cegui_src_System.cpp

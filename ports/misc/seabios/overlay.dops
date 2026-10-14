@@ -5,4 +5,3 @@ target @any
 
 mk add MAKE_ENV "LDVER=ld.bfd"
 mk eval MAKE_ARGS "${MAKE_ARGS:NLD32BIT*}"
-file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

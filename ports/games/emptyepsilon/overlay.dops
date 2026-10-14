@@ -17,7 +17,3 @@ mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's@__FreeBSD__@__DragonFly__@g' \
                 ${WRKSRC_sproton}/src/clipboard.cpp
 MK
-
-file materialize dragonfly/patch-src_pathPlanner.cpp -> dragonfly/patch-src_pathPlanner.cpp
-file materialize dragonfly/patch-src_screenComponents_selfDestructIndicator.cpp -> dragonfly/patch-src_screenComponents_selfDestructIndicator.cpp
-file materialize dragonfly/patch-src_spaceObjects_playerSpaceship.cpp -> dragonfly/patch-src_spaceObjects_playerSpaceship.cpp

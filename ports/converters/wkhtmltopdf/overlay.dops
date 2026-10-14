@@ -11,9 +11,3 @@ mk target set dfly-patch <<'MK1'
 			 -e 's@\(5\*\|4\*\|3.4\*\)@8*|\1@g'     \
 		${WRKSRC}/../qt-5db36ec/configure
 MK1
-file materialize dragonfly/patch-src_network_ssl_qsslcertificate.cpp -> dragonfly/patch-src_network_ssl_qsslcertificate.cpp
-file materialize dragonfly/patch-src_network_ssl_qsslkey.cpp -> dragonfly/patch-src_network_ssl_qsslkey.cpp
-file materialize dragonfly/patch-src_network_ssl_qsslsocket__openssl.cpp -> dragonfly/patch-src_network_ssl_qsslsocket__openssl.cpp
-file materialize dragonfly/patch-src_network_ssl_qsslsocket__openssl__p.h -> dragonfly/patch-src_network_ssl_qsslsocket__openssl__p.h
-file materialize dragonfly/patch-src_network_ssl_qsslsocket__openssl__symbols.cpp -> dragonfly/patch-src_network_ssl_qsslsocket__openssl__symbols.cpp
-file materialize dragonfly/patch-src_network_ssl_qsslsocket__openssl__symbols__p.h -> dragonfly/patch-src_network_ssl_qsslsocket__openssl__symbols__p.h

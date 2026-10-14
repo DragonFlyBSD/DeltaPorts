@@ -1,6 +1,3 @@
 port net/php84-sockets
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-sockets__arginfo.h -> dragonfly/patch-sockets__arginfo.h

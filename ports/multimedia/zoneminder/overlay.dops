@@ -11,6 +11,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/CMakeLists.txt.c++20 \
 		${WRKSRC}/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-cmake_Modules_CheckPlatform.cmake -> dragonfly/patch-cmake_Modules_CheckPlatform.cmake
-file materialize dragonfly/patch-src_zm__comms.h -> dragonfly/patch-src_zm__comms.h
-file materialize dragonfly/patch-src_zm__logger.cpp -> dragonfly/patch-src_zm__logger.cpp

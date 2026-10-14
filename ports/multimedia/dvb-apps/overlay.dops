@@ -12,6 +12,3 @@ mk target append post-patch <<'MK1'
 		${WRKSRC}/util/av7110_loadkeys/av7110_loadkeys.c \
 		${WRKSRC}/util/dib3000-watch/dib-i2c.h
 MK1
-
-file materialize dragonfly/patch-lib_libucsi_endianops.h -> dragonfly/patch-lib_libucsi_endianops.h
-file materialize dragonfly/patch-util_atsc__epg_Makefile -> dragonfly/patch-util_atsc__epg_Makefile

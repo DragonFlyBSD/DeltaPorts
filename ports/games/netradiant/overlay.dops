@@ -16,4 +16,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/radiant/mainframe.cpp				\
 		${WRKSRC}/radiant/watchbsp.cpp
 MK1
-file materialize dragonfly/patch-tools_quake2_qdata_heretic2_common_threads.c -> dragonfly/patch-tools_quake2_qdata_heretic2_common_threads.c

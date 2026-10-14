@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@_POSIX_C_SOURCE@&__@g' \
 		${WRKSRC}/src/igmpproxy.c
 MK1
-file materialize dragonfly/patch-src_os-dragonfly.h -> dragonfly/patch-src_os-dragonfly.h

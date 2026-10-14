@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@[[:<:]]_KERNEL[[:>:]]@_KERNEL_STRUCTURES@g' \
 		${WRKSRC}/main.h ${WRKSRC}/resolve.c ${WRKSRC}/utils.c ${WRKSRC}/whois.c
 MK1
-file materialize dragonfly/patch-net.c -> dragonfly/patch-net.c

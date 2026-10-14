@@ -19,6 +19,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/include/grpc/impl/codegen/port_platform.h \
 		${WRKSRC}/third_party/zlib/contrib/minizip/ioapi.h
 MK1
-file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py
-file materialize dragonfly/patch-third__party_abseil-cpp_absl_status_status.cc -> dragonfly/patch-third__party_abseil-cpp_absl_status_status.cc
-file materialize dragonfly/patch-third__party_abseil-cpp_absl_time_internal_cctz_src_time__zone__format.cc -> dragonfly/patch-third__party_abseil-cpp_absl_time_internal_cctz_src_time__zone__format.cc

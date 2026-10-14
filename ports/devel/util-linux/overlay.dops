@@ -22,9 +22,3 @@ mk target set dfly-install <<'MK2'
 	${RM} -fv ${STAGEDIR}${LOCALBASE}/share/bash-completion/completions/runuser
 	${RM} -fv ${STAGEDIR}${LOCALBASE}/share/bash-completion/completions/su
 MK2
-file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
-file materialize dragonfly/patch-disk-utils_cfdisk.c -> dragonfly/patch-disk-utils_cfdisk.c
-file materialize dragonfly/patch-include_bitops.h -> dragonfly/patch-include_bitops.h
-file materialize dragonfly/patch-include_cpuset.h -> dragonfly/patch-include_cpuset.h
-file materialize dragonfly/patch-term-utils_agetty.c -> dragonfly/patch-term-utils_agetty.c
-file materialize dragonfly/patch-term-utils_ttymsg.c -> dragonfly/patch-term-utils_ttymsg.c

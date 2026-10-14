@@ -8,6 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
 		${WRKSRC}/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-src_platform.h -> dragonfly/patch-src_platform.h
-file materialize dragonfly/patch-src_platform__unix.h -> dragonfly/patch-src_platform__unix.h
-file materialize dragonfly/patch-src_system__includes.h -> dragonfly/patch-src_system__includes.h

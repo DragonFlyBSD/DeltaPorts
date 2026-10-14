@@ -12,4 +12,3 @@ mk target set dfly-patch <<'MK1'
 			 -e '/#include <vfs\/ufs\/extattr.h>/d' \
 		${WRKSRC}/cmds.c
 MK1
-file materialize dragonfly/patch-cmds.c -> dragonfly/patch-cmds.c

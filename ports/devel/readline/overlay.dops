@@ -10,5 +10,3 @@ mk target set pre-configure-script <<'MK'
 	${REINPLACE_CMD} "s/SHOBJ_LDFLAGS =/SHOBJ_LDFLAGS = -lncurses/" \
 		${WRKSRC}/shlib/Makefile.in
 MK
-
-file materialize dragonfly/patch-terminal.c -> dragonfly/patch-terminal.c

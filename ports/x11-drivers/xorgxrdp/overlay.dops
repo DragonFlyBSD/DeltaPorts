@@ -7,5 +7,3 @@ mk eval CONFIGURE_ARGS "--enable-strict-locations"
 
 text replace-once file pkg-plist from "@dir /etc/X11/xrdp" to "@dir etc/X11/xrdp"
 text replace-once file pkg-plist from "/etc/X11/xrdp/xorg.conf" to "etc/X11/xrdp/xorg.conf"
-
-file materialize dragonfly/patch-m4_nasm.m4 -> dragonfly/patch-m4_nasm.m4

@@ -4,5 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add CONFIGURE_ARGS "--disable-libknet-sctp"
-file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
-file materialize dragonfly/patch-libknet_libknet.h -> dragonfly/patch-libknet_libknet.h

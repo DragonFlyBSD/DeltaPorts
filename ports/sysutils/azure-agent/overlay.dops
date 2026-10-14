@@ -4,6 +4,4 @@ reason "auto-converted from compat (fragment + diffs/)"
 target @any
 
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-bin_waagent2.0 -> dragonfly/patch-bin_waagent2.0
-file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py
 mk add SHEBANG_FILES "init/waagent"

@@ -9,6 +9,3 @@ mk add CMAKE_OFF "ENABLE_IPO GDAL_HIDE_INTERNAL_SYMBOLS"
 mk add CFLAGS "-DGDAL_DISABLE_FLOAT16"
 mk add CXXFLAGS "-DGDAL_DISABLE_FLOAT16"
 mk set PORTREVISION "3"
-file materialize dragonfly/patch-gdal.cmake -> dragonfly/patch-gdal.cmake
-file materialize dragonfly/patch-port_cpl__multiproc.cpp -> dragonfly/patch-port_cpl__multiproc.cpp
-file materialize dragonfly/patch-port_cpl__spawn.cpp -> dragonfly/patch-port_cpl__spawn.cpp

@@ -5,5 +5,3 @@ target @any
 
 mk set USE_CLANG_FALLBACK "default"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDOXYGEN}"
-file materialize dragonfly/patch-server_output.cpp -> dragonfly/patch-server_output.cpp
-file materialize dragonfly/patch-server_seat.cpp -> dragonfly/patch-server_seat.cpp

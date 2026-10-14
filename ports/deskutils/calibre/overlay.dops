@@ -9,7 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${CP} -v ${.CURDIR:H}/calibre/pkg-plist ${DFLY_PLIST}
 	${REINPLACE_CMD} -e '/libmtp.so/d' ${DFLY_PLIST}
 MK1
-file materialize dragonfly/patch-setup_build.py -> dragonfly/patch-setup_build.py
-file materialize dragonfly/patch-setup_extensions.json -> dragonfly/patch-setup_extensions.json
-file materialize dragonfly/patch-src_calibre_devices_libusb_libusb.c -> dragonfly/patch-src_calibre_devices_libusb_libusb.c
-file materialize dragonfly/patch-src_calibre_utils_speedup.c -> dragonfly/patch-src_calibre_utils_speedup.c

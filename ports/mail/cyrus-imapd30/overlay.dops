@@ -5,7 +5,3 @@ target @any
 
 mk add MAKE_ENV "LDVER=ld.bfd"
 mk add LDFLAGS "-lm"
-file materialize dragonfly/patch-lib_byteorder64.h -> dragonfly/patch-lib_byteorder64.h
-file materialize dragonfly/patch-lib_cyrusdb_twoskip.c -> dragonfly/patch-lib_cyrusdb_twoskip.c
-file materialize dragonfly/patch-lib_util.c -> dragonfly/patch-lib_util.c
-file materialize dragonfly/patch-libressl-compat -> dragonfly/patch-libressl-compat

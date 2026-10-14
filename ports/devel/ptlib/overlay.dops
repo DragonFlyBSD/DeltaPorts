@@ -10,5 +10,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@STDCXXFLAGS)@& -fpermissive@g' \
 		${WRKSRC}/make/common.mak
 MK1
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure
-file materialize dragonfly/patch-include_ptlib_thread.h -> dragonfly/patch-include_ptlib_thread.h

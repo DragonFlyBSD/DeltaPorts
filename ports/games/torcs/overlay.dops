@@ -13,6 +13,3 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/src/libs/learning/policy.cpp			\
 		${WRKSRC}/src/drivers/olethros/driver.cpp
 MK
-
-file materialize dragonfly/patch-src_libs_tgfclient_guifont.cpp -> dragonfly/patch-src_libs_tgfclient_guifont.cpp
-file materialize dragonfly/patch-src_modules_simu_simuv2_SOLID-2.0_src_C_api.cpp -> dragonfly/patch-src_modules_simu_simuv2_SOLID-2.0_src_C_api.cpp

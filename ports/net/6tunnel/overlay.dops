@@ -1,6 +1,3 @@
 port net/6tunnel
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-6tunnel.c -> dragonfly/patch-6tunnel.c

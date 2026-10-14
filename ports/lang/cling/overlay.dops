@@ -6,5 +6,3 @@ target @any
 mk block set condition "${LLVM_RELEASE:M5.0.0}" <<'MK'
 BROKEN= pending update
 MK
-
-file materialize dragonfly/patch-cmake_modules_HandleLLVMOptions.cmake -> dragonfly/patch-cmake_modules_HandleLLVMOptions.cmake

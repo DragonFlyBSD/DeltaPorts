@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 			 -e 's@-lcurses@-lncurses@g' \
 		${WRKSRC}/src/Makefile.am
 MK1
-file materialize dragonfly/patch-src_mmap__file__pool.cpp -> dragonfly/patch-src_mmap__file__pool.cpp

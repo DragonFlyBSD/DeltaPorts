@@ -11,6 +11,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/lib-src/zipios++/src/directory.h		\
 		${WRKSRC}/lib-src/zipios++/src/directory.cpp
 MK1
-file materialize dragonfly/patch-lib-src__enigma-core__ecl_util.hh -> dragonfly/patch-lib-src__enigma-core__ecl_util.hh
-file materialize dragonfly/patch-src__Utf8ToXML.hh -> dragonfly/patch-src__Utf8ToXML.hh
-file materialize dragonfly/patch-src__file.hh -> dragonfly/patch-src__file.hh

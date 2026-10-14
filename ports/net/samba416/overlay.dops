@@ -5,11 +5,6 @@ target @any
 
 mk add USES ncurses
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NQUOTAS:NGSSAPI_BUILTIN} GSSAPI_MIT"
-file materialize dragonfly/patch-libcli_http_http.c -> dragonfly/patch-libcli_http_http.c
-file materialize dragonfly/patch-nsswitch_wscript__build -> dragonfly/patch-nsswitch_wscript__build
-file materialize dragonfly/patch-source3_modules_vfs_cap.c -> dragonfly/patch-source3_modules_vfs_cap.c
-file materialize dragonfly/patch-source3_smbd_pysmbd.c -> dragonfly/patch-source3_smbd_pysmbd.c
-file materialize dragonfly/patch-wscript -> dragonfly/patch-wscript
 text line-remove file Makefile exact "LIB_DEPENDS+=			libsunacl.so:sysutils/libsunacl" on-missing noop
 text replace-once file Makefile from "			--with-acl-support \\" to "			--without-acl-support \\"
 text replace-once file Makefile from "			vfs_widelinks vfs_worm vfs_xattr_tdb vfs_zfsacl" to "			vfs_widelinks vfs_worm vfs_xattr_tdb"

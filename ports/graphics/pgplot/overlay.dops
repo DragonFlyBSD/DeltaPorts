@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's,FreeBSD,DragonFly,g' \
 		${WRKSRC}/pgdispd/updatelgtitle.c
 MK1
-file materialize dragonfly/patch-pgdispd_proccom.c -> dragonfly/patch-pgdispd_proccom.c

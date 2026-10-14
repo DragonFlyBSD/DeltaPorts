@@ -6,4 +6,3 @@ target @any
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/-Werror[[:>:]]//g' ${WRKSRC}/libmdnsd/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-mquery.c -> dragonfly/patch-mquery.c

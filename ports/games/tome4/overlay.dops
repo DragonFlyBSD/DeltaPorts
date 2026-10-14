@@ -15,4 +15,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/src/music.h					\
 		${WRKSRC}/src/tSDL.h
 MK1
-file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

@@ -6,9 +6,6 @@ target @any
 mk add CFLAGS "-I/usr/include/priv"
 mk add LDFLAGS "-L/usr/lib/priv"
 mk add LDFLAGS "-R/lib/priv"
-file materialize dragonfly/df-latest.conf.sample -> dragonfly/df-latest.conf.sample
-file materialize dragonfly/df-releases.conf.sample -> dragonfly/df-releases.conf.sample
-file materialize dragonfly/patch-libpkg_lua__scripts.c -> dragonfly/patch-libpkg_lua__scripts.c
 text line-insert-after file pkg-plist anchor "@sample etc/pkg.conf.sample" line "@sample etc/pkg/repos/df-latest.conf.sample" on-missing noop
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's@openssl@wolfssl@g' \

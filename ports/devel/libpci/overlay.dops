@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@-I/usr/src/sys@@g' \
 		${WRKSRC}/lib/Makefile
 MK1
-file materialize dragonfly/patch-lib_physmem-posix.c -> dragonfly/patch-lib_physmem-posix.c

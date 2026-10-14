@@ -5,4 +5,3 @@ target @any
 
 mk add MASTER_SITES "https://fossies.org/linux/misc/old/"
 mk set CONFLICTS_INSTALL "nothing"
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure

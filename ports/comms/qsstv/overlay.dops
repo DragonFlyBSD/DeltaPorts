@@ -20,5 +20,3 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/drmrx/psdcmean.cpp \
 		${WRKSRC}/drmrx/psdmean.cpp
 MK
-
-file materialize dragonfly/patch-mainwindow.cpp -> dragonfly/patch-mainwindow.cpp

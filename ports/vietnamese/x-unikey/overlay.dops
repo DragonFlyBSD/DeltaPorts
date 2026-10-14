@@ -4,4 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add CXXFLAGS "-Wno-narrowing"
-file materialize dragonfly/patch-src_ukengine_usrkeymap.cpp -> dragonfly/patch-src_ukengine_usrkeymap.cpp

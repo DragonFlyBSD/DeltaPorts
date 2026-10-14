@@ -11,5 +11,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@surge::filesystem@& stdc++fs@g' \
 		${WRKSRC}/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-src_common_dsp_MSEGModulationHelper.cpp -> dragonfly/patch-src_common_dsp_MSEGModulationHelper.cpp
-file materialize dragonfly/patch-src_common_gui_MSEGEditor.cpp -> dragonfly/patch-src_common_gui_MSEGEditor.cpp
