@@ -1,6 +1,9 @@
 port x11-servers/xwayland
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "Keep DragonFly Meson support and select the DRI header provider with GL_DEFAULT, avoiding mixed standard Mesa/Mesa26 build dependencies."
 target @any
+
+mk remove BUILD_DEPENDS "${LOCALBASE}/include/GL/internal/dri_interface.h:graphics/mesa-dri"
+mk add BUILD_DEPENDS "${LOCALBASE}/include/GL/internal/dri_interface.h:graphics/${GL_DEFAULT:S/^mesa-libs$/mesa-dri/}"
 
 file materialize dragonfly/patch-meson.build -> dragonfly/patch-meson.build
