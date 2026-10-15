@@ -1,0 +1,14 @@
+port databases/firebird30-client
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+
+# Firebird's vendored configure only matches freebsd triplets and aborts
+# with "unsupported platform x86_64-portbld-dragonfly6.5". configure is
+# generated (from configure.ac) and the port runs it directly without
+# autoreconf, so map DragonFly onto the FreeBSD path at build time.
+mk target set post-extract <<'MK1'
+	@${REINPLACE_CMD} -e 's,x86_64\*-\*-freebsd\* |,x86_64*-*-dragonfly* | x86_64*-*-freebsd* |,' \
+		-e 's,^  \*-\*-freebsd\* |,  *-*-dragonfly* | *-*-freebsd* |,' \
+		${WRKSRC}/configure
+MK1

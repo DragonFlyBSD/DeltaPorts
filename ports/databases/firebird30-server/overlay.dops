@@ -2,3 +2,16 @@ port databases/firebird30-server
 type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
+
+# Firebird's vendored configure only matches freebsd triplets and aborts
+# with "unsupported platform x86_64-portbld-dragonfly6.5". configure is
+# generated (from configure.ac) and the port runs it directly without
+# autoreconf, so map DragonFly onto the FreeBSD path at build time.
+# (Shared with the firebird30-client slave port, which builds from this
+# master's distfile; the dragonfly/ source patches live here and cover
+# both, but each port needs its own post-extract recipe.)
+mk target set post-extract <<'MK1'
+	@${REINPLACE_CMD} -e 's,x86_64\*-\*-freebsd\* |,x86_64*-*-dragonfly* | x86_64*-*-freebsd* |,' \
+		-e 's,^  \*-\*-freebsd\* |,  *-*-dragonfly* | *-*-freebsd* |,' \
+		${WRKSRC}/configure
+MK1
