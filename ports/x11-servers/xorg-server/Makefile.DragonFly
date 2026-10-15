@@ -1,0 +1,4 @@
+# Pin SHA1 so package dependencies match the linked library.
+PORTREVISION=	1
+MESON_ARGS+=	-Dsha1=libnettle
+LIB_DEPENDS+=	libnettle.so:security/nettle
