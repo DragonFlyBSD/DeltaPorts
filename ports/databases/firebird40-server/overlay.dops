@@ -2,3 +2,14 @@ port databases/firebird40-server
 type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
+
+# Same DragonFly configure fix as the client port: map DragonFly triplets
+# onto the FreeBSD path and drop -static-libstdc++ from all link lines
+# (DragonFly's static libstdc++ is non-PIC).
+mk target set post-extract <<'MK1'
+	@${REINPLACE_CMD} -e 's,amd64-\*-freebsd\* | x86_64\*-\\*-freebsd\*,amd64-*-freebsd* | amd64-*-dragonfly* | x86_64*-*-freebsd* | x86_64*-*-dragonfly*,' \
+		-e 's,\*-\*-freebsd\* | \*-\*-k\*bsd\*-gnu),*-*-freebsd* | *-*-dragonfly* | *-*-k*bsd*-gnu),' \
+		${WRKSRC}/configure
+	@${REINPLACE_CMD} -e 's, -static-libstdc++,,g' \
+		${WRKSRC}/builds/posix/make.defaults
+MK1
