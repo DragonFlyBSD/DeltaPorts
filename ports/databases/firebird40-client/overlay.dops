@@ -1,0 +1,10 @@
+port databases/firebird40-client
+type port
+reason "Step 48 bootstrap: deterministic header; patch authors the body"
+target @any
+
+# DragonFly build fix (configure/link part) lives in the master port
+# databases/firebird40-server overlay (post-extract REINPLACE mapping
+# DragonFly triplets onto the FreeBSD path, dropping -static-libstdc++).
+# This slave port sets MASTERDIR so its patches come from the master's
+# dragonfly/ directory; no client-local ops needed beyond this note.
