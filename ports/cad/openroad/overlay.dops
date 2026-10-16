@@ -10,6 +10,3 @@ mk target set dfly-patch <<'MK1'
 	${MKDIR} ${BUILD_WRKSRC}
 	${TOUCH} ${BUILD_WRKSRC}/build.ninja
 MK1
-file materialize dragonfly/patch-src_cts_src_TechChar.cpp -> dragonfly/patch-src_cts_src_TechChar.cpp
-file materialize dragonfly/patch-src_replace_src_graphics.cpp -> dragonfly/patch-src_replace_src_graphics.cpp
-file materialize dragonfly/patch-src_sta_search_Power.cc -> dragonfly/patch-src_sta_search_Power.cc

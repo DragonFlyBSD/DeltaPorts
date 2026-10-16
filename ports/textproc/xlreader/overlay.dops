@@ -6,6 +6,3 @@ target @any
 mk target set dfly-patch <<'MK1'
 	${RM} -fv ${WRKSRC}/xlreader
 MK1
-file materialize dragonfly/patch-format.c -> dragonfly/patch-format.c
-file materialize dragonfly/patch-interger.c -> dragonfly/patch-interger.c
-file materialize dragonfly/patch-main.c -> dragonfly/patch-main.c

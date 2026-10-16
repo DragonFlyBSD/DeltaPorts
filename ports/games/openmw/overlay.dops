@@ -10,4 +10,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/components/crashcatcher/crashcatcher.cpp
 MK1
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-components_misc_thread.cpp -> dragonfly/patch-components_misc_thread.cpp

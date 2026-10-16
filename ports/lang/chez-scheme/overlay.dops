@@ -8,5 +8,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/c/Mf-a6fb
 MK1
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-c_externs.h -> dragonfly/patch-c_externs.h
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure

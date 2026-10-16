@@ -10,5 +10,3 @@ mk target set dfly-patch <<'MK1'
 			 -e 's@<dev/ppbus/ppbconf\.h>@<bus/ppbus/ppbconf.h>@g'	\
 		${WRKSRC}/src/jtag/drivers/parport.c
 MK1
-file materialize dragonfly/patch-src_jtag_drivers_ft232r.c -> dragonfly/patch-src_jtag_drivers_ft232r.c
-file materialize dragonfly/patch-src_jtag_drivers_xds110.c -> dragonfly/patch-src_jtag_drivers_xds110.c

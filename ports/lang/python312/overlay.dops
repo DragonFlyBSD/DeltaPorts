@@ -19,7 +19,5 @@ text replace-once file pkg-plist from "%%PYTHON_LIBDIR%%/_sysconfigdata_%%ABI%%_
 text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-1.pyc"
 text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.opt-2.pyc"
 text line-remove file pkg-plist exact "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata_%%ABI%%_freebsd%%OSMAJOR%%_%%PYTHON_TAG%%.pyc"
-file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
 # Replaced by the carried, version-adjusted patch in the DragonFly lane.
 file remove files/patch-configure
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure

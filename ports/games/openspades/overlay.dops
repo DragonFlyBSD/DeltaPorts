@@ -11,5 +11,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/Sources/Client/Corpse.cpp			\
 		${WRKSRC}/Sources/Draw/SWMapRenderer.cpp
 MK1
-file materialize dragonfly/patch-Sources_AngelScript_source_as_memory.cpp -> dragonfly/patch-Sources_AngelScript_source_as_memory.cpp
-file materialize dragonfly/patch-Sources_ENet_unix.c -> dragonfly/patch-Sources_ENet_unix.c

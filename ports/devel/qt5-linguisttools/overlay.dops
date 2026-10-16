@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 			 -e "s@QT_LIBDIR@${QT_LIBDIR}@g" \
 		${WRKSRC}/src/linguist/shared/qmakeevaluator.cpp
 MK1
-file materialize dragonfly/patch-src_linguist_shared_qmakeevaluator.cpp -> dragonfly/patch-src_linguist_shared_qmakeevaluator.cpp

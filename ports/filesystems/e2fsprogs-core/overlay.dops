@@ -19,6 +19,3 @@ mk target set dfly-patch <<'MK'
 MK
 
 patch apply diffs/Makefile.diff
-
-file materialize dragonfly/patch-lib_ext2fs_getsize.c -> dragonfly/patch-lib_ext2fs_getsize.c
-file materialize dragonfly/patch-lib_ext2fs_unix__io.c -> dragonfly/patch-lib_ext2fs_unix__io.c

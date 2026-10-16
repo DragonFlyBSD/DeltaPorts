@@ -4,5 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-gphoto2_actions.c -> dragonfly/patch-gphoto2_actions.c
-file materialize dragonfly/patch-gphoto2_main.c -> dragonfly/patch-gphoto2_main.c

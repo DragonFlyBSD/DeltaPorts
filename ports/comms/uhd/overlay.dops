@@ -16,7 +16,3 @@ mk add PLIST_FILES "%%DATADIR%%/tests/pychdr_parse_test.py"
 mk add PLIST_FILES "%%DATADIR%%/tests/pyranges_test.py"
 mk add PLIST_FILES "%%DATADIR%%/tests/verify_fbs_test.py"
 mk set DFLY_UNMAINTAINED "yes"
-
-file materialize dragonfly/patch-host_cmake_Modules_FindLIBUSB.cmake -> dragonfly/patch-host_cmake_Modules_FindLIBUSB.cmake
-file materialize dragonfly/patch-host_include_uhd_config.h -> dragonfly/patch-host_include_uhd_config.h
-file materialize dragonfly/patch-host_include_uhd_config.hpp -> dragonfly/patch-host_include_uhd_config.hpp

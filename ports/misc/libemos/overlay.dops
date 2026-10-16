@@ -10,5 +10,3 @@ mk target set dfly-patch <<'MK1'
 	${FIND} ${WRKSRC}/gribex -type f | ${XARGS} ${GREP} -l "LITTLE_ENDIAN" | ${XARGS} \
 		${REINPLACE_CMD} -e 's@[[:<:]]LITTLE_ENDIAN[[:>:]]@EMOS_LITTLE_ENDIAN@g'
 MK1
-file materialize dragonfly/patch-cmake_ecbuild__append__to__rpath.cmake -> dragonfly/patch-cmake_ecbuild__append__to__rpath.cmake
-file materialize dragonfly/patch-cmake_ecbuild__check__os.cmake -> dragonfly/patch-cmake_ecbuild__check__os.cmake

@@ -9,5 +9,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/cmake/Modules/Findlibusb-1.0.cmake
 MK1
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-Desktop_CMakeLists.txt -> dragonfly/patch-Desktop_CMakeLists.txt
-file materialize dragonfly/patch-src_ConnectionRemote_ConnectionRemote.cpp -> dragonfly/patch-src_ConnectionRemote_ConnectionRemote.cpp

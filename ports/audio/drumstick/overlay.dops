@@ -41,5 +41,3 @@ mk add PLIST_FILES "%%DATADIR%%/drumstick-drumgrid_es.qm"
 mk add PLIST_FILES "%%DATADIR%%/drumstick-guiplayer_cs.qm"
 mk add PLIST_FILES "%%DATADIR%%/drumstick-guiplayer_es.qm"
 mk add PLIST_FILES "%%DATADIR%%/drumstick-guiplayer_ru.qm"
-
-file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt

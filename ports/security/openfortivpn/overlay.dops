@@ -14,4 +14,3 @@ mk target set dfly-patch <<'MK1'
 			 -e 's@rt_use@rt_use_ofvpn@g' \
 		${WRKSRC}/src/ipv4.h ${WRKSRC}/src/ipv4.c
 MK1
-file materialize dragonfly/pkg-message -> dragonfly/pkg-message

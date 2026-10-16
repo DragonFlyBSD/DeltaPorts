@@ -9,6 +9,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/Makefile.in
 MK1
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-config.h -> dragonfly/patch-config.h
-file materialize dragonfly/patch-pound.h -> dragonfly/patch-pound.h
-file materialize dragonfly/patch-svc.c -> dragonfly/patch-svc.c

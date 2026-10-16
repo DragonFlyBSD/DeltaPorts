@@ -5,4 +5,3 @@ target @any
 
 mk add USES "ncurses"
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-erts_configure.in -> dragonfly/patch-erts_configure.in

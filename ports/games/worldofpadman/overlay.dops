@@ -11,6 +11,3 @@ mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's@freebsd@dragonfly@gi' \
 		${WRKSRC}/Makefile
 MK
-
-file materialize dragonfly/patch-code_qcommon_q__platform.h -> dragonfly/patch-code_qcommon_q__platform.h
-file materialize dragonfly/patch-code_qcommon_vm__x86.c -> dragonfly/patch-code_qcommon_vm__x86.c

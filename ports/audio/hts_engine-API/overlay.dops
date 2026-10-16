@@ -7,4 +7,3 @@ mk set PLIST "${WRKDIR}/fixed-plist"
 mk target set dfly-patch <<'MK1'
 	${CAT} ${.CURDIR}/pkg-plist | ${SED} -e '/@dir share\/licenses\/hts_engine-API/d' > ${PLIST}
 MK1
-file materialize dragonfly/patch-lib_HTS__misc.c -> dragonfly/patch-lib_HTS__misc.c

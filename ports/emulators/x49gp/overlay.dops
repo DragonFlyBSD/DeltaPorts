@@ -4,5 +4,3 @@ reason "fix do-build to use subshell instead of cd+make (avoids MAKELEVEL/MAKEFL
 target @any
 
 patch apply diffs/Makefile.diff
-
-file materialize dragonfly/patch-qemu_qemu-git_bswap.h -> dragonfly/patch-qemu_qemu-git_bswap.h

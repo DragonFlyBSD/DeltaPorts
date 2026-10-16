@@ -16,8 +16,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/src/plugins/grass/CMakeLists.txt
 MK1
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-external_astyle_astyle__main.cpp -> dragonfly/patch-external_astyle_astyle__main.cpp
-file materialize dragonfly/patch-python_plugins_sagaprovider_SagaUtils.py -> dragonfly/patch-python_plugins_sagaprovider_SagaUtils.py
-file materialize dragonfly/patch-src_gui_plot_qgsplotrubberband.cpp -> dragonfly/patch-src_gui_plot_qgsplotrubberband.cpp
-file materialize dragonfly/patch-src_plugins_grass_qtermwidget_kpty.cpp -> dragonfly/patch-src_plugins_grass_qtermwidget_kpty.cpp
-file materialize dragonfly/patch-src_providers_pdal_CMakeLists.txt -> dragonfly/patch-src_providers_pdal_CMakeLists.txt

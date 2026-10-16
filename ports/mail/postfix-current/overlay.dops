@@ -9,4 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@define HAS_DEV_URANDOM@@g' \
 		${WRKSRC}/src/util/sys_defs.h
 MK1
-file materialize dragonfly/patch-makedefs -> dragonfly/patch-makedefs

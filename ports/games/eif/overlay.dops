@@ -1,6 +1,3 @@
 port games/eif
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-src_empcon.c -> dragonfly/patch-src_empcon.c

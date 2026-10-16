@@ -1,6 +1,3 @@
 port comms/libticables2
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac

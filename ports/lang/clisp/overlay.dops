@@ -13,5 +13,3 @@ dfly-patch:
 	${REINPLACE_CMD} -e 's@HAVE_DECL_GETDATE_ERR@&__@g' \
 		${WRKSRC}/modules/syscalls/calls.c
 MK
-
-file materialize dragonfly/patch-src_makemake.in -> dragonfly/patch-src_makemake.in

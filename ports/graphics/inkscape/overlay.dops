@@ -6,4 +6,3 @@ target @any
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 mk add USES "gmake"
 mk add LDFLAGS "\"-Wl,-z,origin\""
-file materialize dragonfly/patch-src_path-prefix.cpp -> dragonfly/patch-src_path-prefix.cpp

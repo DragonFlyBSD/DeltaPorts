@@ -14,6 +14,3 @@ mk target set dfly-install <<'MK'
 MK
 
 patch apply diffs/Makefile.diff
-
-file materialize dragonfly/patch-as_setup.py -> dragonfly/patch-as_setup.py
-file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py

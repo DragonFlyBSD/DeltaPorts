@@ -5,4 +5,3 @@ target @any
 
 mk add BUILD_DEPENDS "gcc${GCC_DEFAULT}>0:lang/gcc${GCC_DEFAULT}"
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-BaseTools_Source_C_GenFv_GenFvInternalLib.c -> dragonfly/patch-BaseTools_Source_C_GenFv_GenFvInternalLib.c

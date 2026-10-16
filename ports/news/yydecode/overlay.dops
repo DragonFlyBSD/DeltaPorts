@@ -1,6 +1,3 @@
 port news/yydecode
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-src_crc32.h -> dragonfly/patch-src_crc32.h

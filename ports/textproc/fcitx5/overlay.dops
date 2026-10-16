@@ -8,5 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@ MATCHES "\(BSD\)"@ MATCHES "\1|DragonFly"@g' \
 		${WRKSRC}/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-src_lib_fcitx-utils_misc.cpp -> dragonfly/patch-src_lib_fcitx-utils_misc.cpp
-file materialize dragonfly/patch-src_lib_fcitx-utils_semver.h -> dragonfly/patch-src_lib_fcitx-utils_semver.h

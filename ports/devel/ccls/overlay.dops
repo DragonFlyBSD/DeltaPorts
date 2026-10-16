@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e "/CLANG_EXECUTABLE/s@ clang)@ clang${LLVM_DEFAULT})@g" \
 		${WRKSRC}/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt

@@ -20,12 +20,13 @@ mk add USES "gmake"
 # Python/gc_free_threading.c get_process_mem_usage; Lib/multiprocessing/util.py
 # _SUN_PATH_MAX (sun_path[104] on this builder); Modules/_hacl/Lib_Memzero0.c
 # explicit_bzero (configure finds explicit_bzero yes).
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure
-file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
-file materialize dragonfly/patch-Python_thread__pthread.h -> dragonfly/patch-Python_thread__pthread.h
-file materialize dragonfly/patch-Python_gc__free__threading.c -> dragonfly/patch-Python_gc__free__threading.c
-file materialize dragonfly/patch-Lib_multiprocessing_util.py -> dragonfly/patch-Lib_multiprocessing_util.py
-file materialize dragonfly/patch-Modules___hacl_Lib__Memzero0.c -> dragonfly/patch-Modules___hacl_Lib__Memzero0.c
+# dragonfly/patch-configure
+# dragonfly/patch-configure.ac
+# dragonfly/patch-Python_thread__pthread.h
+# dragonfly/patch-Python_gc__free__threading.c
+# dragonfly/patch-Lib_multiprocessing_util.py
+# dragonfly/patch-Modules___hacl_Lib__Memzero0.c
+
 text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd_%%PYTHON_TAG%%.opt-1.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-1.pyc"
 text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd_%%PYTHON_TAG%%.opt-2.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.opt-2.pyc"
 text replace-once file pkg-plist from "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_freebsd_%%PYTHON_TAG%%.pyc" to "%%PYTHON_BASELIBDIR%%%%THREAD%%/__pycache__/_sysconfigdata_%%THREAD%%%%ABI%%_%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.pyc"

@@ -7,5 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e "/SHLIB_LD}/s/$$/ -lz/g"	\
 		${WRKSRC}/Makefile.in
 MK1
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure
-file materialize dragonfly/patch-utilities_smem.c -> dragonfly/patch-utilities_smem.c

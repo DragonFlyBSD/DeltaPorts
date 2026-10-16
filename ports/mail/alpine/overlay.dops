@@ -5,5 +5,3 @@ target @any
 
 mk add BROKEN_SSL "libressl"
 mk set BROKEN_SSL_REASON_libressl "too broken"
-
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure

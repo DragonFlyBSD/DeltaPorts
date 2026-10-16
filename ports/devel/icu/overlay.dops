@@ -11,4 +11,3 @@ mk target set post-extract <<'MK1'
 	${REINPLACE_CMD} -e 's|-L$${libdir}|$${ICULIBS_BASE}|' \
 		${WRKSRC}/config/icu-config-bottom
 MK1
-file materialize dragonfly/patch-runConfigureICU -> dragonfly/patch-runConfigureICU

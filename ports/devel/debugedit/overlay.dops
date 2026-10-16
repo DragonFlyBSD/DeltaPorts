@@ -5,4 +5,3 @@ target @any
 
 mk add LIB_DEPENDS "libelf.so:devel/libelf"
 mk add CFLAGS "-I${LOCALBASE}/include/libelf -L${LOCALBASE}/lib"
-file materialize dragonfly/patch-debugedit.c -> dragonfly/patch-debugedit.c

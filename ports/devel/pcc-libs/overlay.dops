@@ -6,4 +6,3 @@ target @any
 mk target set dfly-patch <<'MK1'
 	${LN} -sv ${WRKSRC}/csu/linux ${WRKSRC}/csu/dragonfly
 MK1
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure

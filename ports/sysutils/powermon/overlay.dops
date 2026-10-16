@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/Makefile
 MK1
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

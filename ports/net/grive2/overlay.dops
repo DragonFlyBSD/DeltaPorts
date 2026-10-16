@@ -6,4 +6,3 @@ target @any
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/FreeBSD/DragonFly/' ${WRKSRC}/grive/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-libgrive_src_util_OS.hh -> dragonfly/patch-libgrive_src_util_OS.hh

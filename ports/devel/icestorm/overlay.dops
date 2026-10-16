@@ -1,6 +1,3 @@
 port devel/icestorm
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-icetime_iceutil.cc -> dragonfly/patch-icetime_iceutil.cc

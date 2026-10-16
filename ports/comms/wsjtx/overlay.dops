@@ -11,5 +11,3 @@ dfly-patch:
 	${ECHO} '-    (void)libusb_set_auto_detach_kernel_driver(udh, port->parm.usb.iface);' >> ${WRKSRC}/hamlib.patch
 	${ECHO} '+//    (void)libusb_set_auto_detach_kernel_driver(udh, port->parm.usb.iface);' >> ${WRKSRC}/hamlib.patch
 MK
-
-file materialize dragonfly/XFAIL -> dragonfly/XFAIL

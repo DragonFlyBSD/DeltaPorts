@@ -15,6 +15,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/unittests/BuildSystem/CMakeLists.txt	\
 		${WRKSRC}/unittests/Ninja/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
-file materialize dragonfly/patch-lib_Basic_CMakeLists.txt -> dragonfly/patch-lib_Basic_CMakeLists.txt
-file materialize dragonfly/patch-lib_llvm_Support_CMakeLists.txt -> dragonfly/patch-lib_llvm_Support_CMakeLists.txt

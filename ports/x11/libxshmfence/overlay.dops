@@ -4,4 +4,3 @@ reason "DragonFly umtx futex backend: PROCESS_SHARED pthread primitives do not w
 target @any
 
 mk add CONFIGURE_ARGS "--enable-futex"
-file materialize dragonfly/patch-src_xshmfence__futex.h -> dragonfly/patch-src_xshmfence__futex.h

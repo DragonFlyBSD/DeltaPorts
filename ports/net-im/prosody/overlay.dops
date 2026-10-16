@@ -10,4 +10,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/certs/makefile ${WRKSRC}/certs/GNUmakefile \
 		${WRKSRC}/util/openssl.lua
 MK1
-file materialize dragonfly/patch-util-src_pposix.c -> dragonfly/patch-util-src_pposix.c

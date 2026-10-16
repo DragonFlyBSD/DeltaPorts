@@ -5,4 +5,3 @@ target @any
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 mk add CONFIGURE_ARGS "--allow-warnings"
-file materialize dragonfly/patch-src_util_build__config.h -> dragonfly/patch-src_util_build__config.h

@@ -9,7 +9,3 @@ mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e "s@\(-lncurses\)@-L${LOCALBASE}/lib \1@g"	\
 		${WRKSRC}/makefile
 MK
-
-file materialize dragonfly/patch-ckucmd.c -> dragonfly/patch-ckucmd.c
-file materialize dragonfly/patch-ckufio.c -> dragonfly/patch-ckufio.c
-file materialize dragonfly/patch-ckupty.c -> dragonfly/patch-ckupty.c

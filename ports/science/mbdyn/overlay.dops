@@ -10,5 +10,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/mbdyn/base/rtsolver.cc \
 		${WRKSRC}/mbdyn/base/solver.cc
 MK1
-file materialize dragonfly/patch-mbdyn_base_solver.cc -> dragonfly/patch-mbdyn_base_solver.cc
-file materialize dragonfly/patch-mbdyn_mbdyn.h -> dragonfly/patch-mbdyn_mbdyn.h

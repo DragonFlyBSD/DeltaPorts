@@ -9,4 +9,3 @@ USE_RC_SUBR=	hostapd
 MK
 patch apply diffs/files_hostapd.in.diff
 patch apply diffs/files_pkg-message.in.diff
-file materialize dragonfly/patch-src_drivers_driver__bsd.c -> dragonfly/patch-src_drivers_driver__bsd.c

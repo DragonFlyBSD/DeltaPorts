@@ -28,5 +28,3 @@ mk target set dfly-patch <<'MK'
 	@${ECHO} "########################################################" >> ${DPMSG}
 .endif
 MK
-
-file materialize dragonfly/patch-3rdparty_joystick_jsNone.cxx -> dragonfly/patch-3rdparty_joystick_jsNone.cxx

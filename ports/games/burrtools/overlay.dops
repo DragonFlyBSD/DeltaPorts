@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/src/help/data2c.cpp				\
 		${WRKSRC}/src/lib/stl.cpp
 MK1
-file materialize dragonfly/patch-src_halfedge_modifiers.cpp -> dragonfly/patch-src_halfedge_modifiers.cpp

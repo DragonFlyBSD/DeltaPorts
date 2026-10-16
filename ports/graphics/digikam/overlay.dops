@@ -12,6 +12,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/core/tests/CMakeLists.txt
 MK1
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-core_dplugins_generic_tools_mediaserver_upnpsdk_Neptune_Source_Core_NptConfig.h -> dragonfly/patch-core_dplugins_generic_tools_mediaserver_upnpsdk_Neptune_Source_Core_NptConfig.h
-file materialize dragonfly/patch-core_libs_pgfutils_libpgf_PGFplatform.h -> dragonfly/patch-core_libs_pgfutils_libpgf_PGFplatform.h
-file materialize dragonfly/patch-core_libs_rawengine_libraw_src_utils_utils__dcraw.cpp -> dragonfly/patch-core_libs_rawengine_libraw_src_utils_utils__dcraw.cpp

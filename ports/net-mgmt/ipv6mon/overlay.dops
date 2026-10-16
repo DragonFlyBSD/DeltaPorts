@@ -1,6 +1,3 @@
 port net-mgmt/ipv6mon
 type port
 reason "auto-converted from Makefile.DragonFly"
-target @any
-
-file materialize dragonfly/patch-ipv6mon.c -> dragonfly/patch-ipv6mon.c

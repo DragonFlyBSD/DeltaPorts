@@ -5,4 +5,3 @@ target @any
 
 mk add USES "shebangfix"
 mk add SHEBANG_FILES "active-response/ossec-pagerduty.sh"
-file materialize dragonfly/patch-src_Makefile -> dragonfly/patch-src_Makefile

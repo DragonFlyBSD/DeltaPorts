@@ -34,5 +34,3 @@ text replace-once file Makefile from "	@${REINPLACE_CMD} -e 's|/Contents/$$(ARCH
 text replace-once file Makefile from "	${STRIP_CMD} ${STAGEDIR}${LOCALBASE}/OFX/Plugins/Arena.ofx.bundle/Contents/FreeBSD-x86-64/Arena.ofx" to "	${STRIP_CMD} ${STAGEDIR}${LOCALBASE}/OFX/Plugins/Arena.ofx.bundle/Contents/${OPSYS}-x86-64/Arena.ofx"
 
 text replace-once file pkg-plist from "OFX/Plugins/Arena.ofx.bundle/Contents/FreeBSD-x86-64/Arena.ofx" to "OFX/Plugins/Arena.ofx.bundle/Contents/%%OPSYS%%-x86-64/Arena.ofx"
-
-file materialize dragonfly/patch-OpenFX_Support_include_ofxsCore.h -> dragonfly/patch-OpenFX_Support_include_ofxsCore.h

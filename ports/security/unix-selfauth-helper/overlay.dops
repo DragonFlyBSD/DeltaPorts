@@ -10,4 +10,3 @@ mk target set dfly-install <<'MK1'
 		${WRKSRC}/unix-selfauth.in
 	${INSTALL_DATA} ${WRKSRC}/unix-selfauth.in ${STAGEDIR}${PREFIX}/etc/pam.d/unix-selfauth
 MK1
-file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

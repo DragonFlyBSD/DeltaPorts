@@ -99,11 +99,3 @@ MK
 # are ?= and have no faithful set op, so substitute in place instead.
 mk eval BUILD_DEPENDS "${BUILD_DEPENDS:S,devel/binutils,devel/binutils@native,g}"
 mk eval RUN_DEPENDS "${RUN_DEPENDS:S,devel/binutils,devel/binutils@native,g}"
-
-file materialize dragonfly/patch-components_chmhelp_lhelp -> dragonfly/patch-components_chmhelp_lhelp
-file materialize dragonfly/patch-ide_initialsetupproc.pas -> dragonfly/patch-ide_initialsetupproc.pas
-file materialize dragonfly/patch-ide_Makefile -> dragonfly/patch-ide_Makefile
-file materialize dragonfly/patch-ide_packages_ideconfig_include_dragonfly_lazconf.inc -> dragonfly/patch-ide_packages_ideconfig_include_dragonfly_lazconf.inc
-file materialize dragonfly/patch-ide_packages_ideconfig_include_unix_lazbaseconf.inc -> dragonfly/patch-ide_packages_ideconfig_include_unix_lazbaseconf.inc
-file materialize dragonfly/patch-lcl_interfaces_qt5_cbindings_qt5.pas -> dragonfly/patch-lcl_interfaces_qt5_cbindings_qt5.pas
-file materialize dragonfly/patch-lcl_interfaces_qt5_qt56.pas -> dragonfly/patch-lcl_interfaces_qt5_qt56.pas

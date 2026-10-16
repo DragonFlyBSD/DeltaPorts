@@ -5,4 +5,3 @@ target @any
 
 mk eval USES "${USES:S/cargo/cargo:extra/}"
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-src_utils.rs -> dragonfly/patch-src_utils.rs

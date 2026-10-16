@@ -4,4 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add LDFLAGS "-L${LOCALBASE}/lib"
-file materialize dragonfly/patch-myconf.h -> dragonfly/patch-myconf.h

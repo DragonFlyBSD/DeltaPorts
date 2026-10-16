@@ -5,4 +5,3 @@ target @any
 
 mk add USES "pkgconfig"
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
-file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

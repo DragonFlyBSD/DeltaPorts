@@ -4,4 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk eval RUN_DEPENDS "${RUN_DEPENDS:Nrar*}"
-file materialize dragonfly/patch-Makefile.PL -> dragonfly/patch-Makefile.PL

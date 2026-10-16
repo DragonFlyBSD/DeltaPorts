@@ -12,5 +12,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@_THROW_BAD_ALLOC@throw()@g' \
 		${WRKSRC}/sources/3rd-party/nvtt/nvcore/Memory.h
 MK1
-file materialize dragonfly/patch-sources_3rd-party_nvtt_nvcore_poshlib_posh.h -> dragonfly/patch-sources_3rd-party_nvtt_nvcore_poshlib_posh.h
-file materialize dragonfly/patch-sources_utils_converter_ogg__tools.cxx -> dragonfly/patch-sources_utils_converter_ogg__tools.cxx

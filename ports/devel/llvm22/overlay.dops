@@ -22,7 +22,7 @@ MK
 # gcc will not convert the std::make_unique overload set to std::function;
 # clang picks an overload, gcc rejects the whole set. Wrap each entry in a
 # lambda with an explicit return type.
-file materialize dragonfly/patch-clang-tools-extra_clangd_index_dex_dexp_Dexp.cpp -> dragonfly/patch-clang-tools-extra_clangd_index_dex_dexp_Dexp.cpp
+# dragonfly/patch-clang-tools-extra_clangd_index_dex_dexp_Dexp.cpp
 
 # Both Makefile edits are single, uniquely-anchored lines, so express
 # them rather than carrying a diff: no context to drift. Anchored on the

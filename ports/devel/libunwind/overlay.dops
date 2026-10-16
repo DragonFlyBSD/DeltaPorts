@@ -12,9 +12,6 @@ mk set TESTS_DESC "Enable tests (installed to libexec)"
 mk set TESTS_CONFIGURE_ON "--enable-tests"
 mk set TESTS_CONFIGURE_OFF "--disable-tests"
 
-file materialize dragonfly/patch-src_os-freebsd.c -> dragonfly/patch-src_os-freebsd.c
-file materialize dragonfly/patch-tests_test-ptrace.c -> dragonfly/patch-tests_test-ptrace.c
-
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|' \
 		${WRKSRC}/src/ptrace/_UPT_reg_offset.c \

@@ -9,4 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@<cam/@<bus/cam/@g' \
 		${WRKSRC}/mpt_cam.c
 MK1
-file materialize dragonfly/patch-mptd.h -> dragonfly/patch-mptd.h

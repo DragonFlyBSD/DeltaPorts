@@ -7,7 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's,FreeBSD|OpenBSD),DragonFly|&,g' \
 		${WRKSRC}/build/unix/config_proginfo_host
 MK1
-file materialize dragonfly/patch-build__unix__config_functions -> dragonfly/patch-build__unix__config_functions
-file materialize dragonfly/patch-build__unix__config_proginfo_build -> dragonfly/patch-build__unix__config_proginfo_build
-file materialize dragonfly/patch-src_libs_network_socket_socket_bsd.c -> dragonfly/patch-src_libs_network_socket_socket_bsd.c
-file materialize dragonfly/patch-src_port.h -> dragonfly/patch-src_port.h

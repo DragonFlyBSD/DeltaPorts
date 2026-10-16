@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/libg15daemon_client/g15daemon_net.c \
 		${WRKSRC}/plugins/g15_plugin_net.c
 MK1
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure

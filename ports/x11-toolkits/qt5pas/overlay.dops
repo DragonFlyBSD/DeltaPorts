@@ -1,6 +1,3 @@
 port x11-toolkits/qt5pas
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-qt5.pas -> dragonfly/patch-qt5.pas

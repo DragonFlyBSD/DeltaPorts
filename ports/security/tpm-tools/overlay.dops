@@ -7,4 +7,3 @@ mk add CFLAGS "-Wno-unused-but-set-variable"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/-Werror[[:>:]]//g' ${WRKSRC}/configure
 MK1
-file materialize dragonfly/patch-libressl-compat -> dragonfly/patch-libressl-compat

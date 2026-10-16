@@ -9,5 +9,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/src/meson.build
 
 MK1
-file materialize dragonfly/patch-src_file_reader.cpp -> dragonfly/patch-src_file_reader.cpp
-file materialize dragonfly/patch-src_fs__unix.cpp -> dragonfly/patch-src_fs__unix.cpp

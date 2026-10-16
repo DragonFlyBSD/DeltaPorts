@@ -13,6 +13,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/configure
 MK1
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-lib_dnscore_src_random.c -> dragonfly/patch-lib_dnscore_src_random.c
-file materialize dragonfly/patch-sbin_yadifad_server-rv.c -> dragonfly/patch-sbin_yadifad_server-rv.c
-file materialize dragonfly/patch-sbin_yadifad_server-sm.c -> dragonfly/patch-sbin_yadifad_server-sm.c

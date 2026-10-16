@@ -25,5 +25,3 @@ text line-insert-after file pkg-plist anchor "%%PYTHON_LIBDIR%%/__pycache__/_sys
 text line-insert-after file pkg-plist anchor "%%PYTHON_LIBDIR%%/__pycache__/_sysconfigdata__%%PYTHON_PLATFORM%%_%%PYTHON_TAG%%.pyc" line "%%PYTHON_LIBDIR%%/_sysconfigdata__%%PYTHON_PLATFORM%%_.py" on-missing noop
 text line-insert-after file pkg-plist anchor "%%PYTHON_LIBDIR%%/_sysconfigdata__%%PYTHON_PLATFORM%%_.py" line "%%PYTHON_LIBDIR%%/lib-dynload/_elementtree%%PYTHON_TAG%%.so" on-missing noop
 text line-insert-after file pkg-plist anchor "%%PYTHON_LIBDIR%%/lib-dynload/_elementtree%%PYTHON_TAG%%.so" line "%%PYTHON_LIBDIR%%/lib-dynload/pyexpat%%PYTHON_TAG%%.so" on-missing noop
-
-file materialize dragonfly/patch-setup.py -> dragonfly/patch-setup.py

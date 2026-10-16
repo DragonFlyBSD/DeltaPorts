@@ -1,6 +1,3 @@
 port archivers/lzop
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-src_miniacc.h -> dragonfly/patch-src_miniacc.h

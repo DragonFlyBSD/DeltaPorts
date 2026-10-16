@@ -1,6 +1,3 @@
 port mail/heirloom-mailx
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-names.c -> dragonfly/patch-names.c

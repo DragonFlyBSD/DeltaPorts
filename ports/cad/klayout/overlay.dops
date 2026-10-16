@@ -9,4 +9,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/src/klayout.pri
 MK1
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-src_tl_tl_tlFileUtils.cc -> dragonfly/patch-src_tl_tl_tlFileUtils.cc

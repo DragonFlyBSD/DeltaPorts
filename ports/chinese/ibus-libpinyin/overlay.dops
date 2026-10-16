@@ -1,6 +1,3 @@
 port chinese/ibus-libpinyin
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-src_PYLibPinyin.cc -> dragonfly/patch-src_PYLibPinyin.cc

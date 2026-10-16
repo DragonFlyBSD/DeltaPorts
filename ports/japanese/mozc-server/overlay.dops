@@ -18,6 +18,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|' \
 		${WRKSRC}/src/build_tools/util.py
 MK1
-file materialize dragonfly/patch-src_base_flags.cc -> dragonfly/patch-src_base_flags.cc
-file materialize dragonfly/patch-src_gyp_common.gypi -> dragonfly/patch-src_gyp_common.gypi
-file materialize dragonfly/patch-src_prediction_zero__query__dict.h -> dragonfly/patch-src_prediction_zero__query__dict.h

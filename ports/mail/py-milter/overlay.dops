@@ -1,6 +1,3 @@
 port mail/py-milter
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-miltermodule.c -> dragonfly/patch-miltermodule.c

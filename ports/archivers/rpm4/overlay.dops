@@ -6,6 +6,3 @@ target @any
 patch apply diffs/Makefile.diff
 
 text line-remove file pkg-plist exact "lib/rpm/elfdeps" on-missing noop
-
-file materialize dragonfly/patch-misc_fts.c -> dragonfly/patch-misc_fts.c
-file materialize dragonfly/patch-rpmio_rpmio.c -> dragonfly/patch-rpmio_rpmio.c

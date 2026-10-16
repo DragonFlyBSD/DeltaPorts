@@ -9,7 +9,6 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add CFLAGS "-DZ_HAVE_UNISTD_H"
-file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
 
 # =======================================================================
 # @2026Q3: mongo-c-driver 1.30.8, HTML docs built with Sphinx dirhtml.
@@ -25,6 +24,5 @@ file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.tx
 # =======================================================================
 target @2026Q3
 
-file materialize dragonfly/@2026Q3/patch-src_libmongoc_src_mongoc_mongoc-counters-private.h -> dragonfly/patch-src_libmongoc_src_mongoc_mongoc-counters-private.h
 text line-remove file pkg-plist exact "%%PORTDOCS%%%%DOCSDIR%%/mongo-c-driver/html/api.html"
 text line-remove file pkg-plist exact "%%PORTDOCS%%@dir %%DOCSDIR%%/mongo-c-driver/html/index"

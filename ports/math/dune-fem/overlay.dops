@@ -8,4 +8,3 @@ mk target set dfly-install <<'MK'
 	${TOUCH} ${STAGEDIR}${DOCSDIR}/doxygen/.keepme
 .endif
 MK
-file materialize dragonfly/patch-dune_fem_quadrature_caching_twistutility.cc -> dragonfly/patch-dune_fem_quadrature_caching_twistutility.cc

@@ -4,5 +4,3 @@ reason "DragonFly: version-conditional install workaround, IGNORE unmaintained"
 target @any
 
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-
-file materialize dragonfly/patch-threadlib_pthread.c -> dragonfly/patch-threadlib_pthread.c

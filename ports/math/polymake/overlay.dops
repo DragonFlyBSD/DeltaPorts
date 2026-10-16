@@ -5,4 +5,3 @@ target @any
 
 mk add USES "localbase:ldflags"
 mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--with-libcxx}"
-file materialize dragonfly/patch-lib_core_src_perl_JSON-XS.xxs -> dragonfly/patch-lib_core_src_perl_JSON-XS.xxs

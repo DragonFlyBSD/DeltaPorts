@@ -9,5 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@-Werror@@g'		\
 		${WRKSRC}/Jamsettings ${WRKSRC}/Makefile
 MK1
-file materialize dragonfly/patch-core_file.cpp -> dragonfly/patch-core_file.cpp
-file materialize dragonfly/patch-db_query.cpp -> dragonfly/patch-db_query.cpp

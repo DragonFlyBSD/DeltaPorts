@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/libk3bdevice/k3bscsicommand_bsd.cpp \
 		${WRKSRC}/libk3bdevice/k3bdevicemanager.cpp
 MK1
-file materialize dragonfly/patch-libk3bdevice_CMakeLists.txt -> dragonfly/patch-libk3bdevice_CMakeLists.txt

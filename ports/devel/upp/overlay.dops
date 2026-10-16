@@ -1,6 +1,3 @@
 port devel/upp
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-uppsrc_Core_Format.cpp -> dragonfly/patch-uppsrc_Core_Format.cpp

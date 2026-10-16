@@ -8,6 +8,3 @@ target @any
 # Disable meson werror instead of chasing per-warning -Wno-error names
 # (clang's builtin-declaration diagnostic isn't demoted by those).
 mk add MESON_ARGS "-Dwerror=false"
-
-file materialize dragonfly/patch-render_gles2_renderer.c -> dragonfly/patch-render_gles2_renderer.c
-file materialize dragonfly/patch-render_vulkan_vulkan.c -> dragonfly/patch-render_vulkan_vulkan.c

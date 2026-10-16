@@ -10,5 +10,3 @@ mk target set dfly-patch <<'MK1'
 	${CP} -v ${WRKSRC}/etc/install-yices.freebsd \
 		 ${WRKSRC}/etc/install-yices.dragonfly
 MK1
-file materialize dragonfly/patch-autoconf_os -> dragonfly/patch-autoconf_os
-file materialize dragonfly/patch-src_utils_memsize.c -> dragonfly/patch-src_utils_memsize.c

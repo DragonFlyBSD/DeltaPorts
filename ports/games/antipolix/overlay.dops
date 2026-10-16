@@ -15,5 +15,3 @@ mk target set dfly-patch <<'MK1'
 	@${ECHO} '# Prepare: ".server_defaults" , ".motd" and ".players" #' >> ${DPMSG}
 	@${ECHO} "########################################################" >> ${DPMSG}
 MK1
-file materialize dragonfly/patch-game.c -> dragonfly/patch-game.c
-file materialize dragonfly/patch-messages.c -> dragonfly/patch-messages.c

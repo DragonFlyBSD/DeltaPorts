@@ -7,5 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
 		${WRKSRC}/metainfo.yaml
 MK1
-file materialize dragonfly/patch-src_lib_CMakeLists.txt -> dragonfly/patch-src_lib_CMakeLists.txt
-file materialize dragonfly/patch-src_lib_util_kprocesslist__unix.cpp -> dragonfly/patch-src_lib_util_kprocesslist__unix.cpp

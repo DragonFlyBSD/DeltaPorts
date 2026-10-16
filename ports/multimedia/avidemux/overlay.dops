@@ -10,4 +10,3 @@ mk target set dfly-patch <<'MK1'
 	${ECHO_MSG} 'target_link_libraries(ADM_core6 "-lexecinfo")' >> \
 		${WRKSRC}/avidemux_core/ADM_core/src/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-avidemux_core__ADM_core__include__ADM_default.h -> dragonfly/patch-avidemux_core__ADM_core__include__ADM_default.h

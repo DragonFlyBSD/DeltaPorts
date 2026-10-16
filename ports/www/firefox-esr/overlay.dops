@@ -28,13 +28,3 @@ mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's@gtk+-wayland@&z@g' \
 		${WRKSRC}/toolkit/moz.configure
 MK
-
-file materialize dragonfly/patch-dom_webtransport_api_WebTransportDatagramDuplexStream.cpp -> dragonfly/patch-dom_webtransport_api_WebTransportDatagramDuplexStream.cpp
-file materialize dragonfly/patch-image_imgFrame.h -> dragonfly/patch-image_imgFrame.h
-file materialize dragonfly/patch-media_libcubeb_src_cubeb__jack.cpp -> dragonfly/patch-media_libcubeb_src_cubeb__jack.cpp
-file materialize dragonfly/patch-mozglue_baseprofiler_core_PlatformMacros.h -> dragonfly/patch-mozglue_baseprofiler_core_PlatformMacros.h
-file materialize dragonfly/patch-mozglue_baseprofiler_lul_LulElfInt.h -> dragonfly/patch-mozglue_baseprofiler_lul_LulElfInt.h
-file materialize dragonfly/patch-third__party_libwebrtc_build_build__config.h -> dragonfly/patch-third__party_libwebrtc_build_build__config.h
-file materialize dragonfly/patch-third__party_rust_libc_src_unix_bsd_freebsdlike_dragonfly_mod.rs -> dragonfly/patch-third__party_rust_libc_src_unix_bsd_freebsdlike_dragonfly_mod.rs
-file materialize dragonfly/patch-toolkit_library_gen__buildid.py -> dragonfly/patch-toolkit_library_gen__buildid.py
-file materialize dragonfly/patch-toolkit_xre_nsAppRunner.cpp -> dragonfly/patch-toolkit_xre_nsAppRunner.cpp

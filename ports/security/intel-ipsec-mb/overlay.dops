@@ -4,4 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-lib_intel-ipsec-mb.h -> dragonfly/patch-lib_intel-ipsec-mb.h

@@ -10,4 +10,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
 		${WRKSRC}/src/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-src_MagickUtilities.h -> dragonfly/patch-src_MagickUtilities.h

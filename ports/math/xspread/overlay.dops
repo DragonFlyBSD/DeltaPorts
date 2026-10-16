@@ -9,4 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\(terminfo curses\)@\1 ncurses@g'	\
 		${WRKSRC}/configure
 MK1
-file materialize dragonfly/patch-psc.c -> dragonfly/patch-psc.c

@@ -18,6 +18,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/misc/os_spec.h
 MK1
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-makefile -> dragonfly/patch-makefile
-file materialize dragonfly/patch-misc_debug.h -> dragonfly/patch-misc_debug.h
-file materialize dragonfly/patch-random_unix.c -> dragonfly/patch-random_unix.c

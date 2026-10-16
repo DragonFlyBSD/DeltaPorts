@@ -5,4 +5,3 @@ target @any
 
 mk add USES "localbase:ldflags"
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-src_terminal.c -> dragonfly/patch-src_terminal.c

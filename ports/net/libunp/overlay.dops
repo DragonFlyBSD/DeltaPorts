@@ -1,6 +1,3 @@
 port net/libunp
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-lib_wrapunix.c -> dragonfly/patch-lib_wrapunix.c

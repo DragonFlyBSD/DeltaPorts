@@ -5,4 +5,3 @@ target @any
 
 mk add CONFIGURE_ARGS --disable-netmap-module
 patch apply diffs/pkg-plist.diff
-file materialize dragonfly/patch-os-daq-modules_daq__dump.c -> dragonfly/patch-os-daq-modules_daq__dump.c

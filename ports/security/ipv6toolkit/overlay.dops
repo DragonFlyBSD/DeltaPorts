@@ -5,5 +5,3 @@ target @any
 
 mk set MAKE_JOBS_UNSAFE "yes"
 mk add MAKE_ENV "CWARNFLAGS=-fcommon"
-file materialize dragonfly/patch-tools_libipv6.c -> dragonfly/patch-tools_libipv6.c
-file materialize dragonfly/patch-tools_libipv6.h -> dragonfly/patch-tools_libipv6.h

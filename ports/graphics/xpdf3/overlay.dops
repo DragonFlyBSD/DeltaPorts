@@ -4,5 +4,3 @@ reason "pkg-plist: remove non-X11 binaries and man pages; materialize Makefile.i
 target @any
 
 patch apply diffs/pkg-plist.diff
-
-file materialize dragonfly/patch-Makefile.in -> dragonfly/patch-Makefile.in

@@ -6,4 +6,3 @@ target @any
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/-Werror //g' ${WRKSRC}/Makefile
 MK1
-file materialize dragonfly/patch-smbus_io.c -> dragonfly/patch-smbus_io.c

@@ -6,5 +6,3 @@ target @any
 mk add OPTIONS_EXCLUDE SCTP
 mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:Nsctp}"
 mk eval CFLAGS "${CFLAGS:N-Werror:N-Qunused-arguments}"
-
-file materialize dragonfly/patch-config -> dragonfly/patch-config

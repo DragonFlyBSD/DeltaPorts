@@ -26,4 +26,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/cpp/src/IceGrid/PlatformInfo.cpp \
 		${WRKSRC}/cpp/src/IceUtil/UtilException.cpp
 MK1
-file materialize dragonfly/patch-scripts_Util.py -> dragonfly/patch-scripts_Util.py

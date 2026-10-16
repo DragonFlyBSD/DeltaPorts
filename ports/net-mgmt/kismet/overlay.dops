@@ -9,5 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/freebsd\*/freebsd*|dragonfly*/g' \
 		${WRKSRC}/configure
 MK1
-file materialize dragonfly/patch-packetsource_bsdrt.cc -> dragonfly/patch-packetsource_bsdrt.cc
-file materialize dragonfly/patch-util.cc -> dragonfly/patch-util.cc

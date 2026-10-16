@@ -5,4 +5,3 @@ target @any
 
 mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--enable-utempter}"
 mk add USES "ncurses:port"
-file materialize dragonfly/patch-osdep -> dragonfly/patch-osdep

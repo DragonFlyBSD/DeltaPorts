@@ -1,5 +1,3 @@
 port astro/celestia
 type port
 reason "auto-converted from Makefile.DragonFly"
-target @any
-file materialize dragonfly/patch-src_celengine_astro.cpp -> dragonfly/patch-src_celengine_astro.cpp

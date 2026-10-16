@@ -9,5 +9,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/unix/qsh_unix.c				\
 		${WRKSRC}/unix/snd_unix.c
 MK1
-file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile
-file materialize dragonfly/patch-unix_net__udp.c -> dragonfly/patch-unix_net__udp.c

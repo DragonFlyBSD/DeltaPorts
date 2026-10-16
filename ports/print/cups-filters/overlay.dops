@@ -5,4 +5,3 @@ target @any
 
 mk add CXXFLAGS "-std=c++17"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPSHYBRID} PSPOPPLER"
-file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac

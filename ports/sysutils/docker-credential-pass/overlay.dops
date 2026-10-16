@@ -7,4 +7,3 @@ mk target set pre-build-script <<'MK1'
 	${LN} -s ${GO_WRKSRC}/pass/cmd/main_linux.go ${GO_WRKSRC}/pass/cmd/main_dragonfly.go
 	${LN} -s ${GO_WRKSRC}/pass/pass_linux.go ${GO_WRKSRC}/pass/pass_dragonfly.go
 MK1
-file materialize dragonfly/XFAIL -> dragonfly/XFAIL

@@ -10,5 +10,3 @@ mk target set dfly-patch <<'MK1'
 	  < ${FILESDIR}/FREEBSD_DEF \
 	  > ${WRKSRC}/acelib/wmake/DRAGONFLY_DEF
 MK1
-file materialize dragonfly/patch-acelib_wh_mydirent.h -> dragonfly/patch-acelib_wh_mydirent.h
-file materialize dragonfly/patch-acelib_wh_mystdlib.h -> dragonfly/patch-acelib_wh_mystdlib.h

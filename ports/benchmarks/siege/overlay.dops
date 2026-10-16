@@ -4,5 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-src_cookies.c -> dragonfly/patch-src_cookies.c
-file materialize dragonfly/patch-src_ftp.c -> dragonfly/patch-src_ftp.c

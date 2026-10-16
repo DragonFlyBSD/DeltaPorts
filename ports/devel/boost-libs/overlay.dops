@@ -30,11 +30,3 @@ text line-remove file pkg-plist exact "lib/libboost_math_tr1l.so"
 text line-remove file pkg-plist exact "lib/libboost_math_tr1l.so.%%BOOST_MAJOR_VER%%"
 text line-remove file pkg-plist exact "lib/libboost_math_tr1l.so.%%BOOST_MAJOR_VER%%.%%BOOST_MINOR_VER%%"
 text line-remove file pkg-plist exact "lib/libboost_math_tr1l.so.%%BOOST_SHARED_LIB_VER%%"
-
-file materialize dragonfly/patch-boost_math_tools_config.hpp -> dragonfly/patch-boost_math_tools_config.hpp
-file materialize dragonfly/patch-boost_system_config.hpp -> dragonfly/patch-boost_system_config.hpp
-file materialize dragonfly/patch-boost_test_impl_execution__monitor.ipp -> dragonfly/patch-boost_test_impl_execution__monitor.ipp
-file materialize dragonfly/patch-libs_iostreams_src_lzma.cpp -> dragonfly/patch-libs_iostreams_src_lzma.cpp
-file materialize dragonfly/patch-libs_log_src_timestamp.cpp -> dragonfly/patch-libs_log_src_timestamp.cpp
-file materialize dragonfly/patch-libs_process_src_ext_env.cpp -> dragonfly/patch-libs_process_src_ext_env.cpp
-file materialize dragonfly/patch-libs_process_src_pid.cpp -> dragonfly/patch-libs_process_src_pid.cpp

@@ -60,19 +60,3 @@ mk target set dfly-patch <<'MK'
 MK
 mk set MAKE_JOBS_UNSAFE "yes"
 patch apply diffs/pkg-plist.diff
-file materialize dragonfly/patch-addons_xbmc.addon_metadata.xsd -> dragonfly/patch-addons_xbmc.addon_metadata.xsd
-file materialize dragonfly/patch-cmake_modules_buildtools_FindTexturePacker.cmake -> dragonfly/patch-cmake_modules_buildtools_FindTexturePacker.cmake
-file materialize dragonfly/patch-cmake_scripts_common_AddonHelpers.cmake -> dragonfly/patch-cmake_scripts_common_AddonHelpers.cmake
-file materialize dragonfly/patch-cmake_scripts_common_ArchSetup.cmake -> dragonfly/patch-cmake_scripts_common_ArchSetup.cmake
-file materialize dragonfly/patch-cmake_scripts_common_Platform.cmake -> dragonfly/patch-cmake_scripts_common_Platform.cmake
-file materialize dragonfly/patch-lib_libUPnP_CMakeLists.txt -> dragonfly/patch-lib_libUPnP_CMakeLists.txt
-file materialize dragonfly/patch-lib_libUPnP_patches_0002-platinum-add-custom-CMakeLists.txt.patch -> dragonfly/patch-lib_libUPnP_patches_0002-platinum-add-custom-CMakeLists.txt.patch
-file materialize dragonfly/patch-tools_depends_m4_xbmc__arch.m4 -> dragonfly/patch-tools_depends_m4_xbmc__arch.m4
-file materialize dragonfly/patch-tools_depends_target_ffmpeg_CMakeLists.txt -> dragonfly/patch-tools_depends_target_ffmpeg_CMakeLists.txt
-file materialize dragonfly/patch-xbmc_addons_addoninfo_AddonInfoBuilder.cpp -> dragonfly/patch-xbmc_addons_addoninfo_AddonInfoBuilder.cpp
-file materialize dragonfly/patch-xbmc_cores_AudioEngine_CMakeLists.txt -> dragonfly/patch-xbmc_cores_AudioEngine_CMakeLists.txt
-file materialize dragonfly/patch-xbmc_network_DNSNameCache.cpp -> dragonfly/patch-xbmc_network_DNSNameCache.cpp
-file materialize dragonfly/patch-xbmc_platform_freebsd_network_NetworkFreebsd.h -> dragonfly/patch-xbmc_platform_freebsd_network_NetworkFreebsd.h
-file materialize dragonfly/patch-xbmc_platform_posix_PosixTimezone.cpp -> dragonfly/patch-xbmc_platform_posix_PosixTimezone.cpp
-file materialize dragonfly/patch-xbmc_settings_Settings.cpp -> dragonfly/patch-xbmc_settings_Settings.cpp
-file materialize dragonfly/patch-xbmc_utils_SystemInfo.cpp -> dragonfly/patch-xbmc_utils_SystemInfo.cpp

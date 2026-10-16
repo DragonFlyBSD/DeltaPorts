@@ -5,4 +5,3 @@ target @any
 
 mk add USES "alias localbase:ldflags"
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-Makefile -> dragonfly/patch-Makefile

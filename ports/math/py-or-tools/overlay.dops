@@ -17,5 +17,3 @@ mk target set dfly-patch <<'MK2'
 		${WRKSRC}/cmake/cpp.cmake
 
 MK2
-file materialize dragonfly/patch-ortools_util_fp__utils.h -> dragonfly/patch-ortools_util_fp__utils.h
-file materialize dragonfly/patch-ortools_util_zvector.h -> dragonfly/patch-ortools_util_zvector.h

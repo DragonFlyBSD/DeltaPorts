@@ -1,6 +1,3 @@
-target @any
 port devel/jwasm
 type port
 reason "DragonFly lacks <malloc.h>; guard its include like __FreeBSD__ in src/H/memalloc.h"
-
-file materialize dragonfly/patch-src_H_memalloc.h -> dragonfly/patch-src_H_memalloc.h

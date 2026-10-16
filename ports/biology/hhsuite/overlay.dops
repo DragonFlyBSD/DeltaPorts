@@ -19,5 +19,3 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/lib/ffindex/src/CMakeLists.txt \
 		${WRKSRC}/lib/ffindex/src/mpq/CMakeLists.txt
 MK
-
-file materialize dragonfly/patch-environ -> dragonfly/patch-environ

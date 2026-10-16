@@ -13,5 +13,3 @@ OPTIONS_DEFAULT+=	MIT
 MK
 
 mk set DFLY_UNMAINTAINED "yes"
-
-file materialize dragonfly/patch-sshd.c -> dragonfly/patch-sshd.c

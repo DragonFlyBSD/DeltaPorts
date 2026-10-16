@@ -5,4 +5,3 @@ target @any
 
 mk add USES "alias"
 mk add CONFIGURE_ARGS "--disable-polkit"
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure

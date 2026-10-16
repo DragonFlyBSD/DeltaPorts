@@ -5,4 +5,3 @@ target @any
 
 mk add CONFIGURE_ENV "LZMA_LIBS=\"-llzma\""
 mk add CONFIGURE_ENV "LZMA_CFLAGS=\"-DDUMMY\""
-file materialize dragonfly/patch-pdb_enumgen.pl -> dragonfly/patch-pdb_enumgen.pl

@@ -12,4 +12,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
 		${WRKSRC}/src/slib.c
 MK1
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure

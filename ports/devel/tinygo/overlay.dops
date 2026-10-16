@@ -17,4 +17,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e '/B460800/d' -e '/B921600/d' \
 		${WRKSRC}/vendor/go.bug.st/serial/serial_dragonfly.go
 MK1
-file materialize dragonfly/XFAIL -> dragonfly/XFAIL

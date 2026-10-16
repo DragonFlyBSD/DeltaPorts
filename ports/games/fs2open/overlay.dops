@@ -11,4 +11,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/code/windows_stub/stubs.cpp
 MK1
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-code_inetfile_cftp.h -> dragonfly/patch-code_inetfile_cftp.h

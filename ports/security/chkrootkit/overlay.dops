@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
 		${WRKSRC}/chkrootkit
 MK1
-file materialize dragonfly/patch-chkdirs.c -> dragonfly/patch-chkdirs.c

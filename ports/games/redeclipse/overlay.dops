@@ -14,5 +14,3 @@ dfly-patch:
 	@${ECHO} "# Build games/redeclipse-data from source to play this #" >> ${DPMSG}
 	@${ECHO} "########################################################" >> ${DPMSG}
 MK
-
-file materialize dragonfly/patch-redeclipse.sh -> dragonfly/patch-redeclipse.sh

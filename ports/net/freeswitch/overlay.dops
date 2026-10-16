@@ -11,4 +11,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e '/APR_ADDTO(SWITCH_AM_CFLAGS, -Werror)/d' \
 		${WRKSRC}/configure.ac
 MK1
-file materialize dragonfly/patch-src_switch__rtp.c -> dragonfly/patch-src_switch__rtp.c

@@ -10,4 +10,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} 's@tarGET_Link_libraries(ncls@& PUBLIC -lstdc++fs@g' \
 		${WRKSRC}/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-src_compat_compat.c -> dragonfly/patch-src_compat_compat.c

@@ -25,4 +25,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@MATCHES "BSD"@MATCHES "BSD|DRAGONFLY"@g' \
 		${WRKSRC}/Utilities/KWSys/vtksys/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-CMake_VTKGenerateExportHeader.cmake -> dragonfly/patch-CMake_VTKGenerateExportHeader.cmake

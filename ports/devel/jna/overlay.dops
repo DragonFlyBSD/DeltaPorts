@@ -5,8 +5,6 @@ target @any
 
 patch apply diffs/Makefile.diff
 
-file materialize dragonfly/patch-native_Makefile -> dragonfly/patch-native_Makefile
-
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's/-Werror //g' ${WRKSRC}/native/Makefile
 MK

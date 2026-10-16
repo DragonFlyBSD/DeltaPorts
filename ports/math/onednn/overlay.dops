@@ -9,6 +9,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/src/common/utils.cpp \
 		${WRKSRC}/src/common/memory_debug.cpp
 MK1
-file materialize dragonfly/patch-src_common_ittnotify_ittnotify_config.h -> dragonfly/patch-src_common_ittnotify_ittnotify_config.h
-file materialize dragonfly/patch-src_common_ittnotify_ittnotify_static.c -> dragonfly/patch-src_common_ittnotify_ittnotify_static.c
-file materialize dragonfly/patch-src_common_ittnotify_jitprofiling.c -> dragonfly/patch-src_common_ittnotify_jitprofiling.c

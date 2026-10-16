@@ -17,6 +17,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/unix/cmake/squeak.in
 	${CAT} ${.CURDIR}/pkg-plist | ${SED} -e '/so.vm-sound-pulse/d' > ${PLIST}
 MK1
-file materialize dragonfly/patch-Cross_vm_sqVirtualMachine.c -> dragonfly/patch-Cross_vm_sqVirtualMachine.c
-file materialize dragonfly/patch-unix_cmake_config.guess -> dragonfly/patch-unix_cmake_config.guess
-file materialize dragonfly/patch-unix_cmake_config.sub -> dragonfly/patch-unix_cmake_config.sub

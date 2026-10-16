@@ -36,7 +36,3 @@ text replace-once file pkg-plist from "OFX/Plugins/Shadertoy.ofx.bundle/Contents
 text replace-once file pkg-plist from "@dir OFX/Plugins/CImg.ofx.bundle/Contents/FreeBSD-x86-64" to "@dir OFX/Plugins/CImg.ofx.bundle/Contents/%%OPSYS%%-x86-64"
 text replace-once file pkg-plist from "@dir OFX/Plugins/Misc.ofx.bundle/Contents/FreeBSD-x86-64" to "@dir OFX/Plugins/Misc.ofx.bundle/Contents/%%OPSYS%%-x86-64"
 text replace-once file pkg-plist from "@dir OFX/Plugins/Shadertoy.ofx.bundle/Contents/FreeBSD-x86-64" to "@dir OFX/Plugins/Shadertoy.ofx.bundle/Contents/%%OPSYS%%-x86-64"
-
-file materialize dragonfly/patch-openfx_HostSupport_include_ofxhBinary.h -> dragonfly/patch-openfx_HostSupport_include_ofxhBinary.h
-file materialize dragonfly/patch-openfx_HostSupport_src_ofxhPluginCache.cpp -> dragonfly/patch-openfx_HostSupport_src_ofxhPluginCache.cpp
-file materialize dragonfly/patch-openfx_Support_Library_ofxsImageEffect.cpp -> dragonfly/patch-openfx_Support_Library_ofxsImageEffect.cpp

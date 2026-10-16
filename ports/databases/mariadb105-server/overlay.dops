@@ -9,6 +9,3 @@ mk target set dfly-install <<'MK1'
 	${RM} ${STAGEDIR}${DATADIR}/JavaWrappers.jar
 	${RM} ${STAGEDIR}${DATADIR}/JdbcInterface.jar
 MK1
-file materialize dragonfly/patch-client_mysql.cc -> dragonfly/patch-client_mysql.cc
-file materialize dragonfly/patch-include_my__pthread.h -> dragonfly/patch-include_my__pthread.h
-file materialize dragonfly/patch-scripts_CMakeLists.txt -> dragonfly/patch-scripts_CMakeLists.txt

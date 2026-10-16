@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@-lcurses@-lncurses@'	\
 		${WRKSRC}/configure
 MK1
-file materialize dragonfly/patch-dtop_dtop.c -> dragonfly/patch-dtop_dtop.c

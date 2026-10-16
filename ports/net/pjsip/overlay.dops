@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e "/app=libilbccodec .*subst /s/$$/ ILBC_LDFLAGS=-lm/"	\
 		${WRKSRC}/third_party/build/ilbc/Makefile
 MK1
-file materialize dragonfly/patch-aconfigure -> dragonfly/patch-aconfigure

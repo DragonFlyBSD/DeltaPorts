@@ -4,5 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add OPTIONS_EXCLUDE "DOCS"
-file materialize dragonfly/patch-src_ptex_PtexPlatform.h -> dragonfly/patch-src_ptex_PtexPlatform.h
-file materialize dragonfly/patch-src_ptex_PtexWriter.cpp -> dragonfly/patch-src_ptex_PtexWriter.cpp

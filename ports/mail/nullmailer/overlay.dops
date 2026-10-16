@@ -1,6 +1,3 @@
 port mail/nullmailer
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-lib_selfpipe.cc -> dragonfly/patch-lib_selfpipe.cc

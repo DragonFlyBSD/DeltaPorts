@@ -10,4 +10,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@' \
 		${WRKSRC}/Makefile.os
 MK1
-file materialize dragonfly/patch-Makefile.os -> dragonfly/patch-Makefile.os

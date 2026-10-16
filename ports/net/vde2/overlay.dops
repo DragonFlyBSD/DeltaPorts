@@ -1,8 +1,3 @@
 port net/vde2
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
-file materialize dragonfly/patch-man_CMakeLists.txt -> dragonfly/patch-man_CMakeLists.txt
-file materialize dragonfly/patch-src_vde__plug2tap.c -> dragonfly/patch-src_vde__plug2tap.c

@@ -16,10 +16,6 @@ mk add CMAKE_ARGS "-DENABLE_PULSEAUDIO:BOOL=OFF"
 
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
 
-file materialize dragonfly/patch-CMakeLists.txt -> dragonfly/patch-CMakeLists.txt
-file materialize dragonfly/patch-Source_Core_Common_MemoryUtil.cpp -> dragonfly/patch-Source_Core_Common_MemoryUtil.cpp
-file materialize dragonfly/patch-Source_Core_DiscIO_DriveBlob.cpp -> dragonfly/patch-Source_Core_DiscIO_DriveBlob.cpp
-
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
 		${WRKSRC}/Externals/cubeb/src/cubeb_alsa.c

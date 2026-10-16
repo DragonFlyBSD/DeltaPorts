@@ -5,4 +5,3 @@ target @any
 
 mk add MAKE_ENV "LIBCLANG_PATH=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib"
 mk eval USES "${USES:S/cargo/cargo:extra/}"
-file materialize dragonfly/XFAIL -> dragonfly/XFAIL

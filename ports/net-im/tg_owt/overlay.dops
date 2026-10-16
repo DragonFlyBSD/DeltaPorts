@@ -13,8 +13,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/cmake/libwebrtcbuild.cmake \
 		${WRKSRC}/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-cmake_libwebrtcbuild.cmake -> dragonfly/patch-cmake_libwebrtcbuild.cmake
-file materialize dragonfly/patch-src_rtc__base_byte__order.h -> dragonfly/patch-src_rtc__base_byte__order.h
-file materialize dragonfly/patch-src_rtc__base_ifaddrs__converter.h -> dragonfly/patch-src_rtc__base_ifaddrs__converter.h
-file materialize dragonfly/patch-src_rtc__base_platform__thread__types.cc -> dragonfly/patch-src_rtc__base_platform__thread__types.cc
-file materialize dragonfly/patch-src_system__wrappers_source_cpu__info.cc -> dragonfly/patch-src_system__wrappers_source_cpu__info.cc

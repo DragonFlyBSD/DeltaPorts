@@ -5,4 +5,3 @@ target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NVERBS}"
 mk add USES "alias"
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure

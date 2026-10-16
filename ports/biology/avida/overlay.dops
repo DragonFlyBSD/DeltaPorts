@@ -16,4 +16,3 @@ mk target set dfly-patch <<'MK1'
 				 -e 's@APTO_PLATFORM(THREADS)@APTO_PLATFORM_THREADS@g'
 MK1
 mk set DFLY_UNMAINTAINED "yes"
-file materialize dragonfly/patch-libs_apto_include_apto_core_ListStorage.h -> dragonfly/patch-libs_apto_include_apto_core_ListStorage.h

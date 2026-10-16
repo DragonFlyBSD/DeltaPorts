@@ -8,11 +8,11 @@ target @any
 # unchanged. The sixth is dropped -- get_process_mem_usage is gone from
 # 3.15 entirely (0 occurrences across Python/*.c and Modules/*.c, 4 in
 # 3.14), so Python_gc__free__threading.c has nothing to patch.
-file materialize dragonfly/patch-configure -> dragonfly/patch-configure
-file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
-file materialize dragonfly/patch-Python_thread__pthread.h -> dragonfly/patch-Python_thread__pthread.h
-file materialize dragonfly/patch-Lib_multiprocessing_util.py -> dragonfly/patch-Lib_multiprocessing_util.py
-file materialize dragonfly/patch-Modules___hacl_Lib__Memzero0.c -> dragonfly/patch-Modules___hacl_Lib__Memzero0.c
+# dragonfly/patch-configure
+# dragonfly/patch-configure.ac
+# dragonfly/patch-Python_thread__pthread.h
+# dragonfly/patch-Lib_multiprocessing_util.py
+# dragonfly/patch-Modules___hacl_Lib__Memzero0.c
 
 # The literal, not %%PYTHON_PLATFORM%%: Mk/Uses/python.mk derives that from
 # PYTHON_REL, which does not parse the 3.15.0b2 beta suffix, so it expands

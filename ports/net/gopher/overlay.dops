@@ -10,4 +10,3 @@ mk target set dfly-patch <<'MK1'
 			 -e "/LIBS/s@\(-lncurses\)@-L${LOCALBASE}/lib \1@g"	\
 		${WRKSRC}/configure
 MK1
-file materialize dragonfly/patch-object_GSgopherobj.c -> dragonfly/patch-object_GSgopherobj.c

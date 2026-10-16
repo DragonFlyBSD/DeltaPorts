@@ -16,5 +16,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/scripts/release.pl
 MK1
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-external_astyle_astyle__main.cpp -> dragonfly/patch-external_astyle_astyle__main.cpp
-file materialize dragonfly/patch-src_plugins_grass_qtermwidget_kpty.cpp -> dragonfly/patch-src_plugins_grass_qtermwidget_kpty.cpp

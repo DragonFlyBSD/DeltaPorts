@@ -9,4 +9,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/src/mathsResources/specialFunctions/erfFunction.cpp
 MK1
 mk set IGNORE "unmaintained, please request fixing to users mailing list"
-file materialize dragonfly/patch-src_mathsResources_specialFunctions_erfFunction.cpp -> dragonfly/patch-src_mathsResources_specialFunctions_erfFunction.cpp

@@ -4,5 +4,4 @@ reason "auto-converted from compat (fragment + diffs/)"
 target @any
 
 mk add USES "readline"
-file materialize dragonfly/patch-mfbt_moz.build -> dragonfly/patch-mfbt_moz.build
 mk set CONFIGURE_TARGET "x86_64-portbld-${OPSYS:tl}${OSREL}"

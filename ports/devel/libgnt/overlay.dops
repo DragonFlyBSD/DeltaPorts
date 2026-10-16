@@ -9,4 +9,3 @@ mk target set dfly-patch <<'MK1'
 			 -e "/ncurses_sys_prefix/s@'/usr'@'${LOCALBASE}'@g" \
 		${WRKSRC}/meson.build
 MK1
-file materialize dragonfly/patch-gntmain.c -> dragonfly/patch-gntmain.c

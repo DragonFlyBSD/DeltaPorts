@@ -9,4 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e "s@curses_lib_list=\"@&-L${LOCALBASE}/lib @g" \
 		${WRKSRC}/configure
 MK1
-file materialize dragonfly/patch-include_qemu_bswap.h -> dragonfly/patch-include_qemu_bswap.h

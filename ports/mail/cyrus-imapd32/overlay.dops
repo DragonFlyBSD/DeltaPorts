@@ -5,9 +5,3 @@ target @any
 
 mk add MAKE_ENV "LDVER=ld.bfd"
 mk add LDFLAGS "-lm"
-file materialize dragonfly/patch-imap_cyr__df.c -> dragonfly/patch-imap_cyr__df.c
-file materialize dragonfly/patch-imap_global.c -> dragonfly/patch-imap_global.c
-file materialize dragonfly/patch-imap_http__admin.c -> dragonfly/patch-imap_http__admin.c
-file materialize dragonfly/patch-imap_partlist.c -> dragonfly/patch-imap_partlist.c
-file materialize dragonfly/patch-imap_tls.c -> dragonfly/patch-imap_tls.c
-file materialize dragonfly/patch-lib_byteorder64.h -> dragonfly/patch-lib_byteorder64.h

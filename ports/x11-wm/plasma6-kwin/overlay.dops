@@ -7,5 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|g' \
 		${WRKSRC}/src/utils/CMakeLists.txt
 MK1
-file materialize dragonfly/patch-src_core_syncobjtimeline.cpp -> dragonfly/patch-src_core_syncobjtimeline.cpp
-file materialize dragonfly/patch-src_utils_ramfile.cpp -> dragonfly/patch-src_utils_ramfile.cpp
