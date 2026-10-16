@@ -1,0 +1,5 @@
+TIMESTAMP = 1786550780
+SHA256 (linux-firmware-20260622.tar.xz) = 2b9d8a358e76eb766588609135e53fa548b902c551daae33ee32f26f25e60dbb
+SIZE (linux-firmware-20260622.tar.xz) = 638944264
+SHA256 (intel-Intel-Linux-Processor-Microcode-Data-Files-microcode-20260512_GH0.tar.gz) = 5a07ce745d0bd8b360a4713564d46d5e38be797316a52abedaff0761e1b02370
+SIZE (intel-Intel-Linux-Processor-Microcode-Data-Files-microcode-20260512_GH0.tar.gz) = 16949219
