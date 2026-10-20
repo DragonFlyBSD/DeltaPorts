@@ -3,7 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk add USES "alias"
 mk add CMAKE_ARGS "BSD=1"
 mk add CFLAGS "-DBSD"
 mk target set dfly-patch <<'MK1'

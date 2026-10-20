@@ -3,7 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk add USES "alias"
 mk add CXXFLAGS "-Wno-return-type -Wno-ignored-attributes"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@ STREQUAL "\(FreeBSD\)"@ MATCHES "\1|DragonFly"@g' \

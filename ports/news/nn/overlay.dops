@@ -3,7 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk add USES "alias ncurses"
+mk add USES "ncurses"
 mk add MAKE_ARGS "CPP=\"${CC} -E -P\""
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@-ltermcap@-lncurses@g'	\

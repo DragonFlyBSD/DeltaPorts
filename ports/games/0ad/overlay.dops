@@ -1,11 +1,12 @@
 port games/0ad
 type lock
-reason "manual package build guard + alias USES + MAKE env"
+reason "manual package build guard + MAKE env; drop DPorts' USES=alias"
 target @any
 
 mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
 MANUAL_PACKAGE_BUILD=	570M package (too big for mirrors)
 MK
 
-mk add USES alias
+# FreeBSD removed Mk/Uses/alias.mk; DPorts' Makefile.DragonFly still adds it.
+text line-remove file Makefile.DragonFly exact "USES+=\t\talias"
 mk add MAKE_ENV "MAKE=${MAKE_CMD}"

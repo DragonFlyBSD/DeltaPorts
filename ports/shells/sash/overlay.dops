@@ -3,7 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk add USES "alias"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@<ufs/ufs/@<vfs/ufs/@g' \
 			 -e 's@<isofs/@<vfs/isofs/@g' \

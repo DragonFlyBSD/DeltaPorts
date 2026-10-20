@@ -3,7 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk eval USES "${USES:Nalias}"
 mk add OPTIONS_EXCLUDE "DOCS"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI}"
 mk add MAKE_ENV "LDVER=ld.bfd"

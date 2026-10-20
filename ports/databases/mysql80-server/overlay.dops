@@ -3,7 +3,6 @@ type port
 reason "disable SASL/FIDO options; filter cmake args; patch router CMakeLists; dragonfly patches"
 target @any
 
-mk add USES alias
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSASLCLIENT}"
 mk eval CMAKE_ARGS "${CMAKE_ARGS:N-DWITH_AUTHENTICATION_FIDO*}"
 mk add CMAKE_ARGS -DWITHOUT_FIDO=1

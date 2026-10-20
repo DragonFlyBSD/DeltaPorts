@@ -1,6 +1,4 @@
 port security/gsad
 type port
-reason "add alias to USES, add /var/run/gvm dir to plist in post-install"
+reason "FreeBSD lists /var/run/gvm itself; nothing left to change"
 target @any
-
-patch apply diffs/Makefile.diff

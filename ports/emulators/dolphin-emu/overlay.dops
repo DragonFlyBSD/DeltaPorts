@@ -3,7 +3,7 @@ type port
 reason "replace pulseaudio with alsa; dfly-patch for cubeb/jack _XOPEN_SOURCE; mark unmaintained"
 target @any
 
-mk add USES "alias localbase:ldflags"
+mk add USES "localbase:ldflags"
 
 mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
 

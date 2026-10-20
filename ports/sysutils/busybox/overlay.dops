@@ -3,6 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk add USES "alias"
 mk add CFLAGS "-D__FreeBSD_version=1300029"
 mk set DFLY_UNMAINTAINED "yes"

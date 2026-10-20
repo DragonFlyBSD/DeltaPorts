@@ -3,6 +3,5 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk add USES "alias"
 mk add CFLAGS "-DUNIX_BSD"
 mk set IGNORE "unmaintained, please request fixing to users mailing list"

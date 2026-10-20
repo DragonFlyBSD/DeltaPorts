@@ -3,7 +3,6 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk add USES "alias"
 mk target set dfly-patch <<'MK1'
 	${LN} -sv ${WRKSRC}/Makefile.FreeBSD ${WRKSRC}/Makefile.DragonFly
 	${REINPLACE_CMD} -e 's@\(\[ F"\`uname -s\`" = F"FreeBSD" \]\)@\1 \|\| \[ F"\`uname -s\`" = F"DragonFly" \]@g'	\

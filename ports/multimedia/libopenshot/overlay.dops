@@ -3,7 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk add USES "alias"
 mk add OPTIONS_EXCLUDE "DOCS"
 mk add CMAKE_BOOL_OFF "CMAKE_DISABLE_FIND_PACKAGE_Doxygen ENABLE_DOCS"
 mk target set dfly-patch <<'MK1'

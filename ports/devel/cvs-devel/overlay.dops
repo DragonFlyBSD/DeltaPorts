@@ -3,5 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk add USES "alias"
 mk add CONFIGURE_ARGS "ac_cv_have_decl___fpending=yes"

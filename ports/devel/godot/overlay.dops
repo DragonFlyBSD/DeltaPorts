@@ -3,7 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk add USES "alias"
 mk set USE_CLANG_FALLBACK "default"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@CRASH_HANDLER_ENABLED 1@NOCRASH@g' \

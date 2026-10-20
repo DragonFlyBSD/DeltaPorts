@@ -1,9 +1,8 @@
 port lang/mono
 type port
-reason "DragonFly: alias/localbase USES, iconv/charset deps, configure fix"
+reason "DragonFly: localbase USES, iconv/charset deps, configure fix"
 target @any
 
-mk add USES alias
 mk add USES localbase
 
 mk set DFLY_ALLOW_REMAKE "increases chances of building exponentially"

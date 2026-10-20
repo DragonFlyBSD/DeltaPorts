@@ -4,5 +4,5 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk set MAKE_JOBS_UNSAFE "yes"
-mk add USES "alias shebangfix"
+mk add USES "shebangfix"
 mk add SHEBANG_FILES "meson_post_install.py"

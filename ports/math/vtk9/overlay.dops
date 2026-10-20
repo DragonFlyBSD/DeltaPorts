@@ -1,9 +1,8 @@
 port math/vtk9
 type port
-reason "strip alias/MPI options, add DOCS exclude, run dfly-patch reinplace for DragonFly compat"
+reason "strip MPI options, add DOCS exclude, run dfly-patch reinplace for DragonFly compat"
 target @any
 
-mk eval USES "${USES:Nalias}"
 mk add OPTIONS_EXCLUDE DOCS
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI}"
 mk target set dfly-patch <<'MK'

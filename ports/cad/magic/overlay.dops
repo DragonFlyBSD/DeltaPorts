@@ -3,4 +3,4 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk add USES "alias localbase:ldflags"
+mk add USES "localbase:ldflags"

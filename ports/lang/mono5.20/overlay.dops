@@ -1,6 +1,6 @@
 port lang/mono5.20
 type port
-reason "DragonFly: USES self-ref filter, alias/localbase, iconv/charset deps"
+reason "DragonFly: USES self-ref filter, localbase, iconv/charset deps"
 target @any
 
 mk remove USES "elfctl"

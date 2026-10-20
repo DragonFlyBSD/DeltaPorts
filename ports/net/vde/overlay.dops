@@ -3,7 +3,6 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk add USES "alias"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@net/if_tun.h@net/tun/if_tun.h@g' \
 		${WRKSRC}/vdetaplib/test.c \

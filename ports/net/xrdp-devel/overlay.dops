@@ -3,7 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk add USES "alias"
 mk eval RUN_DEPENDS "${RUN_DEPENDS:N*pulseaudio-module-xrdp}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\(\*freebsd\*\))@\1|*dragonfly*)@g' \

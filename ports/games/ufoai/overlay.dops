@@ -1,9 +1,8 @@
 port games/ufoai
 type port
-reason "alias uses, conditional run-depends strip and package message target"
+reason "conditional run-depends strip and package message target"
 target @any
 
-mk add USES alias
 mk set DPMSG "${WRKDIR}/dports-message"
 
 mk block set condition "!defined(DPORTS_BUILDER) && defined(PACKAGE_BUILDING)" <<'MK'

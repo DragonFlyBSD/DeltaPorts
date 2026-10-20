@@ -1,9 +1,8 @@
 port science/afni
 type port
-reason "add alias USES; materialize dragonfly patches"
+reason "materialize dragonfly patches"
 target @any
 
-mk add USES alias
 mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
 MANUAL_PACKAGE_BUILD=	421M package (too big for mirrors)
 MK

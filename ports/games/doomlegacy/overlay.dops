@@ -4,4 +4,4 @@ reason "auto-converted from compat (fragment + diffs/)"
 target @any
 
 mk set DFLY_UNMAINTAINED "yes"
-mk set USES "gl alias gmake sdl tar:bzip2"
+mk set USES "gl gmake sdl tar:bzip2"
