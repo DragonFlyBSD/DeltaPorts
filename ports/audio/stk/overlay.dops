@@ -1,9 +1,7 @@
 port audio/stk
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "Recognize DragonFly in both the shipped configure script and its Autoconf source; preserve the selected realtime audio backend"
 target @any
 
-mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e 's|freebsd|dragonfly|' \
-		${WRKSRC}/configure.ac
-MK1
+file materialize dragonfly/patch-configure -> dragonfly/patch-configure
+file materialize dragonfly/patch-configure.ac -> dragonfly/patch-configure.ac
