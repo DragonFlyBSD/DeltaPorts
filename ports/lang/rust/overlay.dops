@@ -114,3 +114,57 @@ text line-insert-after file distinfo \
 
 # This line's own patches are in dragonfly/@main/, cut against the 1.99.0
 # source.
+
+# =======================================================================
+# @2026Q4: rust 1.98.1, bootstrap 1.97.1. FreeBSD's 2026Q4 lang/rust is
+# main's of 2026-09-11, which @main built until da3bd93a65c; this is that
+# block, with the bootstrap site and environment above copied in.
+# =======================================================================
+target @2026Q4
+
+# Bootstrap tarballs are self-hosted (no cross-build port exists for
+# DragonFly); avalon lays them out under <version>/ rather than the
+# <compiler_date>/ FreeBSD uses, so BOOTSTRAPS_DATE carries the version.
+mk add MASTER_SITES "https://avalon.dragonflybsd.org/misc/distfiles/rust-bootstrap/:bootstrap"
+
+# ld.gold cannot link std into the rustc driver.
+mk add MAKE_ENV "LDVER=ld.bfd"
+# The stage0 rustc/cargo need their own shared libs plus base libgcc.
+mk add MAKE_ENV "LD_LIBRARY_PATH=${WRKDIR}/bootstrap/lib:/usr/lib/gcc80"
+
+# rustc 1.98.1 needs LLVM 22. @2026Q3 keeps the 20/21 its own port pins.
+mk set LLVM_VERSION "22"
+mk set _LLVM_VERSION "22"
+
+mk set BOOTSTRAPS_DATE "1.97.1"
+
+# 1.98.1 and later vendor enough crates that the glob exceeds ARG_MAX.
+text replace-once file Makefile \
+     from "@${REINPLACE_CMD} 's,\"files\":{[^}]*},\"files\":{},'" \
+     to "@${FIND} ${CARGO_VENDOR_DIR} -name .cargo-checksum.json -exec ${REINPLACE_CMD} 's,\"files\":{[^}]*},\"files\":{},'"
+text replace-once file Makefile \
+     from "${CARGO_VENDOR_DIR}/*/.cargo-checksum.json" \
+     to "{} +"
+
+# Same chain as @2026Q3, against this branch's own source SIZE line.
+text line-insert-after file distinfo \
+     anchor "SIZE (rust/rustc-1.98.1-src.tar.xz) = 244440824" \
+     line "SHA256 (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 3ae8e16224118083cd089aa5318a00a0ca57f11d7a58aa4dd782a75394ad1db4"
+text line-insert-after file distinfo \
+     anchor "SHA256 (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 3ae8e16224118083cd089aa5318a00a0ca57f11d7a58aa4dd782a75394ad1db4" \
+     line "SIZE (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 68662392"
+text line-insert-after file distinfo \
+     anchor "SIZE (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 68662392" \
+     line "SHA256 (rust/1.97.1/rust-std-1.97.1-x86_64-unknown-dragonfly.tar.xz) = f11578b7ec1aa67dc1299cbdcb7c60d3a5dee528085bf322cbc37c6c7efca7bd"
+text line-insert-after file distinfo \
+     anchor "SHA256 (rust/1.97.1/rust-std-1.97.1-x86_64-unknown-dragonfly.tar.xz) = f11578b7ec1aa67dc1299cbdcb7c60d3a5dee528085bf322cbc37c6c7efca7bd" \
+     line "SIZE (rust/1.97.1/rust-std-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 24595676"
+text line-insert-after file distinfo \
+     anchor "SIZE (rust/1.97.1/rust-std-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 24595676" \
+     line "SHA256 (rust/1.97.1/cargo-1.97.1-x86_64-unknown-dragonfly.tar.xz) = eaa880eac5c00b16d64c41d92b0b02bd97be4ac95b6c1ecda5cdbee85af53562"
+text line-insert-after file distinfo \
+     anchor "SHA256 (rust/1.97.1/cargo-1.97.1-x86_64-unknown-dragonfly.tar.xz) = eaa880eac5c00b16d64c41d92b0b02bd97be4ac95b6c1ecda5cdbee85af53562" \
+     line "SIZE (rust/1.97.1/cargo-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 11460860"
+
+# This line's own patches are in dragonfly/@2026Q4/, cut against the 1.98.1
+# source.

@@ -65,3 +65,20 @@ mk target set dfly-patch <<'MK'
 			${WRKSRC}/tests/Makefile.in; \
 	fi
 MK
+
+# @2026Q4 starts as a copy of @main's own ops (dportsv3 migrate branch-line).
+target @2026Q4
+
+mk target set dfly-patch <<'MK'
+	@if [ -n "${PACKAGE_BUILDING}" ]; then \
+		${REINPLACE_CMD} -e "s|/usr/ports|/usr/dports|g" ${PROBLEM_FILES}; \
+	else \
+		${REINPLACE_CMD} -e "s|/usr/ports|${PORTSDIR}|g" ${PROBLEM_FILES}; \
+	fi
+	@if [ -e /usr/lib/priv/libprivate_ssl.so ]; then \
+		${REINPLACE_CMD} -e 's|lssl|lprivate_ssl|' -e 's|lcrypto|lprivate_crypto|' \
+			${WRKSRC}/libpkg/Makefile.in \
+			${WRKSRC}/src/Makefile.in \
+			${WRKSRC}/tests/Makefile.in; \
+	fi
+MK

@@ -104,3 +104,42 @@ text replace-once file pkg-plist \
 text replace-once file pkg-plist \
      from "%%DATADIR%%/completions-core/portupgrade.bash" \
      to   "%%FREEBSD%%%%DATADIR%%/completions-core/portupgrade.bash"
+
+# @2026Q4 starts as a copy of @main's own ops (dportsv3 migrate branch-line).
+target @2026Q4
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/freebsd-update.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/freebsd-update.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/kldload.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/kldload.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/kldunload.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/kldunload.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/pkg_deinstall.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/pkg_deinstall.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/pkg_delete.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/pkg_delete.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/pkg_info.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/pkg_info.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/portinstall.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/portinstall.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/portsnap.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/portsnap.bash"
+
+text replace-once file pkg-plist \
+     from "%%DATADIR%%/completions-core/portupgrade.bash" \
+     to   "%%FREEBSD%%%%DATADIR%%/completions-core/portupgrade.bash"

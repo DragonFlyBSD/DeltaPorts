@@ -148,3 +148,9 @@ target @main
 
 text line-remove file pkg-plist exact "%%DATADIR%%/qm/librecad_id_id.qm"
 text line-remove file pkg-plist exact "%%DATADIR%%/qm/plugins_id_id.qm"
+
+# @2026Q4 starts as a copy of @main's own ops (dportsv3 migrate branch-line).
+target @2026Q4
+
+text line-remove file pkg-plist exact "%%DATADIR%%/qm/librecad_id_id.qm"
+text line-remove file pkg-plist exact "%%DATADIR%%/qm/plugins_id_id.qm"
