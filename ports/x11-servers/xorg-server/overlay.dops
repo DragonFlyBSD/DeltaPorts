@@ -6,3 +6,18 @@ target @any
 patch apply diffs/Makefile.diff
 
 file remove files/patch-hw_xfree86_xorg-wrapper.c on-missing noop
+
+# FreeBSD 67dae6618236 run-depends on libdril_dri.so, which locked mesa-dri
+# 21.3.9 does not build. swrast_dri.so is in its package on every arch.
+
+target @2026Q3
+
+text replace-once file Makefile from "${LOCALBASE}/lib/dri/libdril_dri.so:graphics/mesa-dri" to "${LOCALBASE}/lib/dri/swrast_dri.so:graphics/mesa-dri"
+
+target @2026Q4
+
+text replace-once file Makefile from "${LOCALBASE}/lib/dri/libdril_dri.so:graphics/mesa-dri" to "${LOCALBASE}/lib/dri/swrast_dri.so:graphics/mesa-dri"
+
+target @main
+
+text replace-once file Makefile from "${LOCALBASE}/lib/dri/libdril_dri.so:graphics/mesa-dri" to "${LOCALBASE}/lib/dri/swrast_dri.so:graphics/mesa-dri"
