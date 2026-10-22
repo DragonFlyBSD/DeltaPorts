@@ -1,6 +1,4 @@
 port sysutils/packer
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
 
-mk set BUILD_DEPENDS "ca_root_nss>=0:security/ca_root_nss"
