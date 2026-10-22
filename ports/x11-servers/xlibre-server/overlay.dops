@@ -1,3 +1,15 @@
 port x11-servers/xlibre-server
 type port
 reason "DragonFly: provide feature_present() fallback for config/udev.c (FreeBSD libc only)"
+
+# dri.pc is in graphics/mesa-libs, and locked mesa-dri 21.3.9 builds no
+# libdril_dri.so; swrast_dri.so is in its package on every arch.
+target @2026Q3
+text replace-once file Makefile.common from "BUILD_DEPENDS+=\t${LOCALBASE}/libdata/pkgconfig/dri.pc:graphics/mesa-dri" to "BUILD_DEPENDS+=\t${LOCALBASE}/libdata/pkgconfig/dri.pc:graphics/mesa-libs"
+text replace-once file Makefile.common from "\t\t${LOCALBASE}/libdata/pkgconfig/dri.pc:graphics/mesa-dri" to "\t\t${LOCALBASE}/lib/dri/swrast_dri.so:graphics/mesa-dri"
+
+target @2026Q4
+text replace-once file Makefile.common from "${LOCALBASE}/lib/dri/libdril_dri.so:graphics/mesa-dri" to "${LOCALBASE}/lib/dri/swrast_dri.so:graphics/mesa-dri"
+
+target @main
+text replace-once file Makefile.common from "${LOCALBASE}/lib/dri/libdril_dri.so:graphics/mesa-dri" to "${LOCALBASE}/lib/dri/swrast_dri.so:graphics/mesa-dri"
