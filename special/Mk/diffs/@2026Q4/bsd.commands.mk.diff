@@ -1,0 +1,21 @@
+--- bsd.commands.mk.orig	2021-02-08 11:17:58 UTC
++++ bsd.commands.mk
+@@ -15,6 +15,9 @@ COMMANDS_Include_MAINTAINER=	portmgr@Fre
+ 
+ _COMMANDSMKINCLUDED=	yes
+ 
++.if defined(AWK) && ${AWK} == "awk"
++.undef AWK
++.endif
+ AWK?=			/usr/bin/awk
+ BASENAME?=		/usr/bin/basename
+ BRANDELF?=		/usr/bin/brandelf
+@@ -64,7 +67,7 @@ MOUNT_DEVFS?=		${MOUNT} -t devfs devfs
+ # XXX: this is a work-around for an obscure bug where
+ # mount -t nullfs returns zero status on errors within
+ # a make target
+-MOUNT_NULLFS?=		/sbin/mount_nullfs
++MOUNT_NULLFS?=		/sbin/mount_null
+ MV?=			/bin/mv
+ OBJCOPY?=		/usr/bin/objcopy
+ OBJDUMP?=		/usr/bin/objdump

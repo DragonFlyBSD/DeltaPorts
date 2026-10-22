@@ -1,0 +1,43 @@
+--- Uses/compiler.mk.orig	2022-07-11 23:41:27 UTC
++++ Uses/compiler.mk
+@@ -67,6 +67,11 @@ _COMPILER_ARGS=	#
+ _COMPILER_ARGS+=	features
+ .  endif
+ 
++.if ${CC} == cc
++# This is the DragonFly base compiler, we know it's gcc
++COMPILER_TYPE=		gcc
++COMPILER_VERSION=	83
++.else
+ .  if defined(_CCVERSION_${_CC_hash})
+ _CCVERSION=	${_CCVERSION_${_CC_hash}}
+ .  else
+@@ -80,6 +85,7 @@ COMPILER_TYPE=	clang
+ .  else
+ COMPILER_TYPE=	gcc
+ .  endif
++.endif
+ 
+ ALT_COMPILER_VERSION=	0
+ ALT_COMPILER_TYPE=	none
+@@ -115,6 +121,12 @@ CHOSEN_COMPILER_TYPE=	gcc
+ .  endif
+ 
+ .  if ${_COMPILER_ARGS:Mfeatures}
++.  if ${CC} == cc && ${CXX} == c++
++   # This is DragonFly's base gcc80 compiler
++   # Use a cache for DF rather than testing each feature.
++COMPILER_FEATURES=	libstdc++ c89 c99 c11 gnu89 gnu99 gnu11 c++98 \
++			c++0x c++11 c++14 c++17 gnu++98 gnu++11 gnu++17 dragonfly
++.  else
+ .    if defined(_CXXINTERNAL_${_CXX_hash})
+ _CXXINTERNAL=	${_CXXINTERNAL_${_CXX_hash}}
+ .    else
+@@ -147,6 +159,7 @@ PORTS_ENV_VARS+=			CC_OUTPUT_${_CC_hash}
+ COMPILER_FEATURES+=	${std}
+ .      endif
+ .    endfor
++.  endif	# DragonFly base compiler
+ .  endif
+ 
+ .  if ${_COMPILER_ARGS:Mc++11-lib}

@@ -1,0 +1,43 @@
+--- Scripts/do-fetch.sh.orig
++++ Scripts/do-fetch.sh
+@@ -27,6 +27,30 @@
+ 		;;
+ esac
+ 
++# Serialise fetches of the same distfile across parallel builders: re-run
++# this script under a per-file lock, once per line of the list. The list is
++# read from ${dp_FILES_FILE}, as the main loop below reads it, so each child
++# gets a one-line copy of it. Only the targets that download are wrapped;
++# the listing targets run in the port directory and write nothing.
++case ${dp_TARGET} in
++	do-fetch|makesum)
++		if [ ! -n "${DO_FETCH_ISLOCKED:=}" ]; then
++			_one="${dp_FILES_FILE}.locked.$$"
++			trap 'rm -f "${_one}"' EXIT
++			trap 'exit 1' HUP INT TERM
++			while IFS= read -r _file; do
++				mkdir -p .locks
++				file=${_file%%:*}
++				lkfile="`echo "$file" | md5`"
++				printf '%s\n' "${_file}" > "${_one}"
++				dp_FILES_FILE="${_one}" DO_FETCH_ISLOCKED=YES \
++					lockf -k -s .locks/${lkfile}.lk sh $0 || exit 1
++			done < "${dp_FILES_FILE}"
++			exit 0
++		fi
++		;;
++esac
++
+ . $dp_SITES_FILE
+ 
+ # Read the list of files to fetch from stdin, one per line, instead of
+@@ -154,7 +178,8 @@
+ 		case ${dp_TARGET} in
+ 			do-fetch|makesum)
+ 				${dp_ECHO_MSG} "=> Attempting to fetch ${site}${file}"
+-				if env -S "${dp_FETCH_ENV}" ${_fetch_cmd}; then
++# not				if env -S "${dp_FETCH_ENV}" ${_fetch_cmd}; then
++				if /bin/sh "${dp_SCRIPTSDIR}/not_posix_env.sh" "${dp_FETCH_ENV}" ${_fetch_cmd}; then
+ 					actual_size=$(stat -f %z "${file}")
+ 					if [ -n "${dp_DISABLE_SIZE}" ] || [ -z "${CKSIZE}" ] || [ "${actual_size}" -eq "${CKSIZE}" ]; then
+ 						continue 2

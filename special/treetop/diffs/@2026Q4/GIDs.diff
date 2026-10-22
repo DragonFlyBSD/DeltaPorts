@@ -1,0 +1,26 @@
+--- GIDs.orig	2020-10-27 22:53:37 UTC
++++ GIDs
+@@ -19,12 +19,10 @@ uucp:*:66:
+ xten:*:67:
+ dialer:*:68:aprsd
+ network:*:69:
+-pgsql:*:70:
+ ircd:*:72:
+ ircservices:*:73:
+ simscan:*:74:
+ hybserv:*:76:
+-audit:*:77:
+ virtuoso:*:79:
+ www:*:80:
+ qnofiles:*:81:
+@@ -90,8 +88,8 @@ webcamd:*:145:
+ ventrilo:*:146:
+ kdm:*:147:
+ ipv6mon:*:148:
+-avenger:*:149:
+-cbsd:*:150:
++audit:*:149:
++pgsql:*:150:
+ nixbld:*:151:
+ frrvty:*:152:frr
+ rbldns:*:153:
