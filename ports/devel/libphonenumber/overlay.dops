@@ -5,4 +5,8 @@ target @any
 
 mk set MAKE_JOBS_UNSAFE "yes"
 mk add USES "gmake"
-mk add CXXFLAGS "-Wno-error=sign-compare"
+# CXXFLAGS is not assigned by the port: append, keeping sys.mk's flags.
+mk eval CXXFLAGS "${CXXFLAGS} -Wno-error=sign-compare"
+
+# dragonfly/: FreeBSD's files/ add __FreeBSD__ to the POSIX-thread checks
+# in the base headers (installed for consumers); add __DragonFly__ beside it.
