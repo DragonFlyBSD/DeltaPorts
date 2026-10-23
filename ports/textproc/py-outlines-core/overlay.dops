@@ -1,0 +1,7 @@
+port textproc/py-outlines-core
+type port
+reason "DragonFly: bundled aws-lc-sys 0.35.0 needs OPENSSL_DRAGONFLY and getentropy()"
+
+# dragonfly/: aws-lc only knows FreeBSD among the BSDs here, so on DragonFly
+# it falls back to urandom.c's Linux RNDGETENTCNT ioctl. Define
+# OPENSSL_DRAGONFLY and take the getentropy() path, as devel/uv does.
