@@ -1,9 +1,8 @@
 port databases/postgresql16-server
 type port
-reason "remove LLVM and ICU from defaults; add freebsd template"
+reason "remove LLVM and ICU from defaults"
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLLVM}"
-mk add CONFIGURE_ARGS "--with-template=freebsd"
 mk shell PG_UID "grep -E '^pgsql:' ${PORTSDIR}/GIDs | awk -F ':' '{print $$3}'; echo"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NICU}"
