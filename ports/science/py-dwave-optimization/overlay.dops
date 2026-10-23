@@ -1,7 +1,13 @@
 port science/py-dwave-optimization
 type port
-reason "DragonFly: build with GCC_DEFAULT; needs C++20 <span>, <ranges>, <concepts>"
+reason "DragonFly: build with GCC_DEFAULT (C++20 headers); use BLAS only with scipy_openblas64"
 target @2026Q4,@main
 
 # Base gcc 8's libstdc++ has none of these headers.
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# dragonfly/@2026Q4, @main: linear_algebra.cpp turns on its scipy-openblas64
+# path whenever <openblas_config.h> and <cblas.h> are reachable. gcc12
+# searches /usr/local/include, where math/openblas (pulled in by numpy) has
+# them, but scipy_cblas_dgemm64_ is not there. Require the define that
+# meson.build now adds when it actually finds scipy_openblas64.
