@@ -6,3 +6,8 @@ target @any
 mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Ndoxygen*}"
 mk eval RUN_DEPENDS "${RUN_DEPENDS:Ndoxygen*}"
 mk add PLIST_FILES "\"@dir /var/run/gvm\""
+
+# dragonfly/@2026Q4, @main: patch-util_passwordbasedauthentication.c gives
+# DragonFly, which has crypt(3) but no crypt_r(), a crypt_r() that
+# serialises crypt(), so 23.9's pba_verify_hash() builds and works. The
+# older HAS_CRYPT_R=0 stub patches stay on 2026Q1-Q3.
