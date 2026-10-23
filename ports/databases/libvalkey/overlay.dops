@@ -1,0 +1,12 @@
+port databases/libvalkey
+type port
+reason "DragonFly: point the TLS build at ports OpenSSL; FreeBSD's -pthread/-lm"
+
+target @2026Q4,@main
+
+# OpenSSL comes from ports on DragonFly; the Makefile only adds its include
+# and lib dirs when OPENSSL_PREFIX is set.
+mk add TLS_MAKE_ARGS "OPENSSL_PREFIX=${OPENSSLBASE}"
+
+# dragonfly/@2026Q4, @main: give DragonFly the FreeBSD branch of the
+# Makefile (-pthread with USE_THREADS, -lm).
