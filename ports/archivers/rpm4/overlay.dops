@@ -5,4 +5,9 @@ target @any
 
 patch apply diffs/Makefile.diff
 
+# The diff drops the elfutils BUILD/LIB deps; upstream also lists libelf in
+# RUN_DEPENDS, and devel/elfutils installs it under lib/elfutils here, so
+# run-depends never finds ${LOCALBASE}/lib/libelf.so.
+mk remove RUN_DEPENDS "${LOCALBASE}/lib/libelf.so:devel/elfutils"
+
 text line-remove file pkg-plist exact "lib/rpm/elfdeps" on-missing noop
