@@ -1,0 +1,12 @@
+port devel/sdl3
+type port
+reason "DragonFly: base libusb is too old for SDL's hidapi libusb backend"
+
+# 3.4.16 (2026Q4 on): src/hidapi/libusb/hid.c calls
+# libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG) and
+# libusb_interrupt_event_handler(), which DragonFly's base libusb
+# (API 1.0.13) does not provide. Build hidapi without the libusb backend;
+# joysticks still work through usbhid.
+target @2026Q4,@main
+
+mk add CMAKE_OFF "SDL_HIDAPI_LIBUSB"
