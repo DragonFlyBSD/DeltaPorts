@@ -1,0 +1,7 @@
+port science/py-dwave-optimization
+type port
+reason "DragonFly: build with GCC_DEFAULT; needs C++20 <span>, <ranges>, <concepts>"
+target @2026Q4,@main
+
+# Base gcc 8's libstdc++ has none of these headers.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
