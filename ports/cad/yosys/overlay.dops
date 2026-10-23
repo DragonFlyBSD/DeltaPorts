@@ -4,6 +4,12 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add USES "localbase:ldflags"
+
+# 0.69 moved from the Makefile to CMake, which needs no OS rename, and
+# dropped the coverage and plugin conditionals: dragonfly/ holds the 0.69
+# cut, dragonfly/@2026Q1..Q3 the older one.
+target @2026Q1,@2026Q2,@2026Q3
+
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
 		${WRKSRC}/Makefile
