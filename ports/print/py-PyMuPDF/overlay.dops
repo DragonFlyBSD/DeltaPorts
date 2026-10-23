@@ -1,0 +1,7 @@
+port print/py-PyMuPDF
+type port
+reason "DragonFly: take FreeBSD's build path in setup.py and mupdf's wrap scripts"
+
+# dragonfly/@2026Q4, @main: setup.py and scripts/wrap/state.py only know
+# FreeBSD, so on DragonFly setup.py asks pip for libclang and swig wheels
+# instead of using the ports' py-clang and swig.
