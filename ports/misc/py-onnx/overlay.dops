@@ -1,0 +1,9 @@
+port misc/py-onnx
+type port
+reason "DragonFly: build with GCC_DEFAULT; printer.cc needs floating-point std::to_chars"
+
+target @2026Q4,@main
+
+# onnx/defs/printer.cc (1.23) formats float/double with std::to_chars,
+# which base gcc 8's libstdc++ only has for integers (gcc 11+).
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
