@@ -1,0 +1,12 @@
+port graphics/pdfium
+type port
+reason "DragonFly: no compiler-rt builtins to link"
+
+# dragonfly/patch-build_config_compiler_BUILD.gn: chromium's build links
+# clang's clang_rt.builtins; FreeBSD's port asks clang where it lives. Our
+# llvm ports are built without compiler-rt, so clang answers with a bare
+# file name and ninja finds no rule for
+# .../lib/clang/19/lib/libclang_rt.builtins.a/libclang_rt.builtins.a.
+# Drop the config on the "freebsd" target OS this build runs as; libgcc
+# provides the intrinsics.
+target @any
