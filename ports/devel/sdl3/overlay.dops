@@ -6,7 +6,10 @@ reason "DragonFly: base libusb is too old for SDL's hidapi libusb backend"
 # libusb_has_capability(LIBUSB_CAP_HAS_HOTPLUG) and
 # libusb_interrupt_event_handler(), which DragonFly's base libusb
 # (API 1.0.13) does not provide. Build hidapi without the libusb backend;
-# joysticks still work through usbhid.
+# joysticks still work through usbhid. Without libusb SDL installs no
+# FindLibUSB.cmake/PkgConfigHelper.cmake config modules.
 target @2026Q4,@main
 
 mk add CMAKE_OFF "SDL_HIDAPI_LIBUSB"
+text line-remove file pkg-plist exact "%%HIDAPI%%lib/cmake/SDL3/FindLibUSB.cmake"
+text line-remove file pkg-plist exact "%%HIDAPI%%lib/cmake/SDL3/PkgConfigHelper.cmake"
