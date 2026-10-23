@@ -1,0 +1,9 @@
+port devel/corrade
+type port
+reason "DragonFly: use the BSD strerror_r and executable-path code"
+
+# dragonfly/: Utility/Implementation/ErrorString.cpp picks the GNU
+# char*-returning strerror_r unless it sees one of the BSDs by name (g++
+# defines _GNU_SOURCE), so the build failed converting int to const char*.
+# Utility/Path.cpp's executableLocation() uses the FreeBSD
+# KERN_PROC_PATHNAME sysctl, which DragonFly has too.
