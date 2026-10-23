@@ -4,3 +4,9 @@ reason "remove MPI from OPTIONS_DEFAULT"
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI}"
+
+# 0.16 uses std::exclusive_scan (C++17 <numeric>), which libstdc++ only has
+# from gcc 9; base gcc 8.3 does not. Build with the default ports GCC.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
