@@ -1,5 +1,3 @@
 port devel/uv
 type port
 reason "Step 48 bootstrap: deterministic header; patch authors the body"
-target @any
-mk set WITHOUT_LTO "yes" on-missing noop
