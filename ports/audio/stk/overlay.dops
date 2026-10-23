@@ -1,9 +1,7 @@
 port audio/stk
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
+reason "DragonFly: take configure's FreeBSD realtime branch"
 
-mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e 's|freebsd|dragonfly|' \
-		${WRKSRC}/configure.ac
-MK1
+# dragonfly/patch-configure: configure's realtime host case knows FreeBSD,
+# Linux and NetBSD only. The old dfly-patch edited configure.ac, which
+# the build never regenerates.
