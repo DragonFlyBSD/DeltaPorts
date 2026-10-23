@@ -1,0 +1,8 @@
+port mail/notmuch
+type port
+reason "DragonFly: compile C++ as gnu++17 for xapian-core 2.x headers"
+target @2026Q4,@main
+
+# xapian 2.x headers use std::string_view and inline variables; base
+# gcc 8 defaults to gnu++14 where clang defaults to gnu++17.
+mk set USE_CXXSTD "gnu++17"
