@@ -1,0 +1,11 @@
+port graphics/libetonyek01
+type port
+reason "DragonFly: build with GCC_DEFAULT where mdds 3 headers need it"
+
+# mdds 3 (2026Q4 on): flat_segment_tree.hpp names members declared later
+# in a noexcept-specifier; gcc 8 does not defer parsing those and fails
+# with "'m_left_leaf' was not declared in this scope". devel/liborcus,
+# the other mdds 3 consumer, already builds with GCC_DEFAULT.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
