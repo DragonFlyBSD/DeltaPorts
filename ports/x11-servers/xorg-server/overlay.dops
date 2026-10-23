@@ -3,7 +3,8 @@ type port
 reason "DragonFly xorg-server: Makefile changes, remove stale patch file, materialize DragonFly patches"
 target @any
 
-patch apply diffs/Makefile.diff
+# libunwind is listed for amd64; DragonFly calls that arch x86_64.
+text replace-once file Makefile from "${ARCH} == amd64 ||" to "${ARCH} == x86_64 ||"
 
 file remove files/patch-hw_xfree86_xorg-wrapper.c on-missing noop
 
