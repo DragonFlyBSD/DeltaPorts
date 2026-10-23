@@ -1,3 +1,8 @@
 port comms/hamlib
 type port
 reason "DragonFly base -lusb lacks libusb-1.0 BOS/SuperSpeed helpers; gate rigtestlibusb to the stub main"
+target @any
+
+# dragonfly/@2026Q4, @main: patch-tests_rigctl__parse.h. 4.7.2's
+# struct handle_data has a struct sockaddr_storage field and relies on
+# <netinet/in.h> to declare it, which DragonFly's does not.
