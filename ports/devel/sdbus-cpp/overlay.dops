@@ -1,0 +1,18 @@
+port devel/sdbus-cpp
+type port
+reason "DragonFly: GCC_DEFAULT for C++20 constexpr; eventfd from devel/libepoll-shim"
+
+target @2026Q4,@main
+
+# TypeTraits.h needs constexpr std::move/std::array concatenation (C++20),
+# which base gcc 8's libstdc++ lacks.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# Connection.cpp includes <sys/eventfd.h>; DragonFly has none, and
+# devel/libepoll-shim installs eventfd() and its header where the base
+# system lacks them.
+mk add LIB_DEPENDS "libepoll-shim.so:devel/libepoll-shim"
+mk block set condition "1" <<'MK'
+CXXFLAGS+=	-I${LOCALBASE}/include/libepoll-shim
+LDFLAGS+=	-lepoll-shim
+MK
