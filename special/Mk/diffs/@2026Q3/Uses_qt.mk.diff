@@ -1,6 +1,6 @@
 --- Uses/qt.mk
 +++ Uses/qt.mk
-@@ -109,7 +109,14 @@
+@@ -109,7 +109,18 @@
  # better to support custom settings. Dereferencing the detection allows to
  # avoid forking a shell on each inclusion of this file, and to catch any CXX
  # customization (via USE_GCC, etc.).
@@ -10,6 +10,10 @@
 +.  if ${_QT_VER:M6}
 +.include "${USESDIR}/dfly-libcxx.mk"
 +QMAKE_COMPILER=	clang
++# default_pre.prf probes QMAKE_CXX before qmake applies command-line
++# assignments, so it would run the spec's bare clang++, which DragonFly
++# lacks. -early hands qmake.mk's compiler to the probe as well.
++QMAKE_ARGS+=	-early QMAKE_CC="${CC}" QMAKE_CXX="${CXX}" -before
 +.  else
 +QMAKE_COMPILER=	g++
 +.  endif
