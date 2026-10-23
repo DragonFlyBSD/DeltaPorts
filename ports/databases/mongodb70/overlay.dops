@@ -3,4 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# mk eval appends an unconditional assignment. mk set replaced upstream's
+# only IGNORE, the one inside the armv80a-flavor conditional, so the port
+# stopped being ignored and the default flavor was built.
+mk eval IGNORE "unmaintained, please request fixing to users mailing list"
