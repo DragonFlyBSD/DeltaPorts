@@ -4,3 +4,8 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+
+# x11/wayland-logout is IGNOREd on DragonFly (it needs the socket peer's
+# pid, which LOCAL_PEERCRED does not report here), and this port is
+# already built with -Dwayland-logout=false.
+mk remove RUN_DEPENDS "wayland-logout:x11/wayland-logout"
