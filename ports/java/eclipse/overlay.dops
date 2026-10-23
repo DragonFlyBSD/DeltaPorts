@@ -1,7 +1,10 @@
 port java/eclipse
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly: build the SWT natives the FreeBSD way"
 target @any
 
-mk set MAVEN_ECLIPSE "-Dnative=gtk.freebsd.amd64 -Dmaven.repo.local=${WRKDIR}/eclipse-maven-repo-${PORTVERSION} -DforceContextQualifier=v${ECLIPSE_TSTAMP}"
-mk set ECLIPSE_RESULT "eclipse.platform.releng.tychoeclipsebuilder/eclipse.platform.repository/target/products/org.eclipse.sdk.ide-freebsd.gtk.amd64.tar.gz"
+# SWT's native build.sh only takes the gmake + FREEBSD_OS path when OS is
+# FreeBSD; for any other uname it runs bmake on the GNU make_unix.mak and
+# dies on "Invalid line ifdef ...". It reads OS from the environment first,
+# and the fragment being built is gtk.freebsd.x86_64 anyway.
+mk add MAVEN_ENV "OS=FreeBSD"
