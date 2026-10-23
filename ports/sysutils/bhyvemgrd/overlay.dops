@@ -1,0 +1,7 @@
+port sysutils/bhyvemgrd
+type port
+reason "FreeBSD specific: helper daemon for bhyve(8)"
+
+# Manages bhyve virtual machines (DragonFly has none) and links against
+# FreeBSD 15's setcred(2), which fails at link time here.
+mk set IGNORE "FreeBSD specific: manages bhyve(8) VMs"
