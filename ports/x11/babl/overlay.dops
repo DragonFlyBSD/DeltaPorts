@@ -1,0 +1,9 @@
+port x11/babl
+type port
+reason "DragonFly: keep babl off its AVX-512 (x86-64-v4) paths"
+
+# 0.1.128 (2026Q4 on) adds x86-64-v4 code and turns it on from CPUID
+# alone. DragonFly does not enable AVX-512 register state, so on an
+# AVX-512 CPU the first such instruction raises SIGILL (gegl, run by
+# graphics/gimp-app's build, died that way). dragonfly/@2026Q4 and @main
+# never set the AVX512* caps on DragonFly; babl stays on x86-64-v3.
