@@ -1,6 +1,6 @@
 port devel/doxygen
 type port
-reason "add localbase ldflags, libmd dep; remove libmd5 extract arg and stale patches"
+reason "Q1-Q3: localbase ldflags, libmd dep, drop libmd5 bits; Q4+: build with GCC_DEFAULT"
 
 # FreeBSD's 1.9.6 port swaps the bundled libmd5 for base libmd, which
 # DragonFly lacks.
@@ -13,3 +13,12 @@ mk add LIB_DEPENDS "libmd.so:security/libmd"
 text line-remove file Makefile exact "EXTRACT_AFTER_ARGS=	--exclude '*/libmd5'" on-missing noop
 file remove files/patch-CMakeLists.txt on-missing noop
 file remove files/patch-src_CMakeLists.txt on-missing noop
+
+# 1.18.0 declares compiler:c++20-lang. Base gcc 8.3 lacks C++20, and on
+# DragonFly (ARCH x86_64) compiler.mk answers with USE_GCC=yes, which
+# bsd.df.gcc.mk maps back to base gcc 8.3: the result built, then
+# segfaulted on its first run (generating its own manual). Use the
+# default ports GCC, as FreeBSD's compiler requirement intends.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
