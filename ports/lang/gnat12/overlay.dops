@@ -1,6 +1,6 @@
 port lang/gnat12
 type port
-reason "disable NLS; add LIB_DIR_32 override; plist: remove LIB32 s-mmap/mmauni/mmosin, add dragonfly config headers"
+reason "disable NLS; bootstrap from gcc6-aux; LIB_DIR_32 override; plist: drop LIB32 s-mmap/mmauni/mmosin, freebsd config headers, add dragonfly ones"
 target @any
 
 mk add CONFIGURE_ARGS "--disable-nls"
@@ -8,6 +8,16 @@ mk add CONFIGURE_ARGS "--disable-nls"
 # LIB_DIR_32 is set inside arch-conditional blocks; add an unconditional
 # override via patch apply (diff adds a new standalone line, not editing existing)
 patch apply diffs/Makefile.diff
+
+# The default PREVASSET bootstrap fetches gnat-x86_64-dragonfly.6-*.tar.xz,
+# an asset nobody has built for DragonFly. Bootstrap from lang/gcc6-aux, as
+# the last DragonFly build (12.2.0) did.
+text replace-once file Makefile from "OPTIONS_DEFAULT=\t\tPREVASSET" to "OPTIONS_DEFAULT=\t\tGCC6AUX"
+
+# pkg-plist: the x86_64-*-dragonfly* target installs dragonfly*.h config
+# headers where FreeBSD gets freebsd*.h. 2026Q4 renamed the plist's
+# gnat12/ prefix to %%GNAT%%/, hence two copies.
+target @2026Q1,@2026Q2,@2026Q3
 
 text line-remove file pkg-plist exact "%%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmap.adb" on-missing noop
 text line-remove file pkg-plist exact "%%LIB32%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmap.ads" on-missing noop
@@ -24,3 +34,33 @@ text line-insert-after file pkg-plist \
 text line-insert-after file pkg-plist \
     anchor "gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/dragonfly.h" \
     line "gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/dragonfly.h" on-missing noop
+
+text line-remove file pkg-plist exact "gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/freebsd-spec.h"
+text line-remove file pkg-plist exact "gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/freebsd-stdint.h"
+text line-remove file pkg-plist exact "gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/freebsd.h"
+text line-remove file pkg-plist exact "%%X86%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/freebsd.h"
+text line-remove file pkg-plist exact "%%AMD64%%gnat12/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/freebsd64.h"
+
+target @2026Q4,@main
+
+text line-remove file pkg-plist exact "%%LIB32%%%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmap.adb"
+text line-remove file pkg-plist exact "%%LIB32%%%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmap.ads"
+text line-remove file pkg-plist exact "%%LIB32%%%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmauni.ads"
+text line-remove file pkg-plist exact "%%LIB32%%%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmosin.adb"
+text line-remove file pkg-plist exact "%%LIB32%%%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/32/adainclude/s-mmosin.ads"
+
+text line-insert-after file pkg-plist \
+    anchor "%%AARCH64%%%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/aarch64/biarchlp64.h" \
+    line "%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/dragonfly-stdint.h"
+text line-insert-after file pkg-plist \
+    anchor "%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/dragonfly-stdint.h" \
+    line "%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/dragonfly.h"
+text line-insert-after file pkg-plist \
+    anchor "%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/dragonfly.h" \
+    line "%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/dragonfly.h"
+
+text line-remove file pkg-plist exact "%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/freebsd-spec.h"
+text line-remove file pkg-plist exact "%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/freebsd-stdint.h"
+text line-remove file pkg-plist exact "%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/freebsd.h"
+text line-remove file pkg-plist exact "%%X86%%%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/freebsd.h"
+text line-remove file pkg-plist exact "%%AMD64%%%%GNAT%%/lib/gcc/%%CONFTRGT%%/%%VER%%/plugin/include/config/i386/freebsd64.h"
