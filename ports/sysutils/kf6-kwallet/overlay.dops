@@ -7,3 +7,12 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
 		${WRKSRC}/metainfo.yaml
 MK1
+
+# From 2026Q3 KF6 builds with clang and libc++, but gpgmepp's C++ API
+# (std::vector, std::string) comes from libstdc++, so GPG wallets cannot
+# link. Build without them (blowfish wallets only) until gpgmepp moves to
+# libc++ as well.
+target @2026Q3,@2026Q4,@main
+
+mk remove LIB_DEPENDS "libgpgmepp.so:security/gpgmepp"
+mk add CMAKE_ON "CMAKE_DISABLE_FIND_PACKAGE_Gpgmepp"
