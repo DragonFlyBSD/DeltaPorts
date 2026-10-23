@@ -1,14 +1,12 @@
 port security/courier-authlib-base
 type port
-reason "DragonFly: link the rfc822 C++ test program against libstdc++fs"
+reason "DragonFly: 0.73's C++ code needs a newer compiler than base gcc 8"
 
-# 0.73 (2026Q3 on): libs/rfc822/testsuitecpp, built by "all", uses
-# std::filesystem. Base gcc 8 keeps that in a separate libstdc++fs that
-# DragonFly does not ship; take it from misc/cxxfs_gcc8. LIBS lands after
-# the objects on every link line, where a static archive is searched.
+# 0.73 (2026Q3 on): the bundled rfc822/rfc2045 libraries are C++17 that
+# base gcc 8 rejects: std::filesystem lives in a separate libstdc++fs,
+# std::to_chars has no overload for char32_t (rfc6533.C), and
+# "entity() noexcept=default" on a redeclaration is refused (rfc2045cpp.C).
+# Build with GCC_DEFAULT, which accepts all three.
 target @2026Q3,@2026Q4,@main
 
-mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
-mk add CPPFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
-mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
-mk add LIBS "-lstdc++fs"
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
