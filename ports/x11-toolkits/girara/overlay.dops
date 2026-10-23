@@ -1,0 +1,11 @@
+port x11-toolkits/girara
+type port
+reason "DragonFly: build 2026.07 as C17; base gcc 8 has no C23 mode"
+
+# 2026.07.18 (2026Q4 on) defaults to c_std=c23, which meson refuses for
+# base gcc 8.3 (the port asks only for compiler:c17). The code uses no
+# C23 feature: every source passes gcc 8 -std=c17 -Wpedantic, so build
+# it as C17 like the 2026.02 release did.
+target @2026Q4,@main
+
+mk add MESON_ARGS "-Dc_std=c17"
