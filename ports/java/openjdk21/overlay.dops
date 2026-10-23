@@ -34,3 +34,14 @@ text line-insert-after file distinfo \
 text line-insert-after file distinfo \
      anchor "SHA256 (openjdk21-21.0.6+7.1.x86_64.tar.xz) = c7b286f18eb50a2c8de51bfee57b65bf9512a7c9ef0bee700d5849285d251b8c" \
      line   "SIZE (openjdk21-21.0.6+7.1.x86_64.tar.xz) = 172512764"
+
+# 21.0.12 requires elfctl on bsd.freebsd, which our platform.m4 patch makes
+# DragonFly too, to mark executables +wxneeded. DragonFly has neither the
+# tool nor W^X; configure only takes a tool override on its command line.
+target @2026Q4
+
+mk add CONFIGURE_ARGS "ELFCTL=/usr/bin/true"
+
+target @main
+
+mk add CONFIGURE_ARGS "ELFCTL=/usr/bin/true"
