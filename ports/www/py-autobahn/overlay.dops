@@ -1,0 +1,6 @@
+port www/py-autobahn
+type port
+reason "DragonFly: build NVX with -march=nehalem; gcc 8 has no x86-64-v2"
+
+# dragonfly/@2026Q4, @main: _compile_args.py's portable x86-64 flag is
+# -march=x86-64-v2, a name gcc only learned in 11. nehalem is the same ISA.
