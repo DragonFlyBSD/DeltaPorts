@@ -1,5 +1,8 @@
 port biology/biosig
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
+reason "DragonFly: take biosig's FreeBSD code paths"
 
+# Built with USES=alias (-D__FreeBSD__) until FreeBSD removed it. Without
+# it DragonFly falls into the glibc fpos_t.__pos, OpenBSD betoh16() and
+# `timezone`-variable branches; dragonfly/ adds __DragonFly__ next to
+# __FreeBSD__ in those checks.
