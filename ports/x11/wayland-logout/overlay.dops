@@ -1,0 +1,11 @@
+port x11/wayland-logout
+type port
+reason "DragonFly: cannot learn the compositor's pid from its socket"
+
+# wayland-logout finds the compositor by asking the Wayland socket for its
+# peer's pid (SO_PEERCRED on Linux, LOCAL_PEERCRED's xucred.cr_pid on
+# FreeBSD). DragonFly's LOCAL_PEERCRED returns a struct xucred without
+# cr_pid, and there is no other peer-pid query, so 1.4 cannot work here.
+target @any
+
+mk eval IGNORE "needs the peer pid of a local socket, which LOCAL_PEERCRED on DragonFly does not report"
