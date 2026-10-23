@@ -1,0 +1,11 @@
+port security/lasso
+type port
+reason "DragonFly: install the plain-text docs the plist lists"
+
+# configure looks for rst2html; when the build environment has
+# textproc/py-docutils (it does here, pulled in by other dependencies),
+# docs/lasso-book installs HTML instead of the .rst/.txt files the plist
+# lists, and packaging fails. Pretend it was not found, as on FreeBSD.
+target @any
+
+mk add CONFIGURE_ENV "ac_cv_prog_REST2HTML="
