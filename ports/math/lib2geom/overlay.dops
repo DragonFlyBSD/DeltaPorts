@@ -1,0 +1,10 @@
+port math/lib2geom
+type port
+reason "DragonFly: 1.4 is C++20 (concepts); build with GCC_DEFAULT"
+
+# USES=compiler:c++20-lang resolves to base gcc 8.3 on DragonFly, which
+# knows no concept/requires (src/2geom/planar-graph.h). 1.4 is on every
+# line, so this applies to all of them.
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
