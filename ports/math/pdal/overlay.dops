@@ -6,3 +6,9 @@ target @any
 mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
 mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
 mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+
+# PDAL links -lstdc++fs for GCC < 9 into libpdalcpp only; tools/lasdump
+# compiles pdal/util/FileUtils.cpp itself and does not, so its link fails
+# on std::filesystem. CMAKE_CXX_STANDARD_LIBRARIES lands after the objects
+# on every C++ link line, where the static archive is searched.
+mk add CMAKE_ARGS "-DCMAKE_CXX_STANDARD_LIBRARIES:STRING=-lstdc++fs"
