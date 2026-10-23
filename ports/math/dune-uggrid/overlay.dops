@@ -4,3 +4,11 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add CMAKE_ARGS "-DMPI_C_COMPILER=\"${LOCALBASE}/mpi/openmpi/bin/mpicc\" -DMPI_CXX_COMPILER=\"${LOCALBASE}/mpi/openmpi/bin/mpicxx\" -DMPI_Fortran_COMPILER=\"${LOCALBASE}/mpi/openmpi/bin/mpifort\""
+
+# 2.11 (2026Q2 on) includes dune-common 2.11 headers, which need C++20
+# (<concepts>); base gcc 8's libstdc++ has none. Keep compiler:c++17-lang:
+# c++20-lang would set USE_GCC=yes, and USES=fortran then asks for a bare
+# lang/gcc (bsd.df.gcc.mk sets no _USE_GCC).
+target @2026Q2,@2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
