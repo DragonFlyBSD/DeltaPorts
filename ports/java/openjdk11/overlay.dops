@@ -10,3 +10,14 @@ mk set BOOTSTRAPJDKDIR "${LOCALBASE}/bootstrap-openjdk11"
 mk add BUILD_DEPENDS "${LOCALBASE}/bootstrap-openjdk11/bin/javac:java/bootstrap-openjdk11"
 
 patch apply diffs/Makefile.diff
+
+# 11.0.32 requires elfctl on bsd.freebsd, which our platform.m4 patch makes
+# DragonFly too, to mark executables +wxneeded. DragonFly has neither the
+# tool nor W^X; configure only takes a tool override on its command line.
+target @2026Q4
+
+mk add CONFIGURE_ARGS "ELFCTL=/usr/bin/true"
+
+target @main
+
+mk add CONFIGURE_ARGS "ELFCTL=/usr/bin/true"
