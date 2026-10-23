@@ -1,0 +1,10 @@
+port devel/lief
+type port
+reason "DragonFly: build with GCC_DEFAULT for std::filesystem"
+
+# The profiling tools (profiling/*_profiler.cpp) use std::filesystem, which
+# base gcc 8 keeps in a separate libstdc++fs, so their links fail.
+# gcc 12 has it in libstdc++. The port is new in 2026Q2.
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
