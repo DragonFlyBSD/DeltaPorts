@@ -1,0 +1,8 @@
+port mail/dovecot24
+type port
+reason "DragonFly: let lib.h request BSD visibility as it does on the other BSDs"
+
+# dragonfly/patch-src_lib_lib.h: lib.h defines _POSIX_C_SOURCE/_XOPEN_SOURCE
+# and opts back into BSD interfaces with __BSD_VISIBLE only on Free/Net/
+# OpenBSD. On DragonFly that hid cpu_set_t and sched_getaffinity(), which
+# configure had found, and cpu-count.c failed to compile.
