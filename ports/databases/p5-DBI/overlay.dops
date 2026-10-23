@@ -1,0 +1,7 @@
+port databases/p5-DBI
+type port
+reason "DragonFly: backport DBI 1.656's fix so gcc 8 builds 1.654"
+target @any
+
+# dragonfly/@2026Q4/patch-DBI.xs: 1.654 declares variables right after a
+# case label, which gcc 8 rejects. 1.656 hoists them; this is that change.
