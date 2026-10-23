@@ -7,3 +7,7 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\(HOST_CC=\).*@\1gcc@g' -e 's@\([[:<:]]CC=\).*@\1gcc@g' \
 		${WRKSRC}/Makefile
 MK1
+
+# dragonfly/patch-qjs.c, patch-quickjs.c: report malloc usable size as 0,
+# as for EMSCRIPTEN, instead of calling malloc_usable_size(). Upstream
+# renamed EMSCRIPTEN to __EMSCRIPTEN__ in 2026, hence the 2026Q1/Q2 copies.
