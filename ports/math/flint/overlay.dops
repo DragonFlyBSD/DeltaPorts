@@ -1,0 +1,7 @@
+port math/flint
+type port
+reason "DragonFly: kinfo_proc field names in the memory profiler"
+
+# 3.5 (2026Q3 on): src/generic_files/profiler.c reads FreeBSD's
+# kinfo_proc ki_size/ki_rssize for DragonFly too; DragonFly's fields are
+# kp_vm_map_size and kp_vm_rssize (see dragonfly/@2026Q3, @2026Q4, @main).
