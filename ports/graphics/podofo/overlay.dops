@@ -1,6 +1,25 @@
 port graphics/podofo
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
+reason "DragonFly: std::filesystem for base gcc 8"
 
-mk add CMAKE_ARGS "-DPODOFO_HAVE_OPENSSL_1_1:BOOL=true"
+# 0.10 uses std::filesystem in the library (PdfError.cpp, StreamDevice.cpp,
+# PdfFontManager.cpp...). Base gcc 8 has no libstdc++fs; misc/cxxfs_gcc8
+# carries it with its headers. The header use is private, so podofo's users
+# do not need it. CMAKE_CXX_STANDARD_LIBRARIES puts the archive after the
+# objects on every C++ link line.
+#
+# Text inserts at top level: `mk add` would land these inside the
+# MAINTAINER_MODE .else (it inserts before the first target), and `mk eval`
+# would expand ${LOCALBASE} before bsd.port.mk defines it.
+text line-insert-after file Makefile \
+     anchor "TIFF_LIB_DEPENDS=\tlibtiff.so:graphics/tiff" \
+     line   "\nBUILD_DEPENDS+=\tcxxfs_gcc8>0:misc/cxxfs_gcc8"
+text line-insert-after file Makefile \
+     anchor "BUILD_DEPENDS+=\tcxxfs_gcc8>0:misc/cxxfs_gcc8" \
+     line   "CXXFLAGS+=\t-isystem ${LOCALBASE}/cxxfs_gcc8"
+text line-insert-after file Makefile \
+     anchor "CXXFLAGS+=\t-isystem ${LOCALBASE}/cxxfs_gcc8" \
+     line   "LDFLAGS+=\t-L${LOCALBASE}/cxxfs_gcc8"
+text line-insert-after file Makefile \
+     anchor "LDFLAGS+=\t-L${LOCALBASE}/cxxfs_gcc8" \
+     line   "CMAKE_ARGS+=\t-DCMAKE_CXX_STANDARD_LIBRARIES:STRING=-lstdc++fs"
