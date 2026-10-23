@@ -1,0 +1,9 @@
+port science/py-pyscf
+type port
+reason "DragonFly: build with GCC_DEFAULT; gcc 8 rejects const variables in OpenMP shared()"
+
+target @2026Q4,@main
+
+# pyscf/lib lists const locals in "#pragma omp parallel shared(...)"; gcc 8
+# treats them as predetermined shared and errors out (gcc 9 changed this).
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
