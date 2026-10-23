@@ -1,0 +1,7 @@
+port graphics/py-simplejpeg
+type port
+reason "DragonFly: let setup.py build the bundled libjpeg-turbo as on FreeBSD"
+
+# dragonfly/@2026Q4, @main: setup.py picks the CMake generator and the static
+# library name from a platform list (FreeBSD's patch adds 'freebsd'); add
+# 'dragonfly' so it no longer raises "Platform not supported".
