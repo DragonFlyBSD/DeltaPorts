@@ -1,0 +1,9 @@
+port textproc/R-cran-writexl
+type port
+reason "DragonFly: map minizip's *64 stdio calls to fseeko/ftello/fopen"
+
+# dragonfly/@2026Q4, @main: the bundled minizip's ioapi.h maps fopen64,
+# ftello64 and fseeko64 to the plain calls on FreeBSD/OpenBSD/NetBSD only;
+# DragonFly has no *64 variants, so writexl.so failed to load with an
+# undefined fseeko64. 2.0.1 moved minizip under libxlsxwriter/, hence the
+# per-line patches.
