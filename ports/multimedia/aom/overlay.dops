@@ -4,3 +4,9 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk set USE_CLANG_FALLBACK "default"
+
+# clang${LLVM_DEFAULT} links C++ against libc++ by default (devel/llvm19
+# is built with CLANG_DEFAULT_CXX_STDLIB=libc++), so libaom.so NEEDs
+# libc++.so.1. Declare it, or ports loading libaom (webkit2-gtk's
+# g-ir-scanner) run where libc++ is not installed.
+mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_DEFAULT}"
