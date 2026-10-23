@@ -1,0 +1,8 @@
+port textproc/py-deepsearch-glm
+type port
+reason "DragonFly: give the bundled loguru a numeric thread id"
+
+# dragonfly/: loguru's get_thread_name() falls back to assigning
+# pthread_self() to a uint64_t, which only compiles where pthread_t is an
+# integer. Use pthread_getthreadid_np() on DragonFly (the patch targets the
+# copy post-extract unpacks under build/_deps/).
