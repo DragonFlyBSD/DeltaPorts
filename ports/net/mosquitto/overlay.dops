@@ -1,3 +1,7 @@
 port net/mosquitto
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/: 2.1 config.h no longer sets _XOPEN_SOURCE for the BSDs and
+# socks_mosq.c also lists _AIX; the patches are re-cut for 2.1.2.
+# dragonfly/@2026Q1/ keeps the 2.0.22 versions.
