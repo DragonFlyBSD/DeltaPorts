@@ -1,0 +1,11 @@
+port math/fenics-basix
+type port
+reason "DragonFly: build with GCC_DEFAULT (C++20); no RUNTIME_DEPENDENCY_SET on DragonFly"
+
+target @2026Q4,@main
+
+# compiler:c++20-lang resolves to base gcc 8 on DragonFly.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# dragonfly/@2026Q4, @main: CMake refuses install(TARGETS ... RUNTIME_DEPENDENCY_SET)
+# on "DragonFly"; basix only uses the set on Windows, so drop it.
