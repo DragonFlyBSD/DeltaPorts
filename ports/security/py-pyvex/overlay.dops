@@ -1,7 +1,10 @@
 port security/py-pyvex
 type port
 reason "auto-converted from Makefile.DragonFly"
-target @any
+
+# 9.0.5405 (2026Q1, 2026Q2) builds pyvex_c with its own Makefile, which
+# only knows FreeBSD. 9.2.222 builds it with CMake and needs nothing.
+target @2026Q1,@2026Q2
 
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
