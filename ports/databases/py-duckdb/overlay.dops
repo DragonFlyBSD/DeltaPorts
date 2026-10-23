@@ -1,0 +1,6 @@
+port databases/py-duckdb
+type port
+reason "DragonFly: skip the glibc <features.h> probe in duckdb's platform.hpp"
+
+# dragonfly/@2026Q4, @main: platform.hpp includes <features.h> on every OS
+# but Windows, macOS and FreeBSD to tell glibc from musl.
