@@ -1,0 +1,10 @@
+port cad/opencascade
+type port
+reason "DragonFly: take the __FreeBSD__ code paths in OCCT 8's TKernel"
+
+# DragonFly used to build OCCT with USES=alias, which defined __FreeBSD__;
+# alias.mk is gone. OCCT 8.0 (2026Q4 on) fails in OSD_Path.cxx, whose
+# whereAmI() falls back to uname() without <sys/utsname.h> on unknown
+# systems. dragonfly/@2026Q4 and @main add __DragonFly__ beside
+# __FreeBSD__ there and in the two other TKernel checks (CLK_TCK via
+# sysconf, /dev/zero mmap), as alias used to.
