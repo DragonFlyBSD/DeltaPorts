@@ -1,0 +1,14 @@
+port science/hpddm
+type port
+reason "DragonFly: build with FreeBSD's Make.inc and OS branch"
+
+# post-extract copies Make.inc/Makefile.Linux to Makefile.${OPSYS}, and
+# FreeBSD's files/ patch edits Make.inc/Makefile.FreeBSD: on DragonFly the
+# patch finds no file. The top Makefile picks Make.inc/Makefile.${MAKE_OS}
+# from `uname -s`, which FreeBSD's patch-Makefile teaches only "FreeBSD".
+# Use the FreeBSD copy and pass UNAME_S=FreeBSD on the command line, which
+# overrides the Makefile's own assignment.
+target @any
+
+text replace-once file Makefile from "${WRKSRC}/Make.inc/Makefile.${OPSYS}" to "${WRKSRC}/Make.inc/Makefile.FreeBSD"
+mk add MAKE_ARGS "UNAME_S=FreeBSD"
