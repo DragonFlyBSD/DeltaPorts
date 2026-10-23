@@ -1,0 +1,9 @@
+port devel/py-stringzilla
+type port
+reason "DragonFly: build with GCC_DEFAULT; stringzillas-cpus is C++20"
+
+target @2026Q4,@main
+
+# The stringzillas-cpus module built in post-install includes <concepts>,
+# which base gcc 8's libstdc++ does not have.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
