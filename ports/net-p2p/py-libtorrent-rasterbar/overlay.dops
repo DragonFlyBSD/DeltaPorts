@@ -1,6 +1,12 @@
 port net-p2p/py-libtorrent-rasterbar
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: build the bindings with b2's gcc toolset"
 target @any
 
-mk set BINARY_ALIAS "b2=${DFLY_FILESDIR}/b2"
+# FreeBSD aliases b2 to files/b2, a wrapper that adds toolset=clang. Our
+# replacement wrapper (dragonfly/b2) reached the build tree without its
+# execute bit, so BINARY_ALIAS failed. Drop the alias and pass the toolset
+# in setup.py's --b2-args instead.
+mk unset BINARY_ALIAS
+mk eval PYDISTUTILS_BUILD_TARGET "${PYDISTUTILS_BUILD_TARGET:S/fpic=on/toolset=gcc fpic=on/}"
+mk eval PYDISTUTILS_INSTALL_TARGET "${PYDISTUTILS_INSTALL_TARGET:S/fpic=on/toolset=gcc fpic=on/}"
