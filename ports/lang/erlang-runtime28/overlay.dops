@@ -1,6 +1,8 @@
-target @any
 port lang/erlang-runtime28
 type port
-reason "DragonFly lacks IPPROTO_SCTP in <netinet/in.h>; define it to the IANA protocol number (132)"
+reason "DragonFly: no SCTP; guard inet_drv.c's unconditional IPPROTO_SCTP use"
 
-mk add CFLAGS "-DIPPROTO_SCTP=132"
+# dragonfly/patch-erts_emulator_drivers_common_inet__drv.c: OTP 27.3.4.x/28.x
+# added a socket-open path that names IPPROTO_SCTP outside #ifdef HAVE_SCTP;
+# DragonFly has no SCTP and the port configures --disable-sctp. Upstream
+# master guards it with HAVE_SCTP; this is that change.
