@@ -1,3 +1,7 @@
 port devel/poco
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/patch-Foundation_include_Poco_Platform.h makes DragonFly
+# POCO_OS_FREE_BSD; patch-Foundation_src_Thread__POSIX.cpp then avoids
+# FreeBSD's <sys/thr.h>/thr_self() and uses lwp_gettid().
