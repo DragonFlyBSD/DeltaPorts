@@ -9,3 +9,8 @@ mk add CMAKE_OFF "ENABLE_IPO GDAL_HIDE_INTERNAL_SYMBOLS"
 mk add CFLAGS "-DGDAL_DISABLE_FLOAT16"
 mk add CXXFLAGS "-DGDAL_DISABLE_FLOAT16"
 mk set PORTREVISION "3"
+
+# dragonfly/@2026Q3,@2026Q4,@main/patch-gcore_multidim_gdal__multidim.h:
+# the installed header's `m_poRAT{}` makes gcc 8 instantiate the deleter of
+# the incomplete GDALRasterAttributeTable, so every C++ consumer built with
+# base gcc fails (pdal, sumo, libosmium, R-cran-terra). 3.11 has no such header.
