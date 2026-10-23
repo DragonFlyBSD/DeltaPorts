@@ -1,0 +1,9 @@
+port devel/camp
+type port
+reason "DragonFly: 2026.07 is C++20; build with GCC_DEFAULT"
+
+# 2026.07 (2026Q4 on) uses <concepts> and asks for compiler:c++20-lang,
+# which resolves to base gcc 8.3 on DragonFly.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
