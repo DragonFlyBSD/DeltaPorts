@@ -1,9 +1,13 @@
 port devel/py-tables
 type port
-reason "DragonFly: add Z_HAVE_UNISTD_H to CFLAGS, mark py27 flavor BROKEN"
+reason "DragonFly: drop the zstd build conflict, add Z_HAVE_UNISTD_H to CFLAGS, mark py27 flavor BROKEN"
 target @any
 
-mk add CFLAGS -DZ_HAVE_UNISTD_H
+# USES=fortran pulls in gcc12 -> binutils -> zstd here, so the
+# CONFLICTS_BUILD guard against the bundled zstd always trips. The bundled
+# headers are passed with -I and LOCALBASE with -isystem, so they win.
+mk unset CONFLICTS_BUILD
+mk eval CFLAGS "${CFLAGS} -DZ_HAVE_UNISTD_H"
 mk block set condition "defined(FLAVOR) && ${FLAVOR:Mpy27}" <<'MK'
 BROKEN=	py27 pending removal
 MK
