@@ -1,12 +1,20 @@
 port devel/indi
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
+reason "DragonFly: gmake instead of ninja; treat DragonFly like FreeBSD in CMakeCommon"
 
 mk eval USES "${USES:Nninja} gmake"
+
+# CMakeCommon.cmake skips the -z nodump/relro/now link flags on FreeBSD and
+# OpenBSD; do the same here. (The old list also named FindIconv.cmake and
+# CMakeLists.txt; neither has anything to rewrite, and the former no longer
+# exists, which failed the patch phase.)
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
-		${WRKSRC}/cmake_modules/CMakeCommon.cmake \
-		${WRKSRC}/cmake_modules/FindIconv.cmake \
-		${WRKSRC}/CMakeLists.txt
+		${WRKSRC}/cmake_modules/CMakeCommon.cmake
 MK1
+
+# 2.2 turns FIX_WARNINGS (-Werror over -Wall -Wextra) on by default. Base
+# gcc 8 is not the compiler upstream tunes those warnings against.
+target @2026Q4,@main
+
+mk add CMAKE_ARGS "-DFIX_WARNINGS:BOOL=OFF"
