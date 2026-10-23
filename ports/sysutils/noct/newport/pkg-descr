@@ -1,0 +1,8 @@
+Noct is a command-line filesystem inspection and analysis toolkit for
+Unix-like systems. It combines everyday directory listing with focused
+inspection modes for ownership, permissions, age, sizes, duplicate files,
+scripts, extensions, filesystem boundaries, cleanup candidates, and more.
+
+Noct provides configurable themes, filesystem classification colors,
+optional Nerd Font icons, recursive tree views, filtering and sorting,
+and ANSI16 themes designed for physical system consoles.
