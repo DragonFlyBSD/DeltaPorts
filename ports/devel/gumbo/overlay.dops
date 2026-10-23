@@ -1,0 +1,12 @@
+port devel/gumbo
+type port
+reason "DragonFly: don't build the gtest suite by default"
+
+# 0.14.1 (2026Q4 on): tests/tree_construction.cc uses std::filesystem.
+# Base gcc 8 keeps that in a separate libstdc++fs that DragonFly does not
+# ship, so the gumbo_test link fails. The suite is not installed; leave
+# the TEST option available but off by default rather than moving this C
+# library to another compiler.
+target @2026Q4,@main
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NTEST}"
