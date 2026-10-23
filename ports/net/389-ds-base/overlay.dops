@@ -1,0 +1,34 @@
+port net/389-ds-base
+type port
+reason "DragonFly: take the FreeBSD platform paths in configure.ac and the C sources"
+
+target @2026Q4,@main
+
+# configure.ac only sets up the platform (THREADLIB, POSIX rwlocks) for
+# *-*-freebsd*, and the sources pick FreeBSD code with __FreeBSD__ checks;
+# DragonFly otherwise falls through to Solaris (<sys/mnttab.h>) or Linux
+# (<syscall.h>, <crypt.h>) branches. Extend each check to DragonFly; the
+# parentheses keep negated and combined conditions correct.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^  \*-\*-freebsd\*)/  *-*-freebsd*|*-*-dragonfly*)/' \
+		${WRKSRC}/configure.ac
+	${REINPLACE_CMD} \
+		-e 's/defined(__FreeBSD__)/(defined(__FreeBSD__) || defined(__DragonFly__))/g' \
+		-e 's/^#ifdef __FreeBSD__/#if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		-e 's/^#ifndef __FreeBSD__/#if !defined(__FreeBSD__) \&\& !defined(__DragonFly__)/' \
+		-e 's/^#elif __FreeBSD__/#elif defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/include/base/systems.h \
+		${WRKSRC}/include/public/base/systems.h \
+		${WRKSRC}/ldap/include/portable.h \
+		${WRKSRC}/ldap/servers/plugins/pwdstorage/crypt_pwd.c \
+		${WRKSRC}/ldap/servers/slapd/back-ldbm/db-mdb/mdb_debug.c \
+		${WRKSRC}/ldap/servers/slapd/daemon.c \
+		${WRKSRC}/ldap/servers/slapd/getsocketpeer.c \
+		${WRKSRC}/ldap/servers/slapd/ldaputil.c \
+		${WRKSRC}/ldap/servers/slapd/localhost.c \
+		${WRKSRC}/ldap/servers/slapd/main.c \
+		${WRKSRC}/ldap/servers/slapd/slapi_pal.c \
+		${WRKSRC}/ldap/servers/slapd/tools/pwenc.c \
+		${WRKSRC}/lib/base/dnsdmain.cpp \
+		${WRKSRC}/lib/base/file.cpp
+MK
