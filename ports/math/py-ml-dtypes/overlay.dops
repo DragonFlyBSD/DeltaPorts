@@ -1,0 +1,10 @@
+port math/py-ml-dtypes
+type port
+reason "DragonFly: build 0.6.0 with GCC_DEFAULT; gcc 8 rejects its complex types"
+target @2026Q4,@main
+
+# 0.6.0 adds complex32/bcomplex32 with implicit conversions to both
+# std::complex<float> and bool; gcc 8 finds std::complex<float>(x)
+# ambiguous where newer gcc does not. py-numpy is built with
+# GCC_DEFAULT already.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
