@@ -1,6 +1,6 @@
 port graphics/pdfium
 type port
-reason "DragonFly: no compiler-rt builtins to link"
+reason "DragonFly: no compiler-rt builtins to link; libc++ lives in the llvm prefix"
 
 # dragonfly/patch-build_config_compiler_BUILD.gn: chromium's build links
 # clang's clang_rt.builtins; FreeBSD's port asks clang where it lives. Our
@@ -9,4 +9,12 @@ reason "DragonFly: no compiler-rt builtins to link"
 # .../lib/clang/19/lib/libclang_rt.builtins.a/libclang_rt.builtins.a.
 # Drop the config on the "freebsd" target OS this build runs as; libgcc
 # provides the intrinsics.
+#
+# The same patch points C++ compiles at libc++'s headers: the build passes
+# --target=x86_64-unknown-freebsd, and clang's FreeBSD driver only looks in
+# /usr/include/c++/v1, while devel/libcxx${LLVM_DEFAULT} installs them under
+# ${LOCALBASE}/llvm${LLVM_DEFAULT}. libpdfium.so is linked with -lc++, so
+# declare the library too.
 target @any
+
+mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_DEFAULT}"
