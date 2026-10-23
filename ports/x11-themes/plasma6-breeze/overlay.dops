@@ -1,0 +1,6 @@
+port x11-themes/plasma6-breeze
+type port
+reason "DragonFly: the qt5 flavor builds with base gcc 8.3"
+
+# dragonfly/patch-kstyle_breezetoolsareamanager.cpp: gcc 8.3's libstdc++
+# has no std::erase_if; spell it as erase/remove_if.
