@@ -14,3 +14,10 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
 		${WRKSRC}/Makefile
 MK1
+
+# 0.69 needs C++20 (<version>, a __cplusplus check in yosys_common.h).
+# compiler:c++20-lang resolves to base gcc 8.3 on DragonFly; build with the
+# default ports GCC instead.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
