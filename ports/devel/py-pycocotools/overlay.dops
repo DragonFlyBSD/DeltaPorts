@@ -1,0 +1,10 @@
+port devel/py-pycocotools
+type port
+reason "DragonFly: build with GCC_DEFAULT; gcc 8 rejects numpy's type macros under Py_LIMITED_API"
+
+target @2026Q4,@main
+
+# _mask is built against the limited API, where PyTypeObject is opaque.
+# Cython's numpy helpers take &PyTimedeltaArrType_Type, i.e. &*(PyTypeObject *)p,
+# which gcc 8 rejects as a dereference of an incomplete type; gcc 12 accepts it.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
