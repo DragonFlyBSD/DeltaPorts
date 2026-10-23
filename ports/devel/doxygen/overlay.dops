@@ -1,7 +1,12 @@
 port devel/doxygen
 type port
 reason "add localbase ldflags, libmd dep; remove libmd5 extract arg and stale patches"
-target @any
+
+# FreeBSD's 1.9.6 port swaps the bundled libmd5 for base libmd, which
+# DragonFly lacks.
+# 1.18.0 (2026Q4 on) builds the bundled md5 again, and FreeBSD's new
+# files/patch-CMakeLists.txt there turns IPO off: none of this applies.
+target @2026Q1,@2026Q2,@2026Q3
 
 mk add USES "localbase:ldflags"
 mk add LIB_DEPENDS "libmd.so:security/libmd"
