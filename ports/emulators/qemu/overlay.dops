@@ -21,7 +21,11 @@ mk add CONFIGURE_ARGS "--disable-netmap"
 mk add CONFIGURE_ARGS "--disable-stack-protector"
 mk add CONFIGURE_ARGS "--enable-curses"
 
-mk add LIB_DIRS "${LOCALBASE}/lib/elfutils"
+# find-lib.sh also has to look where devel/elfutils puts libdw on DragonFly.
+# The port never assigns LIB_DIRS, so spell out bsd.port.mk's default too:
+# a bare `mk add` would write LIB_DIRS= and hide ${LOCALBASE}/lib, failing
+# lib-depends on every library.
+mk set LIB_DIRS "/lib /usr/lib ${LOCALBASE}/lib ${LOCALBASE}/lib/elfutils"
 
 mk block set condition "${FLAVOR:U} == default || ${FLAVOR:U} == nox11" <<'MK'
 OPTIONS_DEFAULT+=	SPICE
