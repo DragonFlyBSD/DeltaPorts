@@ -1,0 +1,14 @@
+port security/courier-authlib-base
+type port
+reason "DragonFly: link the rfc822 C++ test program against libstdc++fs"
+
+# 0.73 (2026Q3 on): libs/rfc822/testsuitecpp, built by "all", uses
+# std::filesystem. Base gcc 8 keeps that in a separate libstdc++fs that
+# DragonFly does not ship; take it from misc/cxxfs_gcc8. LIBS lands after
+# the objects on every link line, where a static archive is searched.
+target @2026Q3,@2026Q4,@main
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+mk add CPPFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+mk add LIBS "-lstdc++fs"
