@@ -1,0 +1,13 @@
+port sysutils/atf-sun50i_a64
+type port
+reason "DragonFly: build TF-A with the aarch64-none-elf cross gcc"
+
+# TF-A 2.14 (2026Q4 on) takes CC and CPP from the environment, where the
+# ports framework puts the host compiler. FreeBSD's cc is clang, which TF-A
+# drives with a --target; DragonFly's is gcc 8 for x86_64 and rejects the
+# AArch64 flags (-mstrict-align, -mfix-cortex-a53-835769). Point both at
+# the cross gcc atf-master already depends on; command-line variables win
+# over the environment. HOSTCC stays the host compiler.
+target @2026Q4,@main
+
+mk add MAKE_ARGS "CC=aarch64-none-elf-gcc CPP=aarch64-none-elf-gcc"
