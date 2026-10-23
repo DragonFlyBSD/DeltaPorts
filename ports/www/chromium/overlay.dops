@@ -178,6 +178,9 @@ mk set LTO_UNSAFE "yes" on-missing noop
 # paths that DragonFly is kept off like the old ones). Two flat patches
 # have no target left: rollup is gone from the port and
 # build_inspector_overlay.py from devtools-frontend.
+# 156 also picks the tsc binary by host OS (third_party/typescript and
+# devtools-frontend, in gn and in Python); FreeBSD maps its own name to
+# the linux-amd64 slot and the new @2026Q4/@main patches add DragonFly.
 target @2026Q4,@main
 
 file remove dragonfly/patch-rollup_rust_Cargo.toml
