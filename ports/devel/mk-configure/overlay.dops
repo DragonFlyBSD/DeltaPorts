@@ -1,0 +1,9 @@
+port devel/mk-configure
+type port
+reason "DragonFly: base make is bmake but is not installed as bmake"
+target @any
+
+# mk-configure runs ${BMAKE} (default "bmake") while building and bakes it
+# into the installed mkcmake. DragonFly's /usr/bin/make is bmake, but there
+# is no bmake binary, so the build dies with "env: bmake: No such file".
+mk add MAKE_ARGS "BMAKE=make"
