@@ -1,0 +1,10 @@
+port x11/nvidia-kmod
+type port
+reason "DragonFly: the FreeBSD nvidia kernel module cannot build here"
+target @any
+
+# Same as x11/nvidia-driver: NVIDIA ships no DragonFly driver, and this
+# builds a FreeBSD kernel module. The -devel/-NNN variants are slaves of
+# this port and inherit it. Without it fetch asks for a nonexistent
+# NVIDIA-FreeBSD-x86x86_64 tarball and every dependent shows as failed.
+mk set IGNORE "nvidia kernel module not supported on DragonFly"
