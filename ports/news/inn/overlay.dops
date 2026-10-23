@@ -1,6 +1,13 @@
 port news/inn
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
+reason "DragonFly has no blacklistd/blocklistd"
+
+# DragonFly ships neither blacklist.h nor blocklist.h, so configure fails
+# with the option on. Upstream renamed the option BLOCKLISTD with 2.7.
+target @2026Q1,@2026Q2
 
 mk set OPTIONS_EXCLUDE "BLACKLISTD"
+
+target @2026Q3,@2026Q4,@main
+
+mk set OPTIONS_EXCLUDE "BLOCKLISTD"
