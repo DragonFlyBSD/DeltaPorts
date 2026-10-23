@@ -4,3 +4,9 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add CXXFLAGS "-DCPP_BUILD"
+
+# devel/llvm19 is built by gcc against libc++, and gcc and clang put
+# different symbols in the COMDAT groups of libc++'s stream vtables: linking
+# libfaust (clang) against the static LLVM archives fails with "relocation
+# refers to ... defined in a discarded section". Link libLLVM-19.so instead.
+mk add CMAKE_ARGS "-DLINK_LLVM_STATIC=OFF"
