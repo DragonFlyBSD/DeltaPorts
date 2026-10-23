@@ -1,0 +1,14 @@
+port devel/spirv-llvm-translator
+type port
+reason "DragonFly: build the llvm19-22 flavors with clang and libc++, like the LLVM they link"
+
+# devel/llvm19..22 are built against libc++ on DragonFly. This library calls
+# LLVM's C++ API (std::string, std::optional, std::function in signatures),
+# so built with base gcc and libstdc++ it fails to link against libLLVM:
+# undefined references to llvm:: symbols with std::__cxx11 types.
+# Mk/Uses/dfly-libcxx.mk exists from 2026Q3 on.
+target @2026Q3,@2026Q4,@main
+
+mk block set condition "${FLAVOR:U:Mllvm19} || ${FLAVOR:U:Mllvm2[0-2]}" <<'MK'
+USES+=	dfly-libcxx:${FLAVOR:S/llvm//}
+MK
