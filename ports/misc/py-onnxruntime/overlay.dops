@@ -13,3 +13,9 @@ mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 #  - abseil-cpp.cmake + absl_dragonfly.patch: the bundled abseil
 #    20250814 casts pthread_self() to pid_t and lacks DragonFly in its
 #    mmap/auxv/strptime checks (what devel/abseil patches).
+
+# FreeBSD's files/patch-onnxruntime_core_common_spin__pause.cc comments out
+# tpause_spin_delay_cycles: on FreeBSD CMAKE_SYSTEM_PROCESSOR is amd64, so
+# spin_pause.cc is built without -mwaitpkg and the constant is unused. On
+# DragonFly it is x86_64, -mwaitpkg defines __WAITPKG__ and _tpause() needs it.
+file remove files/patch-onnxruntime_core_common_spin__pause.cc on-missing noop
