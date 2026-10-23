@@ -3,10 +3,15 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk add CXXFLAGS "-fpermissive"
+# CXXFLAGS is not assigned by the port: append, keeping sys.mk's flags.
+mk eval CXXFLAGS "${CXXFLAGS} -fpermissive"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/[[:<:]]isinf[[:>:]]/std::isinf/g' \
 		-e 's/[[:<:]]isnan[[:>:]]/std::isnan/g' \
 		${WRKSRC}/src/tidbits.cpp
 
 MK1
+
+# dragonfly/patch-testsuite_TestSuiteUtils.cpp: the cmake build compiles
+# the testsuite, which stops with "#error Unknown system" unless it sees
+# _POSIX_C_SOURCE, __APPLE__ or __FreeBSD__; add __DragonFly__.
