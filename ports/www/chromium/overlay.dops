@@ -171,3 +171,14 @@ mk set LTO_UNSAFE "yes" on-missing noop
 
 # The source patches in dragonfly/ were split out of the former
 # monolithic dragonfly/patch-all.
+
+# 156 (2026Q4 on): dragonfly/@2026Q4 and @main carry re-cut copies of ten
+# flat patches whose context moved (Python reindented to four spaces,
+# abseil and gn reworked, and udp_socket_posix.cc grew recvmmsg/UDP GRO
+# paths that DragonFly is kept off like the old ones). Two flat patches
+# have no target left: rollup is gone from the port and
+# build_inspector_overlay.py from devtools-frontend.
+target @2026Q4,@main
+
+file remove dragonfly/patch-rollup_rust_Cargo.toml
+file remove dragonfly/patch-third__party_devtools-frontend_src_scripts_build_build__inspector__overlay.py
