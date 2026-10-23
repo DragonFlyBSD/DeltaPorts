@@ -3,3 +3,6 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
+# dragonfly/patch-dom_src_dae_daeUtils.cpp: FreeBSD's files/ patch adds
+# __FreeBSD__ to the tmp-dir and tmpnam() checks; add __DragonFly__ too.
+# USES=alias, which used to define __FreeBSD__ here, is gone.
