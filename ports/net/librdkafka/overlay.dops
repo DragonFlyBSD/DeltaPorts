@@ -1,8 +1,12 @@
 port net/librdkafka
 type port
-reason "add extra lib/build depends"
+reason "define __FreeBSD__ as USES=alias did; add extra lib/build depends"
 target @any
 
+# Sources pick <sys/socket.h> and alloca(3) under __FreeBSD__; USES=alias
+# supplied -D__FreeBSD__=9 until FreeBSD removed alias.mk. (mk add would
+# write CFLAGS= here and drop the default flags.)
+mk eval CFLAGS "${CFLAGS} -D__FreeBSD__=9"
 mk add LIB_DEPENDS "libnghttp2.so:www/libnghttp2"
 mk add LIB_DEPENDS "libssh2.so:security/libssh2"
 mk add LIB_DEPENDS "libpsl.so:dns/libpsl"
