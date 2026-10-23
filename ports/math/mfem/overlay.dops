@@ -4,3 +4,8 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk set OPTIONS_DEFAULT "NOMPI"
+
+# pkg-plist lists the MFEMConfig.cmake.bak that post-install-SUPERLU-on's
+# REINPLACE leaves behind, unconditionally. SUPERLU is off with the NOMPI
+# default above, so the file is never made; tie the entry to the option.
+text replace-once file pkg-plist from "lib/cmake/mfem/MFEMConfig.cmake.bak" to "%%SUPERLU%%lib/cmake/mfem/MFEMConfig.cmake.bak"
