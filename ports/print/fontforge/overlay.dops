@@ -4,3 +4,8 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add LDFLAGS "-lz"
+
+# pyhook/CMakeLists.txt asks distutils.sysconfig for the site-packages
+# path; Python 3.12 has no distutils. Give it the path the plist expects.
+target @2026Q4,@main
+mk set PYTHON_CMAKE_ON "-DPYHOOK_INSTALL_DIR:STRING=${PYTHONPREFIX_SITELIBDIR:S;${PREFIX}/;;}"
