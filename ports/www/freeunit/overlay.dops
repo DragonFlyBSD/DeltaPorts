@@ -1,0 +1,13 @@
+port www/freeunit
+type port
+reason "DragonFly: OpenSSL headers live in LOCALBASE"
+
+# configure's OpenSSL probe compiles with CFLAGS and --cc-opt only. FreeBSD
+# finds base OpenSSL in /usr/include; DragonFly's USES=ssl is the ports
+# OpenSSL in ${LOCALBASE}, so pass its include dir next to the existing
+# --ld-opt. The freeunit-php/-python slaves build from this Makefile.
+target @2026Q4,@main
+
+text replace-once file Makefile \
+     from "\t\t--ld-opt=\"-L${LOCALBASE}/lib\" \\" \
+     to   "\t\t--cc-opt=\"-I${LOCALBASE}/include\" \\\n\t\t--ld-opt=\"-L${LOCALBASE}/lib\" \\"
