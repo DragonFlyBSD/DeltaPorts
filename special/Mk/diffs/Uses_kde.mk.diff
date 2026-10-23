@@ -1,0 +1,13 @@
+--- Uses/kde.mk.orig
++++ Uses/kde.mk
+@@ -257,6 +257,10 @@
+ 
+ # Enforce the chosen Qt Version
+ CMAKE_ARGS+=	-DQT_MAJOR_VERSION=${_QT_VER}
++
++# ECM stops at a platform missing from the project's metainfo.yaml, and
++# those lists name FreeBSD but never DragonFly.
++CMAKE_ARGS+=	-DKF_IGNORE_PLATFORM_CHECK:BOOL=true
+ 
+ # Disable autotests unless TEST_TARGET is defined.
+ .  if !defined(TEST_TARGET)
