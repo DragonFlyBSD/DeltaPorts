@@ -1,0 +1,10 @@
+port science/linearelasticity
+type port
+reason "DragonFly: link libElas against libm"
+
+# libElas.so calls sqrt() without linking libm. FreeBSD only adds -lm on
+# powerpc (LDFLAGS_powerpc); DragonFly's ld.bfd needs it too, or linking
+# the elastic program fails on libElas's undefined sqrt.
+target @any
+
+mk add LDFLAGS "-lm"
