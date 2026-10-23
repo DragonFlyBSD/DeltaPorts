@@ -1,0 +1,19 @@
+port graphics/py-opencv-python-headless
+type port
+reason "DragonFly: take OpenCV's FreeBSD paths (ittnotify, filesystem, plugins), as graphics/opencv does"
+
+target @2026Q4,@main
+
+# The bundled OpenCV checks __FreeBSD__ only. Without it ittnotify picks the
+# Linux platform and includes <malloc.h>, which DragonFly lacks, and core
+# builds without filesystem/plugin support. Same substitution as
+# graphics/opencv, on the opencv/ subtree of this wheel.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's|__FreeBSD__|__DragonFly__|' \
+		${WRKSRC}/opencv/3rdparty/ittnotify/src/ittnotify/ittnotify_config.h \
+		${WRKSRC}/opencv/modules/core/src/parallel.cpp \
+		${WRKSRC}/opencv/modules/core/src/system.cpp \
+		${WRKSRC}/opencv/modules/core/src/utils/filesystem.cpp \
+		${WRKSRC}/opencv/modules/core/include/opencv2/core/utils/filesystem.private.hpp \
+		${WRKSRC}/opencv/modules/core/include/opencv2/core/utils/plugin_loader.private.hpp
+MK
