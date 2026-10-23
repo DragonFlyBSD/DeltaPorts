@@ -1,0 +1,8 @@
+port graphics/py-scikit-image
+type port
+reason "DragonFly: build with GCC_DEFAULT; meson.build requires GCC >= 9.1"
+
+target @2026Q4,@main
+
+# 0.26's meson.build stops with "scikit-image requires GCC >= 9.1" on base gcc 8.3.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
