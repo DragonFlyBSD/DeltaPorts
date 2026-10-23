@@ -1,0 +1,15 @@
+port misc/py-onnxruntime
+type port
+reason "DragonFly: build with GCC_DEFAULT; thread-id, affinity and bundled abseil fixes"
+target @2026Q4,@main
+
+# CMakeLists.txt refuses gcc < 11.1.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# dragonfly/@<line>/:
+#  - posix/env.cc, logging.cc: no SYS_gettid; skip the affinity block as
+#    FreeBSD does, and use lwp_gettid() for the log thread id.
+#  - setup.py: package the FreeBSD library list on DragonFly too.
+#  - abseil-cpp.cmake + absl_dragonfly.patch: the bundled abseil
+#    20250814 casts pthread_self() to pid_t and lacks DragonFly in its
+#    mmap/auxv/strptime checks (what devel/abseil patches).
