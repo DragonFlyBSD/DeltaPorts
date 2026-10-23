@@ -1,0 +1,9 @@
+port devel/libmustache
+type port
+reason "DragonFly: 0.6 needs floating-point std::to_chars (GCC 11+)"
+
+# 0.6.2 (2026Q4 on): configure requires a C++17 library with
+# floating-point std::to_chars, which base gcc 8's libstdc++ lacks.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
