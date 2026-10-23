@@ -1,0 +1,8 @@
+port comms/libusbsio
+type port
+reason "DragonFly: build the FreeBSD (libudev-devd/hidapi) variant"
+
+# dragonfly/: the makefile and lpcusbsio.c choose the FreeBSD hid backend by
+# OS name; without it hid.c has no source dir ("No rule to make target
+# obj/release/hid.o"). BINDIR follows uname so do-install's
+# ${OPSYS:tl}_${MACHINE} path matches.
