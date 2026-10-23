@@ -1,3 +1,6 @@
 port science/orthanc
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/: treat DragonFly like FreeBSD in the CMake platform blocks,
+# minizip's fopen64 mapping and the plugin extension.
