@@ -1,0 +1,9 @@
+port devel/vc-intrinsics
+type port
+reason "DragonFly: declare the Python the build runs"
+
+# CMakeLists.txt find_package(Python REQUIRED) and generates the intrinsic
+# tables with it. FreeBSD gets Python through the llvm package; DragonFly's
+# llvm12 package does not pull it in, so configure failed.
+mk add USES "python:build"
+mk add CMAKE_ARGS "-DPYTHON_EXECUTABLE=${PYTHON_CMD}"
