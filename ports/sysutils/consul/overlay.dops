@@ -1,3 +1,10 @@
 port sysutils/consul
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: give logging a createTime and go-ps a process lister"
+
+# dragonfly/patch-logging_logfile__dragonfly.go: logfile_bsd.go is gone
+# (1.22+); createTime() now lives in per-OS files and none builds for
+# dragonfly. DragonFly's syscall.Stat_t names the field Ctim, as OpenBSD's
+# does, so the new file is logfile_openbsd.go under a dragonfly tag.
+# dragonfly/patch-vendor_..._go-ps_process__dragonfly.go: go-ps v1.0.0 has
+# no dragonfly backend (the go mod vendor tree is patchable).
