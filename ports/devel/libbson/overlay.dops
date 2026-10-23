@@ -2,6 +2,10 @@ port devel/libbson
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
+# dragonfly/@2026Q4, @main: patch-CMakeLists.txt gives DragonFly the
+# -D__BSD_VISIBLE=1 that 2.x passes FreeBSD; with only _XOPEN_SOURCE=700,
+# unistd.h hides usleep(), which mlib/time_point.h calls.
+
 # =======================================================================
 # @2026Q3: libbson 1.30.8 builds its HTML docs with Sphinx's dirhtml
 # builder, and build/sphinx/mongoc_common.py writes a <page>.html redirect
