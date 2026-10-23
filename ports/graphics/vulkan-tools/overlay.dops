@@ -1,3 +1,15 @@
 port graphics/vulkan-tools
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: let cube/ and vulkaninfo/ CMake treat DragonFly like the BSDs"
+
+target @any
+
+# cube/ and vulkaninfo/CMakeLists.txt match CMAKE_SYSTEM_NAME against
+# "Linux|BSD|GNU", which "DragonFly" does not match, so no WSI platform and
+# no vkcube targets are set up. Edit the regex instead of patching: the
+# lines move between releases and the old cube patch no longer applied.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/"Linux|BSD|GNU"/"Linux|BSD|GNU|DragonFly"/' \
+		${WRKSRC}/cube/CMakeLists.txt \
+		${WRKSRC}/vulkaninfo/CMakeLists.txt
+MK
