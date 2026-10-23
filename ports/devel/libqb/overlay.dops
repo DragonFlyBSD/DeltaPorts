@@ -1,3 +1,7 @@
 port devel/libqb
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/patch-configure.ac: the port runs autoreconf (unless DOXYGEN
+# is on), which regenerates configure and drops patch-configure's
+# dragonfly*) case, so configure stopped with "Unsupported OS? hmmmm".
