@@ -3,3 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
+# dragonfly/patch-config.h.cmake.in: FreeBSD's files/ patch maps __FreeBSD__
+# to ODE_PLATFORM_LINUX; add __DragonFly__ to it. USES=alias, which used to
+# define __FreeBSD__ here, is gone.
