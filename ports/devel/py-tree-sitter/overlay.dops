@@ -1,0 +1,7 @@
+port devel/py-tree-sitter
+type port
+reason "DragonFly: drop _POSIX_C_SOURCE from setup.py on 2026Q4 and main"
+
+# dragonfly/@<line>/patch-setup.py: with _POSIX_C_SOURCE, sys/types.h hides
+# lwpid_t; pyconfig.h then forces __BSD_VISIBLE back on and unistd.h
+# declares lwp_gettid(lwpid_t) without the type.
