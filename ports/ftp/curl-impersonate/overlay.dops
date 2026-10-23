@@ -1,6 +1,6 @@
 port ftp/curl-impersonate
 type port
-reason "DragonFly: build without the bundled libidn2, as on the other BSDs"
+reason "DragonFly: build without the bundled libidn2, as on the other BSDs; gcc 8 ICEs on boringssl"
 
 # CMakeLists.txt defaults USE_LIBIDN2 off for CMAKE_SYSTEM_NAME matching
 # "BSD$", which "DragonFly" does not. With it on, configure stops: the
@@ -8,3 +8,8 @@ reason "DragonFly: build without the bundled libidn2, as on the other BSDs"
 target @any
 
 mk add CMAKE_OFF "USE_LIBIDN2"
+
+# Base gcc 8.3 hits an internal compiler error (expand_debug_locations)
+# on boringssl's AVX2 keccak_f_x4 in crypto/fipsmodule/bcm.cc. The bundled
+# dependencies are built with the port's compiler, so switch the port.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
