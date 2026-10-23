@@ -1,0 +1,7 @@
+port mail/py-pymilter
+type port
+reason "DragonFly: take miltermodule.c's RFC 2553 IPv6 path (arpa/inet.h, inet_ntop)"
+
+# dragonfly/patch-miltermodule.c: the RFC 2553 check lists FreeBSD but not
+# DragonFly, so <arpa/inet.h> was never included and inet_ntop() was an
+# implicit declaration, which setup.py turns into an error.
