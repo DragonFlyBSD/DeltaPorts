@@ -1,0 +1,12 @@
+port math/primesieve
+type port
+reason "DragonFly: no AVX-512 code paths"
+
+# DragonFly does not enable AVX-512 register state, and base gcc 8 lacks
+# intrinsics the AVX-512 code uses (_mm512_set_epi8 in
+# src/PrimeGenerator_x86_avx512.hpp). Preset the multiarch checks so the
+# AVX-512 BW/VBMI2 paths are never built; POPCNT dispatch stays.
+target @any
+
+mk add CMAKE_OFF "multiarch_avx512_bw"
+mk add CMAKE_OFF "multiarch_avx512_vbmi2"
