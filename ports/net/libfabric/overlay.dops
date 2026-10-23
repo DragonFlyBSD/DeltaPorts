@@ -4,3 +4,6 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NVERBS}"
+
+# dragonfly/: configure treats DragonFly as FreeBSD; ofi_osd.h, sock_util.h
+# and src/unix/osd.c check __FreeBSD__ only, which USES=alias used to define.
