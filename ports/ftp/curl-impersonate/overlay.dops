@@ -1,0 +1,10 @@
+port ftp/curl-impersonate
+type port
+reason "DragonFly: build without the bundled libidn2, as on the other BSDs"
+
+# CMakeLists.txt defaults USE_LIBIDN2 off for CMAKE_SYSTEM_NAME matching
+# "BSD$", which "DragonFly" does not. With it on, configure stops: the
+# port never runs the `make prepare-libidn2` prebuild it requires.
+target @any
+
+mk add CMAKE_OFF "USE_LIBIDN2"
