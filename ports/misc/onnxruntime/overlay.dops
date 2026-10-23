@@ -1,0 +1,10 @@
+port misc/onnxruntime
+type port
+reason "DragonFly: onnxruntime needs GCC >= 11.1"
+
+# cmake/CMakeLists.txt stops with "GCC version must be greater than or
+# equal to 11.1" (every version on every line: 1.23 to 1.31); the port's
+# compiler:c++11-lang gives base gcc 8.3. Use GCC_DEFAULT.
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
