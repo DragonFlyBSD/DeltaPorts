@@ -1,0 +1,9 @@
+port multimedia/librist
+type port
+reason "DragonFly: build FreeBSD's tun_freebsd.c for the rist_tun_* API"
+
+# 0.2.20 (2026Q4 on) needs a platform rist_tun_* implementation; FreeBSD's
+# files/ add src/tun_freebsd.c and build it for host system "freebsd"
+# only, so libRIST failed to link on rist_tun_read/rist_tun_write.
+# dragonfly/@2026Q4 and @main build it on DragonFly too (if_tun.h lives in
+# net/tun/ there; TUNGIFNAME and the ifaliasreq ioctls are the same).
