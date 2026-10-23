@@ -1,0 +1,11 @@
+port devel/sobjectizer
+type port
+reason "DragonFly: base gcc 8 rejects 'this' in a noexcept-specifier"
+
+# dev/so_5/coop.hpp (5.8.1 on) declares coop_disp_binder() with
+# noexcept(noexcept(disp_binder_shptr_t{ this->m_coop_disp_binder })),
+# which gcc 8 refuses ("invalid use of 'this' at top level"); gcc 9+
+# accept it. Build with GCC_DEFAULT.
+target @any
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
