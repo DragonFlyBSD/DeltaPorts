@@ -1,15 +1,15 @@
---- configure.orig	2018-09-12 21:01:29 UTC
+--- configure.orig	2013-10-14 19:29:37.000000000 +0000
 +++ configure
-@@ -12598,7 +12598,7 @@ cat >>confdefs.h <<_ACEOF
- _ACEOF
+@@ -11450,7 +11450,7 @@ _ACEOF
  
- 		check_for_linux_nvme_headers;;
+                 os_libs=''
+  ;;
 -        *-*-freebsd*|*-*-kfreebsd*-gnu*)
 +        *-*-freebsd*|*-*-dragonfly*|*-*-kfreebsd*-gnu*)
  
  cat >>confdefs.h <<_ACEOF
  #define SG_LIB_FREEBSD 1
-@@ -12663,7 +12663,7 @@ _ACEOF
+@@ -11506,7 +11506,7 @@ _ACEOF
  esac
  
  # Define platform-specific symbol.
