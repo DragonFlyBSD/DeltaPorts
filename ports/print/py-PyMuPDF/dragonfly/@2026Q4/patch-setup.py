@@ -9,3 +9,12 @@
  darwin = sys.platform.startswith( 'darwin')
  windows = platform.system() == 'Windows' or platform.system().startswith('CYGWIN')
  msys2 = platform.system().startswith('MSYS_NT-')
+@@ -925,7 +925,7 @@
+         env_add(env, 'XCXXFLAGS', '-DTOFU_CJK_EXT')
+ 
+     if openbsd or freebsd:
+-        env['CXX'] = 'c++'
++        env['CXX'] = os.environ.get('CXX', 'c++')
+     
+     if darwin and os.environ.get('GITHUB_ACTIONS') == 'true':
+         if os.environ.get('ImageOS') == 'macos13':

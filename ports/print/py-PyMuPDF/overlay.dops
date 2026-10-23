@@ -1,7 +1,16 @@
 port print/py-PyMuPDF
 type port
-reason "DragonFly: take FreeBSD's build path in setup.py and mupdf's wrap scripts"
+reason "DragonFly: take FreeBSD's build path in setup.py and mupdf's wrap scripts; C++20 compiler"
 
 # dragonfly/@2026Q4, @main: setup.py and scripts/wrap/state.py only know
 # FreeBSD, so on DragonFly setup.py asks pip for libclang and swig wheels
 # instead of using the ports' py-clang and swig.
+#
+# setup.py also forces CXX=c++ on FreeBSD (clang there). On DragonFly that
+# is base gcc 8.3, which rejects -std=c++20 for mupdf's zxing-cpp; the
+# patch keeps the port's CXX instead.
+
+target @2026Q4,@main
+
+# mupdf 1.27's zxing-cpp is C++20.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
