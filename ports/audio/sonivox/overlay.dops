@@ -1,0 +1,12 @@
+port audio/sonivox
+type port
+reason "DragonFly: CMake has no runtime-dependency support for DragonFly"
+
+# install(TARGETS ... RUNTIME_DEPENDENCY_SET) is a configure-time error on
+# systems CMake cannot scan runtime dependencies on, DragonFly among them.
+# The set only feeds the INSTALL_DEPENDENCIES (Windows-style bundling)
+# step, which is off; drop the clause from the two install(TARGETS) calls.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -E -e '/^[[:space:]]*RUNTIME_DEPENDENCY_SET sonivox-dependencies$$/d' \
+		${WRKSRC}/CMakeLists.txt ${WRKSRC}/example/CMakeLists.txt
+MK
