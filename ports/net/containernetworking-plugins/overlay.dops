@@ -1,0 +1,6 @@
+port net/containernetworking-plugins
+type port
+reason "FreeBSD specific (jail v2): dfr's CNI fork drives jail_set/jail_get/jail_remove"
+target @any
+
+mk set IGNORE "FreeBSD specific (jail v2)"
