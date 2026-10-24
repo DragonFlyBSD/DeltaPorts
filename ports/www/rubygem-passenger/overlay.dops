@@ -1,6 +1,9 @@
 port www/rubygem-passenger
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# 6.2.0's vendored libuv takes the F_GETPATH branch on DragonFly, whose
+# buffer needs MAXPATHLEN; dragonfly/@2026Q4 and @main include <sys/param.h>.
 target @any
 
 mk target set dfly-patch <<'MK1'
