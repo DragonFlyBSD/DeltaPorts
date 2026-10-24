@@ -11,3 +11,9 @@ mk add USES "gmake"
 target @2026Q3,@2026Q4,@main
 
 mk add MAKE_ENV "LIBCLANG_PATH=${LLVM_PREFIX}/lib"
+
+# The Makefile links BoringSSL's C++ parts against libc++
+# (BORING_BSSL_RUST_CPPLIB=c++), FreeBSD's C++ runtime. DragonFly builds them
+# with g++ and libstdc++.
+mk remove MAKE_ENV "BORING_BSSL_RUST_CPPLIB=c++"
+mk add MAKE_ENV "BORING_BSSL_RUST_CPPLIB=stdc++"
