@@ -1,0 +1,7 @@
+port databases/mysql97-server
+type port
+reason "DragonFly: C++20 needs GCC_DEFAULT (server and mysql97-client)"
+
+# compiler:c++20-lang resolves to base gcc 8.3, which rejects -std=c++20,
+# so CMake's compiler check fails for mysql97-client, a slave of this port.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
