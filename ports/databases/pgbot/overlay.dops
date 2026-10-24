@@ -1,0 +1,6 @@
+port databases/pgbot
+type port
+reason "DragonFly: depends on modernc.org/sqlite, whose transpiled modernc.org/libc has no dragonfly port"
+
+target @2026Q4,@main
+mk set IGNORE "modernc.org/libc, used by its pure-Go SQLite, does not support DragonFly"
