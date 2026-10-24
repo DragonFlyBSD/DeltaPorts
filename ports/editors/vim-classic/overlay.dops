@@ -1,0 +1,11 @@
+port editors/vim-classic
+type port
+reason "DragonFly: pass the ncurses include path to the osdef.h generator, as editors/vim does"
+
+# osdef.sh preprocesses osdef0.c with EXTRA_DEFS but not CFLAGS, so it
+# cannot see devel/ncurses's termcap.h, writes fallback prototypes into
+# auto/osdef.h, and those then clash with termcap.h in term.c.
+target @2026Q4,@main
+mk block set condition "exists(/usr/lib/priv/libprivate_ncursesw.so)" <<'BLK'
+MAKE_ARGS+= EXTRA_DEFS="${CFLAGS:M-I*}"
+BLK
