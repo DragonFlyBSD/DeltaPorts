@@ -1,0 +1,10 @@
+port x11-toolkits/swt
+type port
+reason "DragonFly: drop a clang-only warning flag base gcc rejects"
+
+# files/patch-make_freebsd.mak adds -Wno-error=deprecated-non-prototype, a
+# clang 15 option; gcc 8.3 fails on it ("no option -Wdeprecated-non-prototype").
+# The port's own OPSYS == FreeBSD guard covers only its post-patch copy.
+target @2026Q3,@2026Q4,@main
+
+text replace-once file files/patch-make_freebsd.mak from "-DGTK -Wno-error=deprecated-non-prototype" to "-DGTK"
