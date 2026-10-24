@@ -1,0 +1,3 @@
+port emulators/rvvm-devel
+type port
+reason "DragonFly: pthread attr types are pointers here, and gcc 8 rejects the empty {} ZERO_INIT for scalars (dragonfly/@<line> patch)"
