@@ -1,7 +1,11 @@
 port lang/gauche
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
+reason "2026Q1/Q2 only: axTLS endian patch and LibreSSL test tweaks"
+
+# 0.9.15 dropped the bundled axTLS (TLS is mbedTLS now) and
+# ext/tls/ssltest-mod.scm, so the patch in dragonfly/@2026Q1 and @2026Q2
+# and the ops below have nothing to apply to from 2026Q3 on.
+target @2026Q1,@2026Q2
 
 mk add USES "ssl"
 mk set BINARY_ALIAS "openssl=${LOCALBASE}/bin/openssl"
