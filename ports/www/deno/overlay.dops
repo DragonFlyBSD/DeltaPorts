@@ -4,3 +4,9 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk eval USES "${USES:S/cargo/cargo:extra/}"
+
+# The build fails on DragonFly (r10: build phase) and needs debugging
+# with dsynth debug; ignore it until then.
+target @2026Q3,@2026Q4,@main
+
+mk eval IGNORE "fails to build on DragonFly, pending investigation"
