@@ -1,0 +1,11 @@
+port textproc/libinfinity
+type port
+reason "build the GObject introspection data the pkg-plist lists"
+
+# configure builds the .gir/.typelib files only when it finds
+# gobject-introspection, which the port never asks for; the plist lists
+# them, so staging failed. Depend on it at build time like its GNOME
+# dependencies do.
+target @2026Q3,@2026Q4,@main
+
+mk add USE_GNOME "introspection:build"
