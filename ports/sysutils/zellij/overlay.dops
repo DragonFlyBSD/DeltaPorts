@@ -1,3 +1,12 @@
 port sysutils/zellij
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: cap-primitives 3.4.4 oflags and aws-lc-sys 0.39.0 entropy source"
+target @any
+
+# dragonfly/@2026Q3, @2026Q4, @main:
+# - cap-primitives 3.4.4: rustix has no OFlags::DSYNC/RSYNC on DragonFly;
+#   approximate DSYNC with SYNC and skip RSYNC as for FreeBSD (devel/uv's
+#   patch for 4.0.3).
+# - aws-lc-sys 0.39.0: define OPENSSL_DRAGONFLY and use getentropy() like
+#   the other BSDs; otherwise urandom.c needs Linux's RNDGETENTCNT
+#   (misc/py-hf-xet's patches).
