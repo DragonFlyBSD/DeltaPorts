@@ -1,0 +1,11 @@
+port x11-wm/compiz-plugins-main
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the 0.8.8 archive (size 1869768 -> 1871548) and every
+# mirror now serves the new one; freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+
+text replace-once file distinfo from "TIMESTAMP = 1751419715" to "TIMESTAMP = 1791703629"
+text replace-once file distinfo from "SHA256 (compiz-plugins-main-0.8.8.tar.gz) = 2b322a3009857563cc83d6199e5085cebf251b9a2e87b1399a423e8f7fedee16" to "SHA256 (compiz-plugins-main-0.8.8.tar.gz) = 44c59771afe515196b2b8d46e9a14ba06e4cbfe0f9247b7e880b56c34cc3a8fd"
+text replace-once file distinfo from "SIZE (compiz-plugins-main-0.8.8.tar.gz) = 1869768" to "SIZE (compiz-plugins-main-0.8.8.tar.gz) = 1871548"
