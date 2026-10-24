@@ -1,0 +1,13 @@
+port misc/py-llama-cpp-python
+type port
+reason "DragonFly: vendored llama.cpp OS checks; gcc 12 for its C++17/std::filesystem code"
+
+# dragonfly/@2026Q4: common.cpp picks the cache/config directory per OS and
+# #errors on any other ("Unknown architecture"); subprocess.h assumes
+# posix_spawn_file_actions_addchdir_np, which DragonFly lacks.
+# dragonfly/@main: the newer llama.cpp drops the OS list from common.cpp;
+# subprocess.h gained a fork() fallback, which DragonFly needs (as in
+# misc/llama-cpp). Base gcc 8.3 would also need -lstdc++fs.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
