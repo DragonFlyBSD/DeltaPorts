@@ -1,0 +1,3 @@
+port textproc/py-zensical
+type port
+reason "DragonFly: fix notify's kqueue dependency gate (dragonfly/@<line> cargo-crate patch)"
