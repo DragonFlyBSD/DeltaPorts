@@ -1,7 +1,11 @@
 port biology/sra-tools
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
+reason "DragonFly: take the FreeBSD paths in the CMake build (OS detection, BSD headers)"
+
+# The konfigure/make-era dfly-patch: 2026Q1/Q2 only. 3.4 (2026Q3 on) builds
+# with CMake and ncbi-vdb/build/Makefile.shell, tools/driver-tool and
+# tools/copycat/Makefile are gone, so it fails the patch phase there.
+target @2026Q1,@2026Q2
 
 mk add MAKE_ARGS "OS=bsd TOOLS=gcc"
 mk target set dfly-patch <<'MK1'
@@ -21,4 +25,30 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/ncbi-vdb/libs/kfs/Makefile
 	${REINPLACE_CMD} -e "s@-smagic@-smagic -slzma@g" \
 		${WRKSRC}/tools/copycat/Makefile
+MK1
+
+# CMake build: build/env.cmake (sra-tools and ncbi-vdb) stops with
+# "unknown OS" for anything but Darwin, FreeBSD, Linux, NetBSD and
+# Windows; tools/loaders leaves out sharq on FreeBSD (pkg-plist follows);
+# and the BSD headers and sources only check __FreeBSD__ (#error in
+# interfaces/os/bsd/{endian,byteswap}.h, hw.usermem in kapp, the mktime
+# fixes in systime.c, <xlocale.h> in the bundled fmt). Treat DragonFly as
+# FreeBSD in all of them.
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@STREQUAL  "FreeBSD" )@MATCHES "^(FreeBSD|DragonFly)$$" )@' \
+		${WRKSRC}/build/env.cmake \
+		${WRKSRC}/ncbi-vdb/build/env.cmake
+	${REINPLACE_CMD} -e 's@NOT CMAKE_SYSTEM_NAME STREQUAL "FreeBSD"@NOT CMAKE_SYSTEM_NAME MATCHES "^(FreeBSD|DragonFly)$$"@' \
+		${WRKSRC}/tools/loaders/CMakeLists.txt
+	${REINPLACE_CMD} \
+		-e 's/defined(__FreeBSD__)/(defined(__FreeBSD__) || defined(__DragonFly__))/g' \
+		-e 's/defined __FreeBSD__/(defined __FreeBSD__ || defined __DragonFly__)/g' \
+		-e 's/^#ifdef __FreeBSD__/#if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/ncbi-vdb/interfaces/os/bsd/endian.h \
+		${WRKSRC}/ncbi-vdb/interfaces/os/bsd/byteswap.h \
+		${WRKSRC}/ncbi-vdb/libs/kapp/mac/ram.c \
+		${WRKSRC}/ncbi-vdb/libs/klib/unix/systime.c \
+		${WRKSRC}/libs/inc/spdlog/fmt/bundled/os.h
 MK1
