@@ -1,0 +1,16 @@
+port multimedia/clapper
+type port
+reason "DragonFly: let the MPRIS feature and the Linux data files build as on FreeBSD"
+
+# FreeBSD's patches add 'freebsd' to the host systems that build the MPRIS
+# feature and install the Linux desktop data; with the port's MPRIS option
+# on, meson stopped on DragonFly ("mpris feature was enabled, but OS is not
+# supported by it"). Add 'dragonfly' to both lists.
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e "s/\['linux', 'freebsd'\]/['linux', 'freebsd', 'dragonfly']/" \
+		${WRKSRC}/src/lib/clapper/features/mpris/meson.build
+	${REINPLACE_CMD} -e "s/\['linux','freebsd'\]/['linux', 'freebsd', 'dragonfly']/" \
+		${WRKSRC}/src/bin/clapper-app/data/meson.build
+MK
