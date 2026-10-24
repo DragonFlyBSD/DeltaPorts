@@ -1,0 +1,8 @@
+port devel/py-qcs-sdk-python
+type port
+reason "DragonFly: no OpenSSL in base; point openssl-sys at the ports OpenSSL instead of /usr/include and /usr/lib"
+
+target @2026Q3,@2026Q4,@main
+mk add USES "ssl"
+mk unset OPENSSLINC
+mk unset OPENSSLLIB
