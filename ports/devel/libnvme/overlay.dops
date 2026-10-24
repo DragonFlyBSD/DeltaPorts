@@ -1,0 +1,3 @@
+port devel/libnvme
+type port
+reason "DragonFly: no <malloc.h>; malloc_usable_size comes from <stdlib.h> (dragonfly/@<line> patch)"
