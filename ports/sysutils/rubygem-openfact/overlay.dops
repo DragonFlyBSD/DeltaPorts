@@ -1,0 +1,3 @@
+port sysutils/rubygem-openfact
+type port
+reason "DragonFly: detect the OS as bsd (dragonfly/@<line> patch), as rubygem-facter did"
