@@ -1,0 +1,11 @@
+port devel/jetbrains-sqlite
+type port
+reason "DragonFly: pass the port's CC to make.sh"
+
+# platform/sqlite/make.sh compiles with ${CC:-clang}, and do-build does
+# not set CC; DragonFly has no clang in the build environment ("clang:
+# command not found"). Hand it the port's compiler. (The openjdk ports
+# install include/freebsd on DragonFly too, so the -I path is fine.)
+target @2026Q3,@2026Q4,@main
+
+text replace-once file Makefile from "${SETENV} JAVA_HOME=${JAVA_HOME} OS=freebsd" to "${SETENV} CC=\"${CC}\" JAVA_HOME=${JAVA_HOME} OS=freebsd"
