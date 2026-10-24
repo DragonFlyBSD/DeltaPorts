@@ -11,6 +11,9 @@ reason "DragonFly: no glibc-style cpuset or GNU utmpx programs, as on FreeBSD"
 # DragonFly has updwtmpx(), FreeBSD does not, so configure would also build
 # su, runuser, login, last and others there; su-common.c needs Linux-PAM's
 # PAM_DATA_SILENT. Build the FreeBSD set of programs.
+#
+# wall's ttymsg.c sizes its buffers with MAXNAMLEN, which DragonFly's
+# <dirent.h> does not define (dragonfly/patch-term-utils_ttymsg.c).
 target @2026Q3,@2026Q4,@main
 
 mk add CONFIGURE_ENV "ac_cv_type_cpu_set_t=no ac_cv_func_updwtmpx=no"
