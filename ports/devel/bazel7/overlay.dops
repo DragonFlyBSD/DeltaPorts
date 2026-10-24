@@ -1,0 +1,12 @@
+port devel/bazel7
+type port
+reason "DragonFly: map Java's os.name dragonflybsd to GOOS dragonfly in the bundled rules_go"
+
+# Bazel's repository_ctx.os.name is Java's os.name lower-cased, "dragonflybsd"
+# here, and rules_go 0.39.1 uses it verbatim as GOOS, so analysis stops with
+# "no such target '@@rules_go~//go/toolchain:dragonflybsd'". The dragonfly/
+# patches add toolchain_local/rules_go_dragonfly.patch and apply it through a
+# single_version_override in MODULE.bazel, as FreeBSD does for rules_python.
+target @2026Q3,@2026Q4,@main
+
+text replace-once file files/toolchain_local-BUILD from "exports_files([\"rules_python_freebsd.patch\"])" to "exports_files([\"rules_python_freebsd.patch\", \"rules_go_dragonfly.patch\"])"
