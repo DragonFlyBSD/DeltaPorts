@@ -1,0 +1,11 @@
+port devel/libdpv
+type port
+reason "DragonFly: no ncurses headers in base; build against the ncurses port"
+
+target @2026Q3,@2026Q4,@main
+mk add USES "ncurses"
+# devel/ncurses installs its wide-character libraries as libncurses and
+# libtinfo, without the w suffix base FreeBSD uses.
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|-ltinfow -lncursesw|-ltinfo -lncurses|' ${WRKSRC}/Makefile
+MK1
