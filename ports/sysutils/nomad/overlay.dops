@@ -1,3 +1,10 @@
 port sysutils/nomad
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly support files and build tags; per-line patch sets in dragonfly/@<line>"
+
+# The 1.1-era dragonfly/ patches stay for 2026Q1 and 2026Q2. 1.9.6 takes
+# disk usage and mounts from gopsutil, FreeBSD's files/ move mountedPaths()
+# into a freebsd.go, and dependencies come vendored by go mod vendor, so the
+# set for 2026Q3 on adds DragonFly files for allocdir, host, log_file and
+# go-ps, and the dragonfly build tag to consul-template's signals and
+# moby/term's termios.
