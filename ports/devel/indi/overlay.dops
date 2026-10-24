@@ -1,6 +1,6 @@
 port devel/indi
 type port
-reason "DragonFly: gmake instead of ninja; treat DragonFly like FreeBSD in CMakeCommon"
+reason "DragonFly: gmake instead of ninja; treat DragonFly like FreeBSD in CMake and the sources"
 
 mk eval USES "${USES:Nninja} gmake"
 
@@ -15,6 +15,14 @@ MK1
 
 # 2.2 turns FIX_WARNINGS (-Werror over -Wall -Wextra) on by default. Base
 # gcc 8 is not the compiler upstream tunes those warnings against.
+#
+# dragonfly/@2026Q4, @main (2.2): add DragonFly where the sources and CMake
+# single out FreeBSD: indicom.c's <sys/socket.h> block (UDP session code
+# needs AF_INET, SO_RCVTIMEO...) and its baud table (no B576000), the TCP
+# connection plugin and skysafari includes, hid_libusb's kernel-driver
+# detach, v4l2_base's version macros, the v4l2 sources and driver (the
+# plist lists them; v4l_compat provides the headers), and lx200generic's
+# _XOPEN_SOURCE=700 (600 plus _POSIX_C_SOURCE hides BSD types here).
 target @2026Q4,@main
 
 mk add CMAKE_ARGS "-DFIX_WARNINGS:BOOL=OFF"
