@@ -10,9 +10,10 @@ mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 
 # Connection.cpp includes <sys/eventfd.h>; DragonFly has none, and
 # devel/libepoll-shim installs eventfd() and its header where the base
-# system lacks them.
+# system lacks them. The port has no USES=localbase, so name the library
+# dir too, or every link (CMake's compiler check first) misses the lib.
 mk add LIB_DEPENDS "libepoll-shim.so:devel/libepoll-shim"
 mk block set condition "1" <<'MK'
 CXXFLAGS+=	-I${LOCALBASE}/include/libepoll-shim
-LDFLAGS+=	-lepoll-shim
+LDFLAGS+=	-L${LOCALBASE}/lib -lepoll-shim
 MK
