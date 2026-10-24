@@ -4,3 +4,9 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add PLIST_FILES "libdata/pkgconfig/clBLAS.pc"
+
+# dragonfly/@<line>/patch-src_CMakeLists.txt: on DragonFly use
+# _POSIX_C_SOURCE=200112L/_XOPEN_SOURCE=600 instead of 199309L/500. The
+# patch was cut for an older src/CMakeLists.txt and no longer applies to
+# 2.12 (whose add_definitions() line now reads "# -pedantic ..."); the old
+# copy stays on 2026Q1/Q2, a re-cut one is used from 2026Q3 on.
