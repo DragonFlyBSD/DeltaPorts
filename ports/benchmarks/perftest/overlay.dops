@@ -1,0 +1,6 @@
+port benchmarks/perftest
+type port
+reason "DragonFly: no OFED in base, so drop the base_ofed flavor and default to rdma_core"
+
+target @2026Q4,@main
+mk set FLAVORS "rdma_core"
