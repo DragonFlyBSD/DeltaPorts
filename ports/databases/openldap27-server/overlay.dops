@@ -1,0 +1,8 @@
+port databases/openldap27-server
+type port
+reason "DragonFly: declarations after case labels in tls_o.c (gcc 8)"
+
+# dragonfly/@2026Q4 (also used by openldap27-client, a slave of this port):
+# 2.7.1's tls_o.c starts three case blocks with a declaration, which base
+# gcc 8.3 rejects ("a label can only be part of a statement"). 2.7.2 on main
+# adds braces upstream.
