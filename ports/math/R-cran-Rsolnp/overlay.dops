@@ -1,0 +1,9 @@
+port math/R-cran-Rsolnp
+type port
+reason "DragonFly: gcc 8 finds the List element conversions in solnp.cpp ambiguous"
+
+# dragonfly/@2026Q3,@2026Q4,@main: R builds packages with base g++ 8.3,
+# which rejects initialising arma::vec/mat, IntegerVector and Function
+# members straight from a List element ("call of overloaded 'Col(...
+# NameProxy)' is ambiguous"). Convert with Rcpp::as<T>() explicitly, as the
+# same file already does for the other members.
