@@ -1,0 +1,9 @@
+port databases/libmongocrypt
+type port
+reason "DragonFly: kms-message's object library misses the OpenSSL include dir"
+
+# kms-message builds kms_crypto_libcrypto.c a second time for the
+# kms_message_obj target, which links no OpenSSL target and so gets no
+# include path for it. That works where OpenSSL is in base (/usr/include);
+# DragonFly uses the ports OpenSSL in LOCALBASE.
+mk add USES "localbase"
