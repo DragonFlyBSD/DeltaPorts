@@ -1,5 +1,3 @@
 port devel/py-bullet3
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
-
+reason "DragonFly: __FreeBSD__-only checks need __DragonFly__ now that USES=alias is gone (dragonfly/@<line> patches)"
