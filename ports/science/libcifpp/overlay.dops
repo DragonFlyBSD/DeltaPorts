@@ -1,0 +1,13 @@
+port science/libcifpp
+type port
+reason "DragonFly: C++23 needs GCC_DEFAULT; install the cron update script"
+
+# CMakeLists.txt asks for cxx_std_23, which CMake does not know for base
+# gcc 8.3 (compiler:c++20-lang resolves to it). Build with GCC_DEFAULT.
+#
+# dragonfly/@<line>/patch-CMakeLists.txt: the update script's install is
+# only known for Linux, GNU and FreeBSD and stops configure elsewhere;
+# install it to etc/cron.weekly on DragonFly too, as pkg-plist expects.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
