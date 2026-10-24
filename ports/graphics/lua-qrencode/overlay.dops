@@ -1,0 +1,10 @@
+port graphics/lua-qrencode
+type port
+reason "DragonFly: do-build runs cc with an empty environment"
+
+# do-build runs ${SETENVI} ${CC} without ${WRK_ENV}, so there is no PATH and
+# base gcc's collect2 cannot find ld ("cannot find 'ld'"); FreeBSD's clang
+# finds /usr/bin/ld without one. Pass the usual clean work environment.
+target @2026Q3,@2026Q4,@main
+
+text replace-once file Makefile from "${SETENVI} ${CC}" to "${SETENVI} ${WRK_ENV} ${CC}"
