@@ -4,6 +4,10 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
 # dragonfly/: treat DragonFly like FreeBSD in the CMake platform blocks,
 # minizip's fopen64 mapping and the plugin extension.
+#
+# dragonfly/@2026Q4,@main: 1.13's NetworkingCompatibility.h derives
+# HOST_NAME_MAX from _POSIX_HOST_NAME_MAX but relies on <limits.h> having
+# been included already, which libc++ does and libstdc++'s <string> does not.
 
 # Orthanc sets no C++ standard outside macOS. protobuf 29's headers pull in
 # abseil, which was built as C++17 and maps absl::string_view onto
