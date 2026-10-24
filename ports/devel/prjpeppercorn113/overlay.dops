@@ -1,0 +1,9 @@
+port devel/prjpeppercorn113
+type port
+reason "DragonFly: build with the default ports GCC for std::filesystem"
+
+# gmpack and gmunpack use std::filesystem; base gcc 8.3 has the header but
+# no libstdc++fs, so they fail to link (std::filesystem::__cxx11::path).
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
