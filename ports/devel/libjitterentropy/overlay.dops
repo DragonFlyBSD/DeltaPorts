@@ -1,0 +1,3 @@
+port devel/libjitterentropy
+type port
+reason "DragonFly: pthread notime backend and mlock'd secure memory as on FreeBSD (dragonfly/@<line> patches)"
