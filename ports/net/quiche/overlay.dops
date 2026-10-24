@@ -4,3 +4,10 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "gmake"
+
+# boring-sys runs bindgen, and clang-sys 1.8.1 only searches its built-in
+# libclang directories (/usr/local/llvm*/lib*) on Linux and FreeBSD; on
+# DragonFly it finds nothing. Point it at the llvm from USES=llvm.
+target @2026Q3,@2026Q4,@main
+
+mk add MAKE_ENV "LIBCLANG_PATH=${LLVM_PREFIX}/lib"
