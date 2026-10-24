@@ -1,0 +1,10 @@
+port devel/rubygem-zstd-ruby-gitlab
+type port
+reason "DragonFly: drop FreeBSD's clang-only -fdeclspec"
+
+# FreeBSD's files/patch-ext_zstdruby_extconf.rb adds -fdeclspec to CFLAGS
+# for its clang; DragonFly builds the extension with gcc, which rejects the
+# option. The bundled zstd only uses __declspec on Windows.
+target @2026Q3,@2026Q4,@main
+
+file remove files/patch-ext_zstdruby_extconf.rb
