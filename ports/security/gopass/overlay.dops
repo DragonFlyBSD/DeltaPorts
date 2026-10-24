@@ -1,0 +1,9 @@
+port security/gopass
+type port
+reason "DragonFly: let golang.design/x/clipboard 0.11 build its BSD backend"
+target @any
+
+# dragonfly/@2026Q4, @main (1.17.4, clipboard v0.11.0): the pure-Go X11,
+# Wayland and BSD backends are tagged for Linux and Free/Open/NetBSD only,
+# so on DragonFly nothing defined initialize/read/writeAll/watch. Add
+# dragonfly to them, and keep the !cgo stub off it to avoid duplicates.
