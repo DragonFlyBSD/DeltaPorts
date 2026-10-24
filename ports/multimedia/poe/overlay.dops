@@ -1,0 +1,11 @@
+port multimedia/poe
+type port
+reason "DragonFly: vcedit.c needs LOCALBASE on the C include path"
+
+# vcedit.h includes <ogg/ogg.h>. gnustep-make puts -I/usr/local/include only
+# into the Objective-C flags (from libobjc2's configuration), so the plain C
+# file vcedit.c does not find libogg's headers. Pass it through
+# ADDITIONAL_CPPFLAGS, which Uses/gnustep.mk hands to gnustep-make.
+target @2026Q3,@2026Q4,@main
+
+mk set ADDITIONAL_CPPFLAGS "-I${LOCALBASE}/include"
