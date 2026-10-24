@@ -1,3 +1,6 @@
 port security/wpa_supplicant
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: include the BSD routing headers in wps_upnp.c; l2_packet patch kept for 2.11"
+
+# 2.12 includes <net/bpf.h> for __DragonFly__ in l2_packet_freebsd.c
+# itself, so that patch stays on the lines that still ship 2.11.
