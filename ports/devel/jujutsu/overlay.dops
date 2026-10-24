@@ -1,0 +1,3 @@
+port devel/jujutsu
+type port
+reason "DragonFly: let the vendored mac_address crate use its getifaddrs backend, as on FreeBSD (dragonfly/@<line> cargo-crate patches)"
