@@ -4,7 +4,6 @@ reason "add gmake USES, CXXFLAGS, PLIST_SUB OPSYS, strip GBM/WAYLAND/SSE4 option
 target @any
 
 mk add USES gmake
-mk add CXXFLAGS -Wno-double-promotion
 mk add PLIST_SUB "OPSYS=${OPSYS:tl}"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGBM:NWAYLAND}"
 mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NSSE4_1:NSSE4_2}"
@@ -60,3 +59,16 @@ mk target set dfly-patch <<'MK'
 MK
 mk set MAKE_JOBS_UNSAFE "yes"
 patch apply diffs/pkg-plist.diff
+
+target @2026Q1,@2026Q2
+
+mk add CXXFLAGS -Wno-double-promotion
+
+# Kodi 22 is C++20 (<span> in utils/StringUtils.h), which base gcc 8.3
+# lacks. Its C++ libraries (fmt, spdlog, taglib, exiv2, crossguid, tinyxml,
+# tinyxml2, libcec) are all libstdc++ builds, so gcc 12 links them as they
+# are. Append to CXXFLAGS rather than replace sys.mk's defaults.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk eval CXXFLAGS "${CXXFLAGS} -Wno-double-promotion"
