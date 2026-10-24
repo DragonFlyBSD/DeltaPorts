@@ -1,3 +1,8 @@
 port net/iwnet
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@2026Q1, @2026Q2: the old patch-src_poller_iwn__poller.c.
+# dragonfly/@2026Q3, @2026Q4, @main: the same change re-cut for 1.1.0, whose
+# reformatting broke the old hunk: DragonFly's EVFILT_TIMER has no
+# NOTE_SECONDS/NOTE_USECONDS and takes milliseconds.
