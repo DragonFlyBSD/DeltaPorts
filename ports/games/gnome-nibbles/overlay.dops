@@ -1,7 +1,11 @@
 port games/gnome-nibbles
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
+reason "auto-converted from Makefile.DragonFly; 2026Q1/Q2 only"
+
+# meson_post_install.py was replaced by gnome.post_install() and gnome-nibbles
+# 4.5 ships no Python script, so SHEBANG_FILES stopped the patch phase on
+# 2026Q3 and later ("find: meson_post_install.py: No such file").
+target @2026Q1,@2026Q2
 
 mk add USES "python:3.4+,build shebangfix"
 mk add SHEBANG_FILES "meson_post_install.py"
