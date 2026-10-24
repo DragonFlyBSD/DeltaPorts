@@ -1,0 +1,10 @@
+port net/usbredir
+type port
+reason "DragonFly: base libusb predates libusb_interrupt_event_handler()"
+target @any
+
+# dragonfly/@2026Q3, @2026Q4, @main: usbredirect wakes its event thread
+# with libusb_interrupt_event_handler() (libusb API 1.0.21). DragonFly's
+# base libusb is API 0x01000102, so skip the call there; the FreeBSD-derived
+# libusb_handle_events() returns within its 2 s timeout and the thread then
+# sees event_thread_run cleared.
