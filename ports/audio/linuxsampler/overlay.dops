@@ -1,0 +1,11 @@
+port audio/linuxsampler
+type port
+reason "DragonFly: gcc 8 cannot build linuxsampler 2.5's designated initializers"
+
+# scriptvm/tree.cpp builds VariableDecl arguments with designated
+# initializers that skip members with default initializers; base gcc 8.3
+# then finds no matching constructor ("<brace-enclosed initializer list>"),
+# gcc 12 accepts them. 2026Q3 still has 2.4.2.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
