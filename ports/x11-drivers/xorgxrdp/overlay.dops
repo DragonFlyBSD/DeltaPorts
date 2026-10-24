@@ -7,3 +7,7 @@ mk eval CONFIGURE_ARGS "--enable-strict-locations"
 
 text replace-once file pkg-plist from "@dir /etc/X11/xrdp" to "@dir etc/X11/xrdp"
 text replace-once file pkg-plist from "/etc/X11/xrdp/xorg.conf" to "etc/X11/xrdp/xorg.conf"
+
+# dragonfly/patch-m4_axrdp__prog__nasm.m4: m4/nasm.m4 became
+# m4/axrdp_prog_nasm.m4; without dragonfly in its BSD case NASM objects
+# would be built as 32-bit ELF. The old patch-m4_nasm.m4 stays for 2026Q1/Q2.
