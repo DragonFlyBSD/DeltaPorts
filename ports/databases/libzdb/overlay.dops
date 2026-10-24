@@ -1,0 +1,9 @@
+port databases/libzdb
+type port
+reason "DragonFly: C++20 needs GCC_DEFAULT"
+
+# 3.6.0 builds with -std=c++20 (compiler:c++20-lang), which base gcc 8.3
+# rejects. Q3 has 3.5.0.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
