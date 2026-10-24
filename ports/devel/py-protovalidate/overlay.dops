@@ -1,0 +1,12 @@
+port devel/py-protovalidate
+type port
+reason "DragonFly: compile the bundled cel-cpp/protovalidate-cc with the ports GCC"
+
+# cc-rs builds the bundled C++17 sources with the c++ it finds, base gcc 8.3,
+# which rejects [[maybe_unused]] on constructor parameters (cel-cpp
+# allocator.h). Use GCC_DEFAULT and hand it to cc-rs: the maturin build
+# environment carries no CC/CXX.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add MAKE_ENV "CC=${CC} CXX=${CXX}"
