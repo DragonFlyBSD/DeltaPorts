@@ -1,0 +1,8 @@
+port science/py-qiskit
+type port
+reason "DragonFly: atomic-wait has no DragonFly backend"
+
+# dragonfly/@2026Q4,@main: the vendored atomic-wait 1.1.0 crate implements
+# wait/wake for Linux, macOS, Windows and FreeBSD only ("cannot find module
+# `platform`"). Add a DragonFly backend on umtx_sleep(2)/umtx_wakeup(2), as
+# Rust's std uses there, and the libc dependency for it.
