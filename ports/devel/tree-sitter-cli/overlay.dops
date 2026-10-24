@@ -1,0 +1,10 @@
+port devel/tree-sitter-cli
+type port
+reason "DragonFly: tell bindgen where libclang is"
+
+# rquickjs-sys runs bindgen, whose clang-sys does not know where DragonFly
+# keeps the ports LLVM: "Unable to find libclang". Point it at the USES=llvm
+# prefix, as other DragonFly Rust ports do.
+target @2026Q3,@2026Q4,@main
+
+mk add MAKE_ENV "LIBCLANG_PATH=${LLVM_PREFIX}/lib"
