@@ -1,0 +1,8 @@
+port www/restinio
+type port
+reason "DragonFly: use the FreeBSD-style sendfile(2)"
+
+# dragonfly/@2026Q3, @2026Q4, @main: restinio picks the Linux sendfile
+# (<sys/sendfile.h>) on anything but FreeBSD and macOS. DragonFly has the
+# FreeBSD sendfile(2) signature, without the SF_* flags; take the FreeBSD
+# path and pass 0 as flags.
