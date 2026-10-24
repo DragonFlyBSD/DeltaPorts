@@ -1,0 +1,3 @@
+port devel/php-swoole
+type port
+reason "DragonFly: guard FreeBSD-only socket options and add a lwp_gettid() thread id (dragonfly/@<line> patches)"
