@@ -1,0 +1,6 @@
+port devel/gpds
+type port
+reason "DragonFly: compiler:c++20-lang leaves base gcc 8, whose libstdc++ has no <concepts>; build with GCC_DEFAULT"
+
+target @2026Q3,@2026Q4,@main
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
