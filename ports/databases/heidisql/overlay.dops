@@ -1,0 +1,17 @@
+port databases/heidisql
+type port
+reason "DragonFly: take HeidiSQL's FreeBSD code paths"
+
+# dbconnection.pas finds client libraries through `ldconfig -r` on FreeBSD
+# and Linux and otherwise falls back to the Windows/macOS directory scan,
+# whose variables are only declared for those systems ("Identifier not
+# found Dlls"). Use the FreeBSD branches (FPC defines DRAGONFLY), also for
+# the resource directory in apphelpers.pas.
+target @2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/defined(FREEBSD)/(defined(FREEBSD) or defined(DRAGONFLY))/g' \
+		${WRKSRC}/source/dbconnection.pas
+	${REINPLACE_CMD} -e 's/{\$$IFDEF FREEBSD}/{$$IF defined(FREEBSD) or defined(DRAGONFLY)}/g' \
+		${WRKSRC}/source/apphelpers.pas
+MK
