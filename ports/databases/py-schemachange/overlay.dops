@@ -1,0 +1,14 @@
+port databases/py-schemachange
+type port
+reason "structlog 26.1.0 no longer matches schemachange's <26 pin"
+target @2026Q4,@main
+
+# devel/py-structlog moved to 26.1.0 (2026Q4, main); the <26 run dependency
+# cannot be met. 26.x only drops Python 3.8/3.9 and adds features; the API
+# schemachange uses (configure, getLogger, BoundLogger, processors, dev
+# ConsoleRenderer, stdlib PositionalArgumentsFormatter) is unchanged.
+# dragonfly/@2026Q4,@main relaxes the same bound in pyproject.toml.
+text replace-once file Makefile \
+     from "structlog>=24.1.0<26:devel/py-structlog" \
+     to   "structlog>=24.1.0:devel/py-structlog" \
+     on-missing noop
