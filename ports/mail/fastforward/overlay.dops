@@ -1,3 +1,8 @@
 port mail/fastforward
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@2026Q1, @2026Q2: patch-error.h and patch-cdb_seek.c. FreeBSD's
+# own patch-error.h and patch-cdb__seek.c now include <errno.h> and drop
+# "extern int errno" for every platform, so the DragonFly ones no longer
+# apply.
