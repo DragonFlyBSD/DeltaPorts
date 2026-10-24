@@ -1,9 +1,14 @@
 port devel/libmustache
 type port
-reason "DragonFly: 0.6 needs floating-point std::to_chars (GCC 11+)"
+reason "DragonFly: 0.6 needs floating-point std::to_chars (GCC 11+); no ThreadSanitizer"
 
 # 0.6.2 (2026Q4 on): configure requires a C++17 library with
 # floating-point std::to_chars, which base gcc 8's libstdc++ lacks.
+#
+# FreeBSD configures with --enable-thread-sanitizer, which builds the
+# library with -fsanitize=thread. DragonFly's GCC has no TSan runtime, so
+# configure stops ("requires compiler and linker support").
 target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+text replace-once file Makefile from "--enable-thread-sanitizer" to "--disable-thread-sanitizer"
