@@ -7,3 +7,9 @@ target @2026Q4,@main
 # The stringzillas-cpus module built in post-install includes <concepts>,
 # which base gcc 8's libstdc++ does not have.
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# dragonfly/@2026Q4, @main: ForkUnion's FU_ON_POSIX only knows Linux, Apple
+# and FreeBSD, so on DragonFly FU_WITH_OS_THREADS is 0, distributed.hpp
+# defines no colocated_pool/distributed_pool, and forkunion/c/forkunion.cpp
+# does not compile. Count DragonFly as POSIX; affinity, topology and
+# rescheduling stay off as on any other unlisted POSIX system.
