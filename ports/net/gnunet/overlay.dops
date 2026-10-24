@@ -1,0 +1,10 @@
+port net/gnunet
+type port
+reason "DragonFly: build 0.29 with the default ports GCC (C23 attributes)"
+
+# 0.29's public headers use [[ deprecated (...) ]] attributes, which base
+# gcc 8.3 rejects in C ("expected identifier or '(' before '[' token");
+# gcc 12 accepts them in the gnu11 mode the build uses.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
