@@ -4,3 +4,8 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk eval USES "${USES:Nninja} gmake"
+
+# dragonfly/@2026Q4,@main: stellarsolver 2.8 with FreeBSD's patches checks
+# Q_OS_FREEBSD, which DragonFly's Qt 6 does not define (it has its own
+# Q_OS_DRAGONFLY), so the RAM query fell into the Windows code
+# (MEMORYSTATUSEX). Take the FreeBSD branches, reading hw.physmem.
