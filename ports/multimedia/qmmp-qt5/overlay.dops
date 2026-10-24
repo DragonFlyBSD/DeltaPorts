@@ -4,3 +4,10 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NOSS4:NUDISKS*}"
+
+# The projectM plugin links a bare -lGL (src/plugins/Visual/projectm), and
+# nothing puts -L${LOCALBASE}/lib on that link line, so base gold cannot
+# find libglvnd's libGL.so.
+target @2026Q3,@2026Q4,@main
+
+mk add USES "localbase:ldflags"
