@@ -1,0 +1,3 @@
+port net/deltachat-rpc-server
+type port
+reason "DragonFly: quinn-udp takes the recvmsg path, without IP_RECVTOS (dragonfly/@<line> cargo-crate patches)"
