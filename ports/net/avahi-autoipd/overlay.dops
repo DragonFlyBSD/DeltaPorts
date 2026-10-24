@@ -1,0 +1,13 @@
+port net/avahi-autoipd
+type port
+reason "DragonFly: avahi-autoipd's BSD headers are included under __FreeBSD__ only"
+
+# avahi-autoipd/main.c takes the sysctl(NET_RT_IFLIST) path on every
+# non-Linux system but includes <sys/sysctl.h>, <net/if_dl.h> and
+# <net/route.h> only on FreeBSD, so CTL_NET and RTM_IFINFO are undeclared.
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^#ifdef __FreeBSD__$$/#if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/avahi-autoipd/main.c
+MK
