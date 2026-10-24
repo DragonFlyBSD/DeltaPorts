@@ -1,10 +1,12 @@
 port devel/hyprwire
 type port
-reason "DragonFly: C++20 needs GCC_DEFAULT"
+reason "DragonFly: C++20 and hyprutils need GCC 14"
 
 # hyprwire and the hyprutils headers it uses need C++20 (<span>, <bit>,
 # <ranges>), which base gcc 8.3's libstdc++ lacks; compiler:c++11-lib
-# resolves to it. Build with GCC_DEFAULT.
+# resolves to it. devel/hyprutils is built with GCC 14, and linking its
+# library with an older GCC's libstdc++ leaves GLIBCXX symbols undefined,
+# so use GCC 14 as well.
 target @2026Q3,@2026Q4,@main
 
-mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk set USE_GCC_VERSION "14"
