@@ -1,0 +1,15 @@
+port science/py-ncrystal
+type port
+reason "DragonFly: NCCFileUtils.cc's _XOPEN_SOURCE 500 hides C99 wide-char functions"
+
+# ncrystal_core/src/utils/NCCFileUtils.cc defines _POSIX_C_SOURCE 200809L and
+# _XOPEN_SOURCE 500 except on FreeBSD ("these cause problems on freebsd").
+# On DragonFly _XOPEN_SOURCE 500 limits __ISO_C_VISIBLE to C90, so <wchar.h>
+# hides vfwscanf, wcstof & co. and libstdc++'s <cwchar> fails. Treat
+# DragonFly as FreeBSD there.
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^#  ifndef __FreeBSD__$$/#  if !defined(__FreeBSD__) \&\& !defined(__DragonFly__)/' \
+		${WRKSRC}/ncrystal_core/src/utils/NCCFileUtils.cc
+MK
