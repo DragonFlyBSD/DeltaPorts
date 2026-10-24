@@ -1,0 +1,11 @@
+port japanese/fcitx5-anthy
+type port
+reason "DragonFly: libc++ on 2026Q3 and later, like textproc/fcitx5"
+
+# textproc/fcitx5 builds with clang and libc++ (USE_CLANG_FALLBACK). Its
+# headers need C++20 (<concepts>, <source_location>) that base gcc 8.3 lacks,
+# and its C++ API passes libc++'s std:: types, so build against it the
+# same way.
+target @2026Q3,@2026Q4,@main
+
+mk add USES "dfly-libcxx"
