@@ -4,3 +4,7 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add PLIST_FILES "sbin/c_example.x sbin/c_example_shlib.x"
+
+# dragonfly/patch-src_dashboard.cpp: dashboard.cpp moved to src/ and still
+# uses std::mutex without <mutex>. The old top-level patch is kept for
+# 2026Q1/Q2 in dragonfly/@2026Q1, @2026Q2.
