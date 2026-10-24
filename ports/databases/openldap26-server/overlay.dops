@@ -1,0 +1,10 @@
+port databases/openldap26-server
+type port
+reason "DragonFly: no SMBPWD (smbk5pwd needs Heimdal's krb5.h)"
+
+# Moved here from net/ on 2026Q4, which carried the same exclusion: the
+# Samba password overlay includes <krb5.h>, and DragonFly has no Heimdal in
+# base. FreeBSD 15 and 16 exclude it for the same reason.
+target @2026Q4,@main
+
+mk set OPTIONS_EXCLUDE_DragonFly "SMBPWD"
