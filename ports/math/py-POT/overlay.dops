@@ -1,0 +1,10 @@
+port math/py-POT
+type port
+reason "DragonFly: 0.9.7's BSP-OT extension includes <ranges>"
+
+# ot/bsp/BSP-OT_header_only.h includes <ranges>, which base gcc 8.3's
+# libstdc++ lacks. The Makefile uses no compiler: USES, so the extension is
+# built with base cc. Q3 has 0.9.3.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
