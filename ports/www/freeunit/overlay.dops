@@ -1,11 +1,16 @@
 port www/freeunit
 type port
-reason "DragonFly: OpenSSL headers live in LOCALBASE"
+reason "DragonFly: OpenSSL headers live in LOCALBASE; no CPU_ALLOC"
 
 # configure's OpenSSL probe compiles with CFLAGS and --cc-opt only. FreeBSD
 # finds base OpenSSL in /usr/include; DragonFly's USES=ssl is the ports
 # OpenSSL in ${LOCALBASE}, so pass its include dir next to the existing
 # --ld-opt. The freeunit-php/-python slaves build from this Makefile.
+#
+# dragonfly/patch-src_nxt__lib.c: configure finds sched_getaffinity(), and
+# nxt_lib.c then sizes the set with Linux's CPU_ALLOC()/CPU_COUNT_S().
+# DragonFly's cpu_set_t is a fixed-size cpumask_t without those macros: use
+# a cpu_set_t on the stack and CPU_COUNT().
 target @2026Q4,@main
 
 text replace-once file Makefile \
