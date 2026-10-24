@@ -1,0 +1,14 @@
+port misc/ollama
+type port
+reason "DragonFly: build ggml with ports GCC, whose assembler knows AMX"
+
+# pre-build-CPU-on runs cmake with no environment, so the bundled llama.cpp
+# is built by the system's plain cc. DragonFly's base compilers use base
+# binutils 2.34, whose assembler lacks the AMX instructions GCC emits for the
+# sapphirerapids ggml CPU variant ("no such instruction: tileloadd"). Use
+# GCC_DEFAULT, which assembles with ports binutils, and hand its compilers to
+# cmake explicitly.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add _CMAKE_FLAGS "-DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX}"
