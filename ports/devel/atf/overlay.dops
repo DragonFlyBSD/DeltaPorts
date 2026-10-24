@@ -1,0 +1,6 @@
+port devel/atf
+type port
+reason "DragonFly: atf needs C++20, and compiler:c++20-lang leaves base gcc 8; build with GCC_DEFAULT"
+
+target @2026Q4,@main
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
