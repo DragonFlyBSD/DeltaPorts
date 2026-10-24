@@ -14,3 +14,11 @@ target @2026Q4,@main
 
 # mupdf 1.27's zxing-cpp is C++20.
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# With a ports GCC, USE_BINUTILS puts LD=${LOCALBASE}/bin/ld in MAKE_ENV.
+# pipcl.py links the extension modules with $LD when it is set and passes it
+# compiler-driver flags (-O2 -DNDEBUG -shared); ld rejects them. Keep LD out
+# of the binutils list and point it at the C++ driver, with the GCC rpath
+# that mupdfwrap gets from LDFLAGS for libmupdfcpp.
+mk set BINUTILS_NO_MAKE_ENV "LD"
+mk add MAKE_ENV "LD=\"${CXX} ${LDFLAGS}\""
