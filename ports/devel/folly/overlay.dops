@@ -12,8 +12,8 @@ file materialize Makefile.DragonFly -> Makefile.DragonFly
 # base gcc 8.3 here. The patches in dragonfly/@2026Q4 and @main add DragonFly
 # to folly's FreeBSD checks where DragonFly behaves the same (setpgrp(2)
 # arguments, posix_memalign, ELF macros, environ, endian helpers), map gettid
-# to SYS_lwp_gettid and supply off64_t; DragonFly has fdatasync() now, so the
-# old FileUtil.cpp patch is gone.
+# to SYS_lwp_gettid, supply off64_t and use libc's clearenv(); DragonFly
+# has fdatasync() now, so the old FileUtil.cpp patch is gone.
 target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
