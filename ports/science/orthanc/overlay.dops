@@ -4,3 +4,11 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
 # dragonfly/: treat DragonFly like FreeBSD in the CMake platform blocks,
 # minizip's fopen64 mapping and the plugin extension.
+
+# Orthanc sets no C++ standard outside macOS. protobuf 29's headers pull in
+# abseil, which was built as C++17 and maps absl::string_view onto
+# std::string_view; base gcc 8 defaults to gnu++14, so configure's
+# google/protobuf/any.h probe fails ("Please install libprotobuf-dev").
+target @2026Q3,@2026Q4,@main
+
+mk set USE_CXXSTD "gnu++17"
