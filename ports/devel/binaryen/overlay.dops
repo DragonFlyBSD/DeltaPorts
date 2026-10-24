@@ -1,0 +1,9 @@
+port devel/binaryen
+type port
+reason "DragonFly: C++20 needs GCC_DEFAULT"
+
+# binaryen is C++20 (std::string_view::starts_with, unordered_map::contains),
+# which base gcc 8.3 does not provide.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
