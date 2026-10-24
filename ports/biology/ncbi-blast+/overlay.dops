@@ -6,3 +6,7 @@ target @any
 mk add CONFIGURE_ARGS "--with-lmdb=${LOCALBASE} --with-lzo=${LOCALBASE} --with-sqlite3=${LOCALBASE}"
 
 patch apply diffs/Makefile.diff
+
+# dragonfly/@2026Q1, @2026Q2: patch-src_util_compress_api_miniz_miniz__zip.c.
+# 2.17.0 merged miniz into miniz.c, whose 64-bit stdio branch now keys on
+# glibc's __USE_LARGEFILE64, so DragonFly no longer needs excluding.
