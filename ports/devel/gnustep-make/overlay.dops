@@ -1,0 +1,11 @@
+port devel/gnustep-make
+type port
+reason "DragonFly: build shared libraries the FreeBSD ELF way (soname lib*.so.MAJOR)"
+
+# dragonfly/@2026Q3, @2026Q4, @main: target.make's DragonFly section, a
+# copy of NetBSD's, links with -soname lib*.so.X.Y.Z, installs only the
+# lib*.so link and adds pkgsrc's /usr/pkg and /usr/X11R6 paths. FreeBSD's
+# ELF section uses soname lib*.so.MAJOR (the interface version) and also
+# installs that link, which every FreeBSD pkg-plist of a GNUstep library or
+# framework lists. Use the FreeBSD section on DragonFly. This changes the
+# sonames of every GNUstep library, so the stack must be rebuilt.
