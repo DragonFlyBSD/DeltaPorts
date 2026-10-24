@@ -1,0 +1,30 @@
+port graphics/epsonscan2
+type port
+reason "DragonFly: take the FreeBSD port's code paths"
+
+# FreeBSD's patches add __FreeBSD__ / CMAKE_SYSTEM_NAME "FreeBSD" branches
+# (base libusb, polling semaphores instead of semtimedop(), thread ids,
+# install paths); DragonFly fell through to the Linux code (SYS_gettid,
+# pthread_tryjoin_np). Take those branches here too. DragonFly has no
+# pthread_peekjoin_np either; the only caller polls until the thread has
+# exited, so a blocking pthread_join() does the same.
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} \
+		-e 's/^#if __FreeBSD__$$/#if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		-e 's/^#ifdef __FreeBSD__$$/#if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		-e 's/^#ifndef __FreeBSD__$$/#if !defined(__FreeBSD__) \&\& !defined(__DragonFly__)/' \
+		-e 's/^#elif __FreeBSD__$$/#elif defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/src/Controller/Src/Finder/UsbFinder.cpp \
+		${WRKSRC}/src/Controller/Src/Filter/DTR.cpp \
+		${WRKSRC}/src/ES2Command/Src/Interface/usb/usbInterfaceImpl.h \
+		${WRKSRC}/src/ES2Command/Src/Utils/semaphore.hpp \
+		${WRKSRC}/src/Platform.cpp \
+		${WRKSRC}/src/CommonUtility/DbgLog.cpp \
+		${WRKSRC}/src/SaneWrapper/defines.h
+	${REINPLACE_CMD} -e 's/pthread_peekjoin_np(tid,st)/pthread_join(tid,st)/' \
+		${WRKSRC}/src/Platform.cpp
+	${REINPLACE_CMD} -e 's/CMAKE_SYSTEM_NAME STREQUAL "FreeBSD"/CMAKE_SYSTEM_NAME MATCHES "FreeBSD|DragonFly"/' \
+		${WRKSRC}/CMakeLists.txt
+MK
