@@ -38,3 +38,11 @@ mk target set dfly-patch <<'MK'
 	@${ECHO} "#######################################################" >> ${DPMSG}
 .endif
 MK
+
+# The DPMSG set above lands inside the Makefile's .if !defined(Q3TOTALCONV),
+# so total conversions (openarena, openarena-server) have it empty and
+# dfly-patch's 'echo ... >> ${DPMSG}' is a shell syntax error. Define it
+# unconditionally as well.
+target @2026Q3,@2026Q4,@main
+
+text line-insert-after file Makefile anchor ".include <bsd.port.options.mk>" line "DPMSG=\t${WRKDIR}/dports-message"
