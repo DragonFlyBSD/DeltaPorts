@@ -13,3 +13,7 @@ mk add CMAKE_OFF "USE_LIBIDN2"
 # on boringssl's AVX2 keccak_f_x4 in crypto/fipsmodule/bcm.cc. The bundled
 # dependencies are built with the port's compiler, so switch the port.
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# The curl sub-build's CONFIGURE_COMMAND hard-codes -GNinja, and
+# DragonFly's USES=cmake does not pull in ninja (it builds with make).
+mk add BUILD_DEPENDS "ninja:devel/ninja"
