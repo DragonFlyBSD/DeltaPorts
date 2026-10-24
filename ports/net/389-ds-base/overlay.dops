@@ -20,7 +20,6 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/include/base/systems.h \
 		${WRKSRC}/include/public/base/systems.h \
 		${WRKSRC}/ldap/include/portable.h \
-		${WRKSRC}/ldap/servers/plugins/pwdstorage/crypt_pwd.c \
 		${WRKSRC}/ldap/servers/slapd/back-ldbm/db-mdb/mdb_debug.c \
 		${WRKSRC}/ldap/servers/slapd/daemon.c \
 		${WRKSRC}/ldap/servers/slapd/getsocketpeer.c \
@@ -32,3 +31,12 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/lib/base/dnsdmain.cpp \
 		${WRKSRC}/lib/base/file.cpp
 MK
+
+# crypt_pwd.c needs crypt_r() and struct crypt_data, which FreeBSD's libc
+# has and DragonFly's does not (it has crypt(3) only), so it is left out of
+# the list above: on DragonFly it includes <crypt.h>, from security/libxcrypt
+# (already a build dependency for gost_yescrypt.c). configure only sets
+# LIBCRYPT on Linux; set it so the pwdstorage plugin links libxcrypt, and
+# keep libxcrypt installed at run time.
+mk add CONFIGURE_ENV "LIBCRYPT=-lcrypt"
+mk add LIB_DEPENDS "libcrypt.so.2:security/libxcrypt"
