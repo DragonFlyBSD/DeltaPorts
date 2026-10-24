@@ -1,5 +1,3 @@
 port devel/easyloggingpp
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
-
+reason "DragonFly: count DragonFly as ELPP_OS_FREEBSD, as USES=alias used to (dragonfly/@<line> patch)"
