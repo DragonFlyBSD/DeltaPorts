@@ -4,3 +4,7 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add CFLAGS "-Wno-int-conversion"
+
+# dragonfly/@2026Q3, @2026Q4, @main: main.m calls NSApplicationMain with only
+# <Foundation/NSObject.h> included; clang 16 and later make the implicit
+# declaration an error. Include <AppKit/NSApplication.h>.
