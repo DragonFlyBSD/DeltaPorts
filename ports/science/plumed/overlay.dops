@@ -15,3 +15,7 @@ MK1
 target @2026Q3,@2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# dragonfly/@2026Q3, @2026Q4, @main: FILE is an incomplete type on DragonFly,
+# and TypesafePtr::get<FILE*>() instantiates sizeof(FILE). Give FILE the
+# same size-0 specialization as void; the wrapper never sends a FILE size.
