@@ -4,3 +4,12 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add LDFLAGS "-lz"
+
+# meson.build sets c_std=c23. Meson offers c23 only for GCC 14 and later
+# (c2x from GCC 9); base gcc 8.3 (what compiler:c17 gives) has neither.
+# Upstream's flags (-Werror=maybe-uninitialized) show it is built with GCC,
+# and its Linux users need GCC 14 for c23 as well. The plugins
+# (zathura-cb, -djvu, -pdf-mupdf, -pdf-poppler, -ps) do the same.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "14"
