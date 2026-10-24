@@ -1,0 +1,9 @@
+port graphics/skia124
+type port
+reason "DragonFly: __builtin_convertvector needs GCC 9 or later"
+
+# src/opts/SkRasterPipeline_opts.h uses __builtin_convertvector, which base
+# gcc 8.3 (what compiler:c++17-lang gives) does not have. Note that
+# graphics/aseprite links these static libraries and so needs the same
+# compiler (libstdc++).
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
