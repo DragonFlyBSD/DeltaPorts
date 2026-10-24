@@ -1,0 +1,11 @@
+port lang/gscheme
+type port
+reason "DragonFly: 2003-era C/ObjC that clang 16+ rejects by default"
+
+# The bison-generated parser calls yylex/yyerror undeclared and main.m uses
+# implicit int; clang 16 and later (GNUstep builds with clang 19) make those
+# errors. Turn the new defaults back into warnings, as for games/nextgo.
+target @2026Q3,@2026Q4,@main
+
+mk set ADDITIONAL_CFLAGS "-Wno-error=implicit-int -Wno-error=implicit-function-declaration -Wno-error=int-conversion -Wno-error=incompatible-function-pointer-types"
+mk set ADDITIONAL_OBJCFLAGS "-Wno-error=implicit-int -Wno-error=implicit-function-declaration -Wno-error=int-conversion -Wno-error=incompatible-function-pointer-types"
