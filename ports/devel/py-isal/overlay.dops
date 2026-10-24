@@ -1,0 +1,3 @@
+port devel/py-isal
+type port
+reason "DragonFly: setup.py only knows freebsd and netbsd as BSDs (dragonfly/@<line> patch)"
