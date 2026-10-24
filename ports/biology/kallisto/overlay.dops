@@ -1,0 +1,13 @@
+port biology/kallisto
+type port
+reason "DragonFly: no <malloc.h>; XSI strerror_r() in bifrost's strict_fstream"
+
+# dragonfly/@2026Q3, @2026Q4, @main: bifrost's roaring.h includes
+# <malloc.h> except on Apple and FreeBSD; DragonFly has none either.
+#
+# FreeBSD's files/patch-ext_bifrost_src_strict__fstream.hpp makes FreeBSD
+# take the XSI strerror_r() branch; g++ defines _GNU_SOURCE, so DragonFly
+# (whose strerror_r() returns int) needs the same.
+target @2026Q3,@2026Q4,@main
+
+text replace-once file files/patch-ext_bifrost_src_strict__fstream.hpp from "|| defined(__MUSL__) || defined(__FreeBSD__)" to "|| defined(__MUSL__) || defined(__FreeBSD__) || defined(__DragonFly__)"
