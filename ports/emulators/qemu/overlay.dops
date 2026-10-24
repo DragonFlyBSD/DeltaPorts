@@ -54,6 +54,13 @@ MK
 
 patch apply diffs/Makefile.diff
 
+# FreeBSD passes --enable-netmap for the emulator flavors; DragonFly has no
+# netmap, and the --disable-netmap above only dedupes against the tools
+# flavor's list, so meson setup stops on missing netmap headers.
+target @2026Q3,@2026Q4,@main
+
+text replace-once file Makefile from "--enable-netmap" to "--disable-netmap"
+
 # qemu 11.1's meson.build requires GCC 10.4 or later; base gcc 8.3 stops
 # meson setup.
 target @2026Q4,@main
