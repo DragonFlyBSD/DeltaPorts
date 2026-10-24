@@ -8,3 +8,9 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g'	\
 		${WRKSRC}/src/misc/newinstall.cxx
 MK1
+
+# 4.2.13 takes the FreeBSD paths for <glob.h> (misc/configuration.cxx), the
+# FSK timer (rtty/fsk.cxx, no timerfd) and hidraw (cmedia/hid_lin.cxx) only
+# on __FreeBSD__, which DragonFly lost with USES=alias. dragonfly/@<line>/
+# adds __DragonFly__, with the FreeBSD hidraw ioctl definitions as DragonFly
+# has no hidraw(4).
