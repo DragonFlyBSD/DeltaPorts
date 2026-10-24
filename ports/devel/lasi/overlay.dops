@@ -1,0 +1,14 @@
+port devel/lasi
+type port
+reason "DragonFly: regenerate the doxygen docs the plist lists instead of installing the prebuilt 2019 ones"
+
+# The tarball ships doc/*/html built by an old doxygen, newer than the
+# Doxyfiles. FreeBSD's cmake uses ninja, which reruns the doc commands on a
+# fresh tree; DragonFly's cmake uses make, which sees the prebuilt
+# index.html as up to date, so the old docs get staged and the plist's
+# newer-doxygen files are missing. Make the Doxyfiles newer.
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${TOUCH} ${WRKSRC}/Doxyfile.user ${WRKSRC}/Doxyfile.developer
+MK
