@@ -1,7 +1,12 @@
 port archivers/peazip
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
+reason "DragonFly: take the sources' FREEBSD code paths under FPC's DRAGONFLY define"
+
+# FPC defines DRAGONFLY, not FREEBSD, so the FreeBSD branches ({$IFDEF
+# FREEBSD}) are switched over by name. 11.x renamed unit_gwrap.pas and
+# dropped unit_pea.pas, unit3.pas and unit8.pas; the files carrying FREEBSD
+# branches differ per line.
+target @2026Q1,@2026Q2
 
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FREEBSD@DRAGONFLY@g' \
@@ -12,6 +17,23 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/dev/unit_pea.pas \
 		${WRKSRC}/dev/unit3.pas \
 		${WRKSRC}/dev/unit8.pas
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/dev/list_utils.pas
+MK1
+
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FREEBSD@DRAGONFLY@g' \
+		${WRKSRC}/dev/externalprograms.pas \
+		${WRKSRC}/dev/list_utils.pas \
+		${WRKSRC}/dev/pea.pas \
+		${WRKSRC}/dev/pea_utils.pas \
+		${WRKSRC}/dev/peach.pas \
+		${WRKSRC}/dev/unitgwrap.pas \
+		${WRKSRC}/dev/unitpm.pas \
+		${WRKSRC}/dev/unitpw.pas \
+		${WRKSRC}/dev/unitreport.pas
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
 		${WRKSRC}/dev/list_utils.pas
 MK1
