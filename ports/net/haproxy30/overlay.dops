@@ -1,0 +1,6 @@
+port net/haproxy30
+type port
+reason "DragonFly: procctl(2) has no PROC_TRACE_CTL; build without USE_PROCCTL"
+
+target @2026Q3,@2026Q4,@main
+mk add MAKE_ARGS "USE_PROCCTL="
