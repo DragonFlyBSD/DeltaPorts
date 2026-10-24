@@ -1,0 +1,3 @@
+port ftp/waiho
+type port
+reason "DragonFly: add the <unistd.h> and <sys/stat.h> includes that clang now requires for unlink/read/mkdir (dragonfly/@<line> patches)"
