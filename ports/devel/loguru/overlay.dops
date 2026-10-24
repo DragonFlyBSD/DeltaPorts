@@ -1,0 +1,11 @@
+port devel/loguru
+type port
+reason "DragonFly: thread id fallback casts the pointer pthread_t to an integer"
+
+# dragonfly/@2026Q3,@2026Q4,@main: loguru.cpp, which consumers compile in
+# (#include <loguru.cpp>), prints a numeric thread id from thr_self() on
+# FreeBSD and getthrid() on OpenBSD, and otherwise converts pthread_self()
+# to uint64_t, which fails where pthread_t is a pointer
+# (textproc/py-docling-metrics-table: "invalid static_cast"). Use
+# lwp_gettid() on DragonFly. 2026Q3's snapshot predates the OpenBSD case,
+# hence its own copy of the patch.
