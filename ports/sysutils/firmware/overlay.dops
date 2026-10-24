@@ -1,0 +1,5 @@
+port sysutils/firmware
+type dport
+target @any
+reason "Package firmware with BSD-compatible installation"
+file materialize dragonfly/patch-copy-firmware.sh -> dragonfly/patch-copy-firmware.sh
