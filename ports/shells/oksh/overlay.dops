@@ -1,0 +1,10 @@
+port shells/oksh
+type port
+reason "DragonFly: ports ncurses keeps setupterm/cur_term in libtinfo"
+target @any
+
+# dragonfly/@2026Q3, @2026Q4, @main: configure probes curses by linking
+# -lncurses alone. The ports libncurses.so is a linker script that pulls in
+# libtinfo, but the static flavor links libncurses.a, which lacks
+# setupterm(), so the probe failed, NO_CURSES was set, and emacs.c/vi.c
+# still used cur_term. Link -ltinfo explicitly.
