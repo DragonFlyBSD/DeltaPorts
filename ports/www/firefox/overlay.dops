@@ -88,6 +88,10 @@ mk add CONFIGURE_ENV "BINDGEN_CFLAGS=\"-I${LOCALBASE}/include -stdlib=libc++ -cx
 # <sys/thr.h>/thr_self, which DragonFly lacks; separate patches below give
 # those two files a pthread_self fallback.)
 # dragonfly/patch-build_moz.configure_init.configure
+#
+# 158 lists FreeBSD in dom/webserial/moz.build itself and already includes
+# <functional> in image/imgFrame.h: dragonfly/@2026Q4 and @main carry a
+# re-cut webserial patch and no imgFrame.h patch; the older lines keep both.
 
 # DragonFly has no <sys/thr.h>/thr_self, so inside the XP_FREEBSD profiler
 # thread-id branches (enabled here by the XP_FREEBSD define above) DragonFly
