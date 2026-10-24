@@ -1,6 +1,11 @@
 port comms/gnuradio
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# 3.10.12 dropped the FreeBSD libdata block from CMakeLists.txt, and FreeBSD's
+# files/ now patch thread.cc and the gsm headers themselves: dragonfly/@2026Q3,
+# @2026Q4 and @main extend those FreeBSD guards to DragonFly; the retired
+# lines keep the old set. high_res_timer.h still applies everywhere.
 target @any
 
 mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Ndoxygen*}"
