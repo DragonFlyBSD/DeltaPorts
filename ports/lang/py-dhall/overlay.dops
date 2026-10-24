@@ -1,0 +1,7 @@
+port lang/py-dhall
+type port
+reason "DragonFly: the vendored OpenSSL 1.1.1 (openssl-src) enables devcryptoeng on BSD and needs <crypto/cryptodev.h>; link the ports OpenSSL instead"
+
+target @2026Q3,@2026Q4,@main
+mk add USES "ssl"
+mk add MAKE_ENV "OPENSSL_NO_VENDOR=1 OPENSSL_LIB_DIR=${OPENSSLLIB} OPENSSL_INCLUDE_DIR=${OPENSSLINC}"
