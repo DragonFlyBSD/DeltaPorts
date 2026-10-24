@@ -17,3 +17,9 @@ file remove files/patch-include_freebsd__nvme__ioctl.h on-missing noop
 target @2026Q1,@2026Q2
 
 mk add CONFIGURE_ARGS "--disable-scsistrings"
+
+# The locked 1.42 plist lists its man pages under man/man8, where
+# bsd.port.mk used to point --mandir; it now defaults to share/man.
+target @2026Q3,@2026Q4,@main
+
+mk set GNU_CONFIGURE_MANPREFIX "${PREFIX}"
