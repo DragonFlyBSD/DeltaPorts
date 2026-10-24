@@ -1,0 +1,10 @@
+port devel/ivykis
+type port
+reason "DragonFly: no inotify; OSVERSION (9999999 here) selects the FreeBSD 15 inotify branch, so take the pre-15 one"
+
+target @2026Q3,@2026Q4,@main
+mk block set condition "${OSVERSION} >= 1500050" <<'MK'
+PLIST_SUB+=	INOTIFY="@comment "
+post-patch:
+	${REINPLACE_CMD} -e '/iv_inotify/d' ${WRKSRC}/libivykis.posix.ver
+MK
