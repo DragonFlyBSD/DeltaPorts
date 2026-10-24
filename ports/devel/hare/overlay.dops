@@ -1,0 +1,11 @@
+port devel/hare
+type port
+reason "ignore: the Hare runtime has no DragonFly port"
+
+# Hare's standard library makes system calls directly, with FreeBSD's
+# numbers (rt/+freebsd: SYS_mmap is 477, FreeBSD's mmap; DragonFly's is 197).
+# The freshly built hare tool aborts at its first allocation. A DragonFly rt/
+# would be an upstream port.
+target @2026Q3,@2026Q4,@main
+
+mk eval IGNORE "the Hare runtime makes FreeBSD system calls directly and has no DragonFly port"
