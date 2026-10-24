@@ -1,0 +1,9 @@
+port security/node-sqlcipher
+type port
+reason "DragonFly: build the addon with GCC 13 like node24"
+target @2026Q4,@main
+
+# 4.x compiles its node-gyp addon with -std=gnu++20, which base gcc 8
+# rejects. Use gcc 13, the compiler www/node24 (USES=nodejs:24) is built
+# with, so the addon and node share one libstdc++.
+mk set USE_GCC_VERSION "13"
