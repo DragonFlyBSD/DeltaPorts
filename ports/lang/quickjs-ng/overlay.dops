@@ -1,0 +1,12 @@
+port lang/quickjs-ng
+type port
+reason "DragonFly: declare environ and sighandler_t as on the other BSDs"
+
+# quickjs-libc.c declares "extern char **environ" and typedefs sighandler_t
+# for OpenBSD, FreeBSD and NetBSD only; DragonFly needs the same.
+target @2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^#if defined(__OpenBSD__) || defined(__FreeBSD__) || defined(__NetBSD__)$$/& || defined(__DragonFly__)/' \
+		${WRKSRC}/quickjs-libc.c
+MK
