@@ -1,0 +1,24 @@
+port misc/koboldcpp
+type port
+reason "DragonFly: llama.cpp's per-OS code paths, FreeBSD Makefile block, gcc 12"
+
+# common.cpp picks the cache/config directory per OS and #errors on any
+# other ("Unknown architecture"); vendored subprocess.h needs the fork()
+# fallback (DragonFly has no posix_spawn_file_actions_addchdir, as in
+# misc/llama-cpp); ggml-backend-reg.cpp finds the executable through
+# /proc/curproc/file like FreeBSD. The Makefile adds -pthread only for the
+# systems it names, so let it take the FreeBSD block. The code is C++17
+# with std::filesystem throughout, which base gcc 8.3 handles poorly.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add MAKE_ARGS "UNAME_S=FreeBSD"
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/defined(__linux__) || defined(__FreeBSD__) || defined(_AIX)/defined(__linux__) || defined(__FreeBSD__) || defined(__DragonFly__) || defined(_AIX)/' \
+		${WRKSRC}/common/common.cpp
+	${REINPLACE_CMD} -e 's/^#if defined(_AIX) || defined(__OpenBSD__) ||/#if defined(_AIX) || defined(__OpenBSD__) || defined(__DragonFly__) ||/' \
+		${WRKSRC}/vendor/sheredom/subprocess.h
+	${REINPLACE_CMD} -e 's/^#elif defined(__linux__) || defined(__FreeBSD__)$$/#elif defined(__linux__) || defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		-e 's/^#    elif defined(__FreeBSD__)$$/#    elif defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/ggml/src/ggml-backend-reg.cpp
+MK
