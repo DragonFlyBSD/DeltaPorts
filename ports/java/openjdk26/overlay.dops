@@ -1,0 +1,28 @@
+port java/openjdk26
+type port
+reason "DragonFly: boot from the DragonFly-built openjdk25, build args, and the BSD/DragonFly porting patch set carried over from java/openjdk25"
+
+target @2026Q4,@main
+
+# Same build arguments as java/openjdk25; see the notes there.
+mk add MAKE_ARGS "CONF_CHECK=ignore"
+mk add CONFIGURE_ARGS "--with-stdc++lib=dynamic"
+mk add CONFIGURE_ARGS "--disable-precompiled-headers"
+mk add CONFIGURE_ARGS "ELFCTL=/usr/bin/true"
+mk block set condition "${COMPILER_TYPE} == gcc" <<'MK'
+# DragonFly: upstream's gcc/clang flag selection is FreeBSD-only.
+MK
+mk block set condition "${ARCH} == aarch64" <<'MK'
+# DragonFly: no aarch64 here.
+MK
+text line-insert-after file Makefile \
+     anchor "	@${MKDIR} ${STAGEDIR}${INSTALLDIR}" \
+     line   "	@if [ -d ${JDK_IMAGEDIR}/include/freebsd ]; then ${CP} -rv ${JDK_IMAGEDIR}/include/freebsd ${JDK_IMAGEDIR}/include/dragonfly; fi"
+
+# Upstream boots from a prebuilt FreeBSD openjdk25 tarball, which cannot
+# run here, and avalon has no DragonFly-native 25 tarball. OpenJDK 26
+# accepts 25 as a boot JDK, so build-depend on the DragonFly-built
+# java/openjdk25 (itself booted from avalon's native 24) and boot from it.
+mk unset DISTFILES
+mk add BUILD_DEPENDS "${LOCALBASE}/openjdk25/bin/javac:java/openjdk25"
+mk set BOOTSTRAPJDKDIR "${LOCALBASE}/openjdk25"
