@@ -1,6 +1,6 @@
 port devel/spirv-llvm-translator
 type port
-reason "DragonFly: build the llvm19-22 flavors with clang and libc++, like the LLVM they link"
+reason "DragonFly: build the llvm17-22 flavors with clang and libc++, like the LLVM they link"
 
 # devel/llvm19..22 are built against libc++ on DragonFly. This library calls
 # LLVM's C++ API (std::string, std::optional, std::function in signatures),
@@ -11,4 +11,12 @@ target @2026Q3,@2026Q4,@main
 
 mk block set condition "${FLAVOR:U:Mllvm19} || ${FLAVOR:U:Mllvm2[0-2]}" <<'MK'
 USES+=	dfly-libcxx:${FLAVOR:S/llvm//}
+MK
+
+# devel/llvm17 and llvm18 set USE_CLANG_FALLBACK=default, so they are built
+# with clang${LLVM_DEFAULT} against that generation's libc++ (their packages
+# depend on llvm${LLVM_DEFAULT}-libcxx). Match it, or linking against libLLVM
+# fails the same way.
+mk block set condition "${FLAVOR:U:Mllvm1[78]}" <<'MK'
+USES+=	dfly-libcxx
 MK
