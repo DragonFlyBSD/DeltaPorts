@@ -1,0 +1,3 @@
+port devel/qbs
+type port
+reason "DragonFly: read kinfo_proc's kp_pid/kp_comm in processNameByPid (dragonfly/@<line>)"
