@@ -14,6 +14,12 @@ patch apply diffs/Makefile.diff
 # the last DragonFly build (12.2.0) did.
 text replace-once file Makefile from "OPTIONS_DEFAULT=\t\tPREVASSET" to "OPTIONS_DEFAULT=\t\tGCC6AUX"
 
+# The NLS option (on by default) appends --enable-nls after the
+# --disable-nls above; gnatlink then fails to link: ld cannot find -lintl.
+target @2026Q3,@2026Q4,@main
+
+mk set OPTIONS_EXCLUDE_DragonFly "NLS"
+
 # pkg-plist: the x86_64-*-dragonfly* target installs dragonfly*.h config
 # headers where FreeBSD gets freebsd*.h. 2026Q4 renamed the plist's
 # gnat12/ prefix to %%GNAT%%/, hence two copies.
