@@ -1,0 +1,14 @@
+port multimedia/gpac
+type port
+reason "DragonFly: let configure treat DragonFly as FreeBSD"
+
+# configure sets CONFIG_FREEBSD only for FreeBSD. Without it, "make install"
+# copies the shared data with GNU cp's --no-preserve, which DragonFly's cp
+# rejects, and the sources use ftell/fopen instead of ftello/fseeko. Add
+# DragonFly to configure's FreeBSD case.
+target @2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^    FreeBSD)$$/    FreeBSD|DragonFly)/' \
+		${WRKSRC}/configure
+MK
