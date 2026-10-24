@@ -4,3 +4,11 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk eval BINARY_ALIAS "${BINARY_ALIAS:Ngcc=*:Ng++=*}"
+
+# FreeBSD's files/patch-src_helpers_check__thread__affinity.c switches to
+# <sys/_cpuset.h>/<sys/cpuset.h> and cpuset_t, which DragonFly does not
+# have. DragonFly's <sched.h> provides upstream's Linux API (cpu_set_t,
+# sched_getaffinity(), sched_getcpu()), so keep the upstream file.
+target @2026Q3,@2026Q4,@main
+
+file remove files/patch-src_helpers_check__thread__affinity.c
