@@ -1,0 +1,18 @@
+port databases/py-mycli
+type port
+reason "pycryptodomex 3.24.1 no longer matches mycli's <3.24 pin"
+target @2026Q4,@main
+
+# security/py-pycryptodomex moved to 3.24.1 (2026Q4, main); the <3.24 run
+# dependency cannot be met. mycli only uses AES.new(key, AES.MODE_ECB)
+# from Cryptodome, which 3.24 keeps (it adds K12 threading and fixes
+# signing timing, PKCS#8 and GCM limits). Relax the Makefile pin and turn
+# the pyproject.toml context line in FreeBSD's patch into the same change.
+text replace-once file Makefile \
+     from "pycryptodomex>=3.23.0<3.24:security/py-pycryptodomex" \
+     to   "pycryptodomex>=3.23.0:security/py-pycryptodomex" \
+     on-missing noop
+text replace-once file files/patch-pyproject.toml \
+     from "     \"pycryptodomex ~= 3.23.0\"," \
+     to   "-    \"pycryptodomex ~= 3.23.0\",\n+    \"pycryptodomex>=3.23.0\"," \
+     on-missing noop
