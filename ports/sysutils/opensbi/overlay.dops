@@ -1,6 +1,15 @@
 port sysutils/opensbi
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly: build with the ports LLVM toolchain; skip the RISC-V strip"
 target @any
 
 mk set STRIP_CMD "echo"
+
+# LLVM=1 means clang, ld.lld, llvm-ar and llvm-objcopy from PATH, which
+# FreeBSD's base has and DragonFly's does not ("clang: not found", then
+# "Your linker does not support creating PIEs"). Point LLVM= at the default
+# ports LLVM instead; its standard backends include RISC-V.
+target @2026Q3,@2026Q4,@main
+
+text replace-once file Makefile from "MAKE_ARGS=\tLLVM=1 " to "MAKE_ARGS=\tLLVM=${LOCALBASE}/llvm${LLVM_DEFAULT}/bin/ "
+mk add BUILD_DEPENDS "${LOCALBASE}/llvm${LLVM_DEFAULT}/bin/ld.lld:devel/llvm${LLVM_DEFAULT}"
