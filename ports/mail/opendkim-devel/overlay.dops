@@ -1,0 +1,11 @@
+port mail/opendkim-devel
+type port
+reason "DragonFly: <arpa/nameser_compat.h> has no T_DNAME"
+
+# libopendkim's dkim-keys.c and dkim-report.c compare against T_DNAME, which
+# FreeBSD's nameser_compat.h defines and DragonFly's does not (its
+# nameser.h has ns_t_dname). sys.mk sets no CPPFLAGS, so creating it here
+# loses nothing.
+target @2026Q3,@2026Q4,@main
+
+mk add CPPFLAGS "-DT_DNAME=ns_t_dname"
