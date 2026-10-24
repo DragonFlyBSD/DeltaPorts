@@ -1,0 +1,3 @@
+port devel/quickcpplib
+type port
+reason "DragonFly: take the FreeBSD paths (pthread_getthreadid_np, environ), and treat DragonFly like macOS for the POSIX-timer watchdog it lacks (dragonfly/@<line> patches)"
