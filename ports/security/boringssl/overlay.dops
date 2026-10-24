@@ -1,0 +1,9 @@
+port security/boringssl
+type port
+reason "DragonFly: base gcc 8 ICEs on the x4 Keccak code"
+target @2026Q4,@main
+
+# Base gcc 8.3 hits an internal compiler error in expand_debug_locations
+# on keccak_f_x4() (crypto/fipsmodule/keccak/keccak.cc.inc), seen with
+# 0.20260813.0. Build with the default ports GCC.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
