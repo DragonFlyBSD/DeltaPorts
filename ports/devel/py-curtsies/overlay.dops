@@ -1,7 +1,10 @@
 port devel/py-curtsies
 type port
 reason "auto-converted from Makefile.DragonFly"
-target @any
+
+# The dfly-patch edits setup.py, which 0.4.3 (2026Q3 on) no longer ships
+# (pyproject.toml only), so REINPLACE_CMD fails the patch phase there.
+target @2026Q1,@2026Q2
 
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@=open@=io.open@g' \
