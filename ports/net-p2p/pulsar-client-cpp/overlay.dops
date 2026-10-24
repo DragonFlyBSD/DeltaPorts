@@ -1,0 +1,10 @@
+port net-p2p/pulsar-client-cpp
+type port
+reason "DragonFly: point CMake at the ports OpenSSL"
+
+# The Makefile passes -DOPENSSL_ROOT_DIR=/usr, FreeBSD's base OpenSSL.
+# DragonFly builds against the ports OpenSSL in ${LOCALBASE}, so
+# FindOpenSSL finds nothing. Use OPENSSLBASE from USES=ssl.
+target @2026Q3,@2026Q4,@main
+
+text replace-once file Makefile from "-DOPENSSL_ROOT_DIR=/usr" to "-DOPENSSL_ROOT_DIR=${OPENSSLBASE}"
