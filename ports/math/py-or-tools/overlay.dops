@@ -17,3 +17,7 @@ mk target set dfly-patch <<'MK2'
 		${WRKSRC}/cmake/cpp.cmake
 
 MK2
+
+# dragonfly/@2026Q3,@2026Q4: or-tools 9.6's sysinfo.cc takes the Linux
+# /proc/<pid>/statm branch for any GNUC system that is not FreeBSD, without
+# <unistd.h> (getpid undeclared). Use the FreeBSD getrusage() branch.
