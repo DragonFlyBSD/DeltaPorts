@@ -1,0 +1,10 @@
+port emulators/open-vm-kmod
+type port
+reason "FreeBSD specific: VMware guest kernel modules"
+
+# Builds vmblock/vmmemctl from modules/freebsd with bsd.kmod.mk, which
+# stops with "can't find kernel source tree"; the modules are FreeBSD
+# kernel code. It has never built on DragonFly.
+target @2026Q3,@2026Q4,@main
+
+mk eval IGNORE "FreeBSD specific kmod"
