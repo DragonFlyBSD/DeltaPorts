@@ -20,3 +20,13 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@ifdef \(__FreeBSD__\)@if (defined(\1)||defined(__DragonFly__))@g'	\
 		${WRKSRC}/Modules/ThirdParty/VNL/src/vxl/v3p/netlib/libf2c/sysdep1.h0
 MK1
+
+# The port links its ftime() shim (libftime.a, for lp_solve) through
+# LDFLAGS, which CMake puts before the objects. lld does not care about
+# archive order, but DragonFly's base ld does: liblpsolve55_itk.so came out
+# with ftime undefined and every RTK program failed to link. Name the
+# archive again after the objects.
+target @2026Q3,@2026Q4,@main
+
+mk add CMAKE_ARGS "-DCMAKE_C_STANDARD_LIBRARIES:STRING=${WRKSRC}/libftime.a"
+mk add CMAKE_ARGS "-DCMAKE_CXX_STANDARD_LIBRARIES:STRING=${WRKSRC}/libftime.a"
