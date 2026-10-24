@@ -1,3 +1,9 @@
 port sysutils/rsyslog8
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# 2026Q3 on (8.26xx): lexer.l lost the fileno() prototype the old
+# patch-grammar_lexer.l edited, and omusrmsg.c's utmpx block was reindented.
+# The flat dragonfly/patch-tools_omusrmsg.c is re-cut (use utmpx's
+# setutxent()/getutxent() on DragonFly as on FreeBSD); both old patches stay
+# for 2026Q1/Q2 in dragonfly/@2026Q1, @2026Q2.
