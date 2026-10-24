@@ -1,0 +1,13 @@
+port multimedia/jellyfin-ffmpeg
+type port
+reason "DragonFly: the static chromaprint is C++ against libstdc++, not libc++"
+
+# pre-configure rewrites libchromaprint.pc to link the static archive with
+# -lc++, FreeBSD's base C++ library. DragonFly builds it with gcc and has
+# no libc++ on the default path, so configure's link test failed
+# ("chromaprint not found"). Link libstdc++ instead.
+target @2026Q4,@main
+
+text replace-once file Makefile \
+     from "/lib/libfftw3f.a -lc++ -lm|" \
+     to   "/lib/libfftw3f.a -lstdc++ -lm|"
