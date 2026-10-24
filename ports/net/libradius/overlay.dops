@@ -2,3 +2,10 @@ port net/libradius
 type dport
 reason "DragonFly-only port; source in newport/"
 target @any
+
+# The library is built with -Werror and calls OpenSSL's MD5_* and HMAC_*
+# functions, which OpenSSL 3 (the ports default) marks deprecated. Ask for
+# the 1.1.1 API, under which they are not.
+target @2026Q3,@2026Q4,@main
+
+mk add CFLAGS "-DOPENSSL_API_COMPAT=0x10101000L"
