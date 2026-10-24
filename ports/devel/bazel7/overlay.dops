@@ -7,6 +7,8 @@ reason "DragonFly: map Java's os.name dragonflybsd to GOOS dragonfly in the bund
 # "no such target '@@rules_go~//go/toolchain:dragonflybsd'". The dragonfly/
 # patches add toolchain_local/rules_go_dragonfly.patch and apply it through a
 # single_version_override in MODULE.bazel, as FreeBSD does for rules_python.
+# Bazel's OS enum knows no "DragonFlyBSD" either: the dragonfly/ OS.java patch
+# maps it to FREEBSD, as CommandBuilder refuses to run commands on UNKNOWN.
 target @2026Q3,@2026Q4,@main
 
 text replace-once file files/toolchain_local-BUILD from "exports_files([\"rules_python_freebsd.patch\"])" to "exports_files([\"rules_python_freebsd.patch\", \"rules_go_dragonfly.patch\"])"
