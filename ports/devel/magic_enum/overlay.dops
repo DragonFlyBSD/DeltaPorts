@@ -1,0 +1,6 @@
+port devel/magic_enum
+type port
+reason "DragonFly: header-only; base gcc 8 is too old for magic_enum, so don't build its examples and tests (consumers need a newer compiler anyway)"
+
+target @2026Q3,@2026Q4,@main
+mk add CMAKE_OFF "MAGIC_ENUM_OPT_BUILD_EXAMPLES MAGIC_ENUM_OPT_BUILD_TESTS"
