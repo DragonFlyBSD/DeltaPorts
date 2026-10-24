@@ -1,3 +1,3 @@
 port security/step-cli
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: add PhysicalMemoryBytes to the vendored newrelic go-agent sysinfo (dragonfly/@<line>)"
