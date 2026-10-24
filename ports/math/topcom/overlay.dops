@@ -1,0 +1,12 @@
+port math/topcom
+type port
+reason "DragonFly: base gcc 8.3's libstdc++ checks std::set comparators eagerly"
+
+# Incidences.hh names std::set<IntegerSet, Hash<IntegerSet>> (via
+# ContainerIO.hh's operator<<), whose comparator is not a valid ordering.
+# gcc 8's _Rb_tree static_asserts on the comparator when the class is
+# instantiated; newer libstdc++ checks only where comparisons are made, and
+# clang's libc++ not at all. Build with GCC_DEFAULT.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
