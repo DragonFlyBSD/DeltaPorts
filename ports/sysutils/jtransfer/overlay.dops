@@ -1,0 +1,8 @@
+port sysutils/jtransfer
+type port
+reason "DragonFly: needs FreeBSD's libjail"
+target @2026Q4,@main
+
+# jtransfer looks jails up by name with libjail's jail_getid() (<jail.h>,
+# -ljail). DragonFly has jail_attach(2) but no libjail.
+mk eval IGNORE "needs FreeBSD's libjail (jail_getid)"
