@@ -1,0 +1,3 @@
+port x11/gnome-terminal
+type port
+reason "DragonFly: skip the POSIX/XOPEN feature defines as on FreeBSD (dragonfly/@<line>/patch-meson.build)"
