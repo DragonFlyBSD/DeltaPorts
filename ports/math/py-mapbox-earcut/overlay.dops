@@ -1,0 +1,11 @@
+port math/py-mapbox-earcut
+type port
+reason "DragonFly: base gcc 8.3 cannot pass the triangulate<> specializations to nanobind"
+
+# src/main.cpp passes &triangulate<int32_t, uint32_t> and friends to
+# nanobind's module_::def; base gcc 8.3 cannot deduce Func from the
+# specialization ("unresolved overloaded function type"), which newer GCC
+# and clang do. 2.0.0 on Q3 has the same code.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
