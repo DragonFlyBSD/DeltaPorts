@@ -1,0 +1,12 @@
+port devel/protobuf3
+type port
+reason "DragonFly: link with ld.bfd, as devel/protobuf does"
+
+# libprotobuf.so is linked with libprotobuf.map, whose only global pattern
+# is extern "C++" { *google*; }. DragonFly's default linker, ld.gold, does
+# not apply that to unmangled names, so descriptor_table_* go local and
+# protoc fails to link ("undefined reference to
+# descriptor_table_google_2fprotobuf_2fdescriptor_2eproto"). ld.bfd does.
+target @2026Q3,@2026Q4,@main
+
+mk add MAKE_ENV "LDVER=ld.bfd"
