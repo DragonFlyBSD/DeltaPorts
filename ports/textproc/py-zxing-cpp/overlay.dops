@@ -1,0 +1,7 @@
+port textproc/py-zxing-cpp
+type port
+reason "DragonFly: C++20 (<concepts>) needs GCC_DEFAULT, as textproc/zxing-cpp"
+
+# compiler:c++20-lang resolves to base gcc 8.3, which has no <concepts>
+# (core/src/ZXAlgorithms.h).
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
