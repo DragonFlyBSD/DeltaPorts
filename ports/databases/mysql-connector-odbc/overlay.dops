@@ -1,0 +1,12 @@
+port databases/mysql-connector-odbc
+type port
+reason "DragonFly: no libresolv"
+
+# driver/CMakeLists.txt links the driver with -lresolv everywhere but
+# FreeBSD; DragonFly has the resolver in libc and no libresolv either.
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/MATCHES "FreeBSD")/MATCHES "FreeBSD|DragonFly")/' \
+		${WRKSRC}/driver/CMakeLists.txt
+MK
