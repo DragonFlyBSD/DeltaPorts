@@ -1,0 +1,7 @@
+port security/libfprint
+type port
+reason "DragonFly: declarations after case labels (gcc 8)"
+
+# dragonfly/@2026Q4, @main: 1.94.10's goodixmoc and realtek drivers start a
+# case block with a declaration, which base gcc 8.3 rejects ("a label can
+# only be part of a statement"). Q3 has 1.94.8.
