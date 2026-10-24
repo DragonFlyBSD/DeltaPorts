@@ -1,0 +1,8 @@
+port databases/py-deltalake
+type port
+reason "DragonFly: rustix 1.1.4 enables IPv4 source multicast, which DragonFly's libc crate lacks"
+
+# dragonfly/@2026Q4: rustix 1.1.4 builds the IP_ADD/DROP_SOURCE_MEMBERSHIP
+# setters for all of freebsdlike, but the libc crate defines neither the
+# constants nor ip_mreq_source for DragonFly. Limit them to FreeBSD, as
+# rustix 1.1.5 (main) does upstream; same patches as security/arti.
