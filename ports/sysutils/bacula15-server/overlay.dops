@@ -1,0 +1,3 @@
+port sysutils/bacula15-server
+type port
+reason "DragonFly: use the BSD statfs-based fstype code in findlib (dragonfly/@<line> patch)"
