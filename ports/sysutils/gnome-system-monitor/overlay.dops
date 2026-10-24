@@ -4,3 +4,9 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "python:3.4+,build shebangfix"
+
+# USES=compiler:c++20-lang resolves to base gcc 8.3, which knows neither
+# meson's c_std=gnu2x nor the C++20 the project asks for.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
