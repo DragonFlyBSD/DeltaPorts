@@ -1,0 +1,3 @@
+port devel/pecl-eio
+type port
+reason "DragonFly: take libeio's FreeBSD sendfile and dirent paths that USES=alias used to select (dragonfly/@<line> patch)"
