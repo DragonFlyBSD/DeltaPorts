@@ -1,0 +1,10 @@
+port devel/umpire
+type port
+reason "DragonFly: C++20 (camp's concepts) needs GCC_DEFAULT"
+
+# devel/camp's concepts.hpp now includes <concepts> and defines C++20
+# concepts, and BLT builds as C++20; base gcc 8.3 (compiler:c++17-lang)
+# has neither. Build with GCC_DEFAULT.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
