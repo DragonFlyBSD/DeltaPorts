@@ -1,0 +1,3 @@
+port devel/py-prek
+type port
+reason "DragonFly: give the vendored rustix 1.1.4 a ptsname() for DragonFly, which prek-pty needs (dragonfly/@<line> cargo-crate patches)"
