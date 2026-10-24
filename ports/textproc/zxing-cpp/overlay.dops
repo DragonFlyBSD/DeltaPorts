@@ -1,6 +1,15 @@
 port textproc/zxing-cpp
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
+reason "DragonFly: libc++ on 2026Q3 and later, like its Qt6/KF6 consumers"
+target @2026Q1,@2026Q2
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# The C++ API takes std::string and std::string_view. Its consumers are
+# almost all Qt6/KF6 code (kf6-prison, kitinerary, kodaskanna,
+# mediastreamer), which DragonFly builds with clang and libc++, so build the
+# library the same way; with libstdc++ they fail to link (kf6-prison:
+# ZXing::CreatorOptions(..., std::__1::string) undefined).
+target @2026Q3,@2026Q4,@main
+
+mk add USES "dfly-libcxx"
