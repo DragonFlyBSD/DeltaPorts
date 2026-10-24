@@ -1,0 +1,3 @@
+port net/libyang2
+type port
+reason "DragonFly: include <netinet/in.h> and skip _POSIX_C_SOURCE as on the other BSDs (dragonfly/@<line> patches)"
