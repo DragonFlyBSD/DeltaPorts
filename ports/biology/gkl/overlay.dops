@@ -1,0 +1,18 @@
+port biology/gkl
+type port
+reason "DragonFly: include <omp.h> as FreeBSD's patches do for FreeBSD"
+
+# FreeBSD's patches include <omp.h> under __FreeBSD__ (or __linux__ ||
+# __FreeBSD__) in five sources; without it omp_get_max_threads and
+# omp_get_thread_num are undeclared on DragonFly.
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^#ifdef __FreeBSD__$$/#if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/src/main/native/pairhmm/IntelPairHmm.cc \
+		${WRKSRC}/src/main/native/pdhmm/pdhmm.h \
+		${WRKSRC}/src/main/native/utils/utils.cc
+	${REINPLACE_CMD} -e 's/^#if defined(__linux__) || defined(__FreeBSD__)$$/& || defined(__DragonFly__)/' \
+		${WRKSRC}/src/main/native/pdhmm/pdhmm-implementation.h \
+		${WRKSRC}/src/main/native/pdhmm/pdhmm-serial.cc
+MK
