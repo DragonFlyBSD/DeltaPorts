@@ -19,3 +19,10 @@ mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 # spin_pause.cc is built without -mwaitpkg and the constant is unused. On
 # DragonFly it is x86_64, -mwaitpkg defines __WAITPKG__ and _tpause() needs it.
 file remove files/patch-onnxruntime_core_common_spin__pause.cc on-missing noop
+
+# onnxruntime_set_compile_flags() turns on COMPILE_WARNING_AS_ERROR for every
+# onnxruntime target, which upstream only exercises with clang and its own gcc
+# CI. gcc 12 stops in model_package_variant_selector.cc on a
+# -Wstringop-overread false positive inside std::vector's initializer_list
+# assignment. build.py's --compile_no_warning_as_error turns the property off.
+text line-insert-after file Makefile anchor "\t\t--skip_tests \\" line "\t\t--compile_no_warning_as_error \\"
