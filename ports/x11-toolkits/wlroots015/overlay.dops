@@ -1,0 +1,10 @@
+port x11-toolkits/wlroots015
+type port
+reason "DragonFly: build without meson werror, as wlroots017"
+
+# Sources that #define _POSIX_C_SOURCE 199309L hide C99 round() in
+# DragonFly's <math.h>, and wayland-util.h's wl_fixed_from_double() calls
+# it, so the implicit declaration is fatal under meson's werror=true.
+target @2026Q3,@2026Q4,@main
+
+mk add MESON_ARGS "-Dwerror=false"
