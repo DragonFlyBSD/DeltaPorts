@@ -1,0 +1,3 @@
+port devel/task
+type port
+reason "DragonFly: vendored u-root pkg/ls reads Atimespec/Birthtimespec, which DragonFly's syscall.Stat_t lacks; use its OpenBSD variant (dragonfly/@<line> vendor patches)"
