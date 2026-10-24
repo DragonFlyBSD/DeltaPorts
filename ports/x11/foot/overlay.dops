@@ -1,8 +1,17 @@
 port x11/foot
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
+reason "localbase ldflags; libstdthreads for <threads.h>; DragonFly's wchar_t is UTF-32 (dragonfly/@<line> patch)"
+
+# 2026Q1/Q2 as converted from Makefile.DragonFly. From 2026Q3 on the
+# SIGRTMAX define is dropped: DragonFly's <sys/signal.h> defines SIGRTMAX
+# itself now, and as written the op replaced CFLAGS outright.
+target @2026Q1,@2026Q2
 
 mk add USES "localbase:ldflags"
 mk add LIB_DEPENDS "libstdthreads.so:misc/libstdthreads"
 mk add CFLAGS "-DSIGRTMAX=54"
+
+target @2026Q3,@2026Q4,@main
+
+mk add USES "localbase:ldflags"
+mk add LIB_DEPENDS "libstdthreads.so:misc/libstdthreads"
