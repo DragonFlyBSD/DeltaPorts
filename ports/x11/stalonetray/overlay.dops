@@ -1,0 +1,9 @@
+port x11/stalonetray
+type port
+reason "DragonFly: build the C23 sources with clang"
+target @2026Q3,@2026Q4,@main
+
+# meson.build sets c_std=gnu23 and the code uses bool/true/false without
+# <stdbool.h>, i.e. C23 keywords. Base gcc 8 (and GCC_DEFAULT 12) do not
+# know gnu23; clang 19 does. There is no C++ here, so libc++ does not enter.
+mk add USES "llvm"
