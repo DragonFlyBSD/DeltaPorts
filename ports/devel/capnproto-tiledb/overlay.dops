@@ -1,0 +1,15 @@
+port devel/capnproto-tiledb
+type port
+reason "DragonFly: build libkj-async without fibers, as on FreeBSD"
+
+# dragonfly/patch-src_kj_async.h: kj/async.h turns fibers off by default
+# on FreeBSD and OpenBSD but not on DragonFly, so configure's fiber check
+# passes -DKJ_USE_FIBERS and kj/async.h then stops ("Fibers cannot be
+# enabled when exceptions are disabled"). Disable fibers in configure and
+# list DragonFly in the header, so consumers of the installed headers agree
+# with the library (as devel/capnproto does).
+mk add CONFIGURE_ARGS "--without-fibers"
+
+# dragonfly/patch-src_kj_async-io-unix.c++, patch-src_kj_filesystem-disk-
+# unix.c++ (from devel/capnproto1): DragonFly has no SOL_LOCAL (upstream
+# checks the misspelt __DragonflyBSD__) and no DTTOIF.
