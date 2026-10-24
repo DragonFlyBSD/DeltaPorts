@@ -1,0 +1,3 @@
+port x11/sfwbar
+type port
+reason "DragonFly: build the network module's FreeBSD backend (dragonfly/@<line>/patch-modules_network.c)"
