@@ -1,11 +1,39 @@
 port games/libretro-play
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
+reason "auto-converted from Makefile.DragonFly; DragonFly cases next to FreeBSD's; GCC_DEFAULT"
+
+target @2026Q1,@2026Q2
 
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
 		${WRKSRC}/Source/ui_qt/CMakeLists.txt
 	${REINPLACE_CMD} -e '/stdc++fs/d' \
 		${WRKSRC}/Source/ui_libretro/CMakeLists.txt
+MK1
+
+# 0.48 and its Framework/CodeGen submodules pick platform code with
+# defined(__linux__) || defined(__FreeBSD__); DragonFly falls through to
+# fallbacks that are incomplete (PathUtils.cpp defines one of four paths and
+# needs getuid() undeclared), #error (Posix_VolumeStream.cpp) or unsafe
+# (no mmap for the JIT in MemoryFunction.cpp). Take the FreeBSD branches.
+# std::filesystem with base gcc 8.3 would also need -lstdc++fs, which the
+# build does not add; use GCC_DEFAULT.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
+		${WRKSRC}/Source/ui_qt/CMakeLists.txt
+	${REINPLACE_CMD} -e '/stdc++fs/d' \
+		${WRKSRC}/Source/ui_libretro/CMakeLists.txt
+	${REINPLACE_CMD} -e 's/defined(__FreeBSD__)/(defined(__FreeBSD__) || defined(__DragonFly__))/g' \
+		${WRKSRC}/Source/FpUtils.cpp \
+		${WRKSRC}/Source/Posix_VolumeStream.cpp \
+		${WRKSRC}/Source/gs/GSH_OpenGL/GSH_OpenGL_Texture.cpp \
+		${WRKSRC}/deps/CodeGen/src/Jitter_CodeGenFactory.cpp \
+		${WRKSRC}/deps/CodeGen/src/MemoryFunction.cpp \
+		${WRKSRC}/deps/Framework/include/AlignedAlloc.h \
+		${WRKSRC}/deps/Framework/include/openal/OpenAlDef.h \
+		${WRKSRC}/deps/Framework/include/opengl/OpenGlDef.h \
+		${WRKSRC}/deps/Framework/src/PathUtils.cpp
 MK1
