@@ -1,3 +1,8 @@
 port science/simbody
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@2026Q1, @2026Q2, @2026Q3: patch-SimTKcommon_src_ParallelExecutor.cpp
+# for 3.7. dragonfly/@2026Q4, @main: the same change regenerated for the
+# 3.8 snapshot, which reworked getNumProcessors() (sysctl HW_NCPU on FreeBSD)
+# and errors out on unknown systems.
