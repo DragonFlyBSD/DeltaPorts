@@ -1,0 +1,3 @@
+port sysutils/powerman
+type port
+reason "DragonFly: redfishpower needs <netinet/in.h> as on FreeBSD (dragonfly/@<line> patch)"
