@@ -1,5 +1,3 @@
 port security/tpm2-abrmd
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
-
+reason "DragonFly: define POLLRDHUP away as on FreeBSD (dragonfly/@<line>/patch-src_tcti-tabrmd.c)"
