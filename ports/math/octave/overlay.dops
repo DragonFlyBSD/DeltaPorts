@@ -5,3 +5,12 @@ target @any
 
 mk set GNU_HOST "${CONFIGURE_TARGET}"
 file remove files/patch-libinterp_corefcn_sysdep.cc on-missing noop
+
+# Octave links Qt, so on DragonFly it builds with clang and libc++
+# (Uses/qt.mk, dfly-libcxx), while GraphicsMagick's Magick++ is built
+# against libstdc++: liboctinterp's Magick:: references never resolve.
+# Image I/O through GraphicsMagick stays off until that library can match.
+target @2026Q3,@2026Q4,@main
+
+mk remove LIB_DEPENDS "libGraphicsMagick.so:graphics/GraphicsMagick"
+mk add CONFIGURE_ARGS "--without-magick"
