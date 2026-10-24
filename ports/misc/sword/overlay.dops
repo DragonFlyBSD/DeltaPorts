@@ -1,0 +1,10 @@
+port misc/sword
+type port
+reason "DragonFly: compile C++ as gnu++17 for the ICU headers"
+
+# ICU's headers require C++17 (std::is_convertible_v, std::u16string_view,
+# auto template parameters). Base gcc 8.3 defaults to gnu++14, where
+# FreeBSD's clang defaults to C++17.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_CXXSTD "gnu++17"
