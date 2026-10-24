@@ -1,0 +1,10 @@
+port textproc/xlnt
+type port
+reason "DragonFly: give pre-fetch's git clone the ca_root_nss bundle"
+
+# pre-fetch clones libstudxml over https; in the DragonFly build
+# environment git's OpenSSL finds no CA store ("unable to get local issuer
+# certificate"). Point it at the bundle the port's FETCH_DEPENDS installs.
+target @2026Q3,@2026Q4,@main
+
+text replace-once file Makefile from "git clone -q ${LIBSTUDXML_GIT_URL}" to "${SETENV} GIT_SSL_CAINFO=${LOCALBASE}/share/certs/ca-root-nss.crt git clone -q ${LIBSTUDXML_GIT_URL}"
