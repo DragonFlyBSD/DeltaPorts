@@ -1,6 +1,13 @@
 port net/mediastreamer
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
+reason "auto-converted from Makefile.DragonFly; GLX back on from 2026Q3"
+
+target @2026Q1,@2026Q2
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGLX}"
+
+# From 5.4.121 the QTGL option (on by default) brings in Qt's OpenGL
+# lookup, which sets OpenGL_GLX_FOUND after mediastreamer has decided not
+# to look for GLEW, so glxvideo.c and msogl_functions.h are built without
+# <GL/glew.h>. Keep FreeBSD's default GLX option, whose USE_GL=glew
+# provides it.
