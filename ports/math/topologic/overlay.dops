@@ -1,0 +1,10 @@
+port math/topologic
+type port
+reason "DragonFly: OpenCASCADE 8 headers need C++17; base gcc 8 defaults to gnu++14"
+
+# Topologic sets no C++ standard, so base gcc 8.3 compiles it as gnu++14,
+# but OpenCASCADE 8's headers use std::shared_mutex (C++17) and fail there.
+# FreeBSD's clang defaults to C++17. 2026Q3 has OpenCASCADE 7.9.
+target @2026Q4,@main
+
+mk set USE_CXXSTD "gnu++17"
