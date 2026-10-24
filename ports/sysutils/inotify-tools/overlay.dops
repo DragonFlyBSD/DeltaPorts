@@ -1,3 +1,3 @@
 port sysutils/inotify-tools
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: libinotifytools fanotify stand-ins (dragonfly/ patch); the src/common.h patch is gone upstream and kept only for Q1/Q2"
