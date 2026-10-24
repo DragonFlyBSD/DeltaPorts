@@ -1,9 +1,21 @@
 port games/alephone
 type port
 reason "auto-converted from Makefile.DragonFly"
-target @any
+
+target @2026Q1,@2026Q2
 
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's,\*bsd\*,*dragonfly*,g' \
 		${WRKSRC}/configure.ac
+MK1
+
+# configure installs the MIME files only for *linux*|*bsd* hosts. Editing
+# configure.ac (as above) makes the generated Makefile rerun aclocal-1.16,
+# which the port does not depend on; from 2026Q3 add DragonFly to the case
+# in the shipped configure instead.
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's,^  \*linux\*|\*bsd\*) :$$,  *linux*|*bsd*|*dragonfly*) :,' \
+		${WRKSRC}/configure
 MK1
