@@ -17,3 +17,8 @@ mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 # The curl sub-build's CONFIGURE_COMMAND hard-codes -GNinja, and
 # DragonFly's USES=cmake does not pull in ninja (it builds with make).
 mk add BUILD_DEPENDS "ninja:devel/ninja"
+
+# dragonfly/patch-CMakeLists.txt: curl's lib/CMakeLists.txt defaults
+# CURL_LIBCURL_SOVERSION on only for a list of systems that names FreeBSD
+# but not DragonFly, so libcurl-impersonate.so came out unversioned and
+# the plist's .so.4/.so.4.8.0 were missing. Turn it on for the sub-build.
