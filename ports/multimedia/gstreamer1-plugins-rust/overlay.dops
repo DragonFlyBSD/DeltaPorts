@@ -1,0 +1,9 @@
+port multimedia/gstreamer1-plugins-rust
+type port
+reason "DragonFly: enable the gtk4 plugin's waylandegl feature only when GTK has Wayland (dragonfly/@<line>/patch-meson.build)"
+
+# meson.build turns on the gtk4 plugin's waylandegl feature (gdk4-wayland)
+# whenever GStreamer GL lists a wayland winsys. x11-toolkits/gtk40 is built
+# without WAYLAND here, so gdk4-wayland-sys's build script fails on the
+# missing gtk4-wayland pkg-config module. The patch also checks for
+# gtk4-wayland.pc, so the feature comes back by itself if gtk40 gains it.
