@@ -1,0 +1,16 @@
+port astro/calcmysky
+type port
+reason "DragonFly: std::filesystem with base gcc 8 needs misc/cxxfs_gcc8"
+
+# util.cpp uses std::filesystem; this Qt5 port builds with base gcc 8.3,
+# whose libstdc++ has no libstdc++fs ("undefined reference to
+# std::filesystem::create_directories"). Use misc/cxxfs_gcc8's headers and
+# archive; CMAKE_CXX_STANDARD_LIBRARIES puts it after the objects. CXXFLAGS
+# is inserted as a top-level += so sys.mk's defaults stay.
+target @2026Q3,@2026Q4,@main
+
+mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
+text line-insert-after file Makefile \
+     anchor "CMAKE_ARGS=\t-DQT_VERSION:STRING=5" \
+     line   "CXXFLAGS+=\t-isystem ${LOCALBASE}/cxxfs_gcc8"
+mk add CMAKE_ARGS "-DCMAKE_CXX_STANDARD_LIBRARIES:STRING=${LOCALBASE}/cxxfs_gcc8/libstdc++fs.a"
