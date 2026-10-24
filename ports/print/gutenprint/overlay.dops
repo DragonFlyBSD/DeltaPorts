@@ -6,3 +6,8 @@ target @any
 file remove files/patch-src_cups_commandtoepson.c on-missing noop
 file remove files/patch-src_cups_commandtocanon.c on-missing noop
 file remove files/patch-config.h.in on-missing noop
+
+# dragonfly/@2026Q1,@2026Q2: patch-configure dropped -D_POSIX_C_SOURCE from
+# the GNU warning flags (it hides the BSD interfaces on DragonFly). 5.3.5
+# moved that define to the "C99 + POSIX extras" test, which FreeBSD's own
+# patch-configure already empties, so ours no longer applies or matters.
