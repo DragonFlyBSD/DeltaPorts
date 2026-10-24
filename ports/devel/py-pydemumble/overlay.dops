@@ -1,0 +1,6 @@
+port devel/py-pydemumble
+type port
+reason "DragonFly: the bundled Swift demangler uses __has_builtin, which base gcc 8 does not know; build with GCC_DEFAULT"
+
+target @2026Q3,@2026Q4,@main
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
