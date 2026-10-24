@@ -1,0 +1,7 @@
+port archivers/py-lzma
+type port
+reason "DragonFly: no <malloc.h>"
+
+# dragonfly/@2026Q4, @main: 0.6's src/compat/LzmaCompatDecode.h includes
+# <malloc.h> everywhere but Apple; DragonFly has none. Take malloc() from
+# <stdlib.h> there.
