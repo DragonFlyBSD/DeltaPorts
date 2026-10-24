@@ -1,0 +1,19 @@
+port databases/py-dbt-core
+type port
+reason "sqlparse 0.6.0 no longer matches dbt-core's <0.6 pin"
+target @2026Q4,@main
+
+# databases/py-sqlparse moved to 0.6.0 (2026Q4, main); the RUN_DEPENDS pin
+# <0.6 cannot be met (FreeBSD dropped it on main only). dbt-core uses
+# sqlparse.parse(), Token, token_first(), insert_before/after() and
+# Lexer.get_default_instance(), all unchanged in 0.6.0, whose changes are
+# DoS fixes, keyword additions and dropping Python < 3.10. Relax the
+# install_requires bound as well, so the installed metadata agrees.
+text replace-once file Makefile \
+     from "sqlparse>=0.2.3<0.6:databases/py-sqlparse" \
+     to   "sqlparse>=0.2.3:databases/py-sqlparse" \
+     on-missing noop
+text replace-once file files/patch-setup.py \
+     from "+        \"sqlparse>=0.2.3,<0.6\"," \
+     to   "+        \"sqlparse>=0.2.3\"," \
+     on-missing noop
