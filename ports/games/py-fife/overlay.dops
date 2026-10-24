@@ -1,0 +1,7 @@
+port games/py-fife
+type port
+reason "Include <algorithm> for std::find"
+
+# dragonfly/@2026Q4, @main: engine/core/vfs/zip/zipnode.cpp calls
+# std::find without <algorithm>, which the boost.filesystem headers no
+# longer pull in for libstdc++.
