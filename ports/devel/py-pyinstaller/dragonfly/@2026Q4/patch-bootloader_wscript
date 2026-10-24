@@ -1,0 +1,39 @@
+--- bootloader/wscript.orig
++++ bootloader/wscript
+@@ -47,6 +47,7 @@
+ DESTOS_TO_SYSTEM = {
+     'linux': 'Linux',
+     'freebsd': 'FreeBSD',
++    'dragonfly': 'DragonFly',
+     'openbsd': 'OpenBSD',
+     'netbsd': 'NetBSD',
+     'win32': 'Windows',
+@@ -65,6 +66,7 @@
+     # Android is also folded back into 'linux', to avoid a message about "cross-compiling for Linux".
+     'Android': 'linux',
+     'FreeBSD': 'freebsd',
++    'DragonFly': 'dragonfly',
+     'OpenBSD': 'openbsd',
+     'NetBSD': 'netbsd',
+     'Windows': 'win32',
+@@ -452,6 +454,10 @@
+     else:
+         ctx.load('compiler_c')  # Any available C compiler.
+ 
++    # waf has no __DragonFly__ macro mapping and reports DragonFly as 'generic'.
++    if ctx.env.DEST_OS == 'generic' and BUILD_OS == 'dragonfly':
++        ctx.env.DEST_OS = 'dragonfly'
++
+     global is_cross
+     is_cross = (BUILD_OS != ctx.env.DEST_OS)
+ 
+@@ -670,6 +676,9 @@
+         ctx.check_cc(lib='dl', mandatory=False)
+         # libdl to be thread-safe requires libpthread! Assume it must be available if libdl is available.
+         ctx.check_cc(lib='pthread', mandatory=bool(ctx.env.LIB_DL))
++        if ctx.env.DEST_OS == 'dragonfly':
++            # base gcc 8 raises false -Wstringop-overflow positives under -Werror.
++            ctx.env.append_value('CFLAGS', '-Wno-stringop-overflow')
+         if ctx.env.DEST_OS == 'freebsd' and sysconfig.get_config_var('HAVE_PTHREAD_H'):
+             # On FreeBSD if python has threads: libthr needs to be loaded in the main process, so the bootloader needs
+             # to be link to thr.
