@@ -10,6 +10,11 @@ mk add LIB_DEPENDS "libxslt.so:textproc/libxslt"
 
 mk add ADDITIONAL_LIB_DIRS "-L${LOCALBASE}/libs"
 
+# The dfly-install link (lib*.so.MAJOR) works around devel/gnustep-make's old
+# DragonFly target.make, which did not create it. From 2026Q3 gnustep-make
+# installs that link itself and a second ln -s would fail.
+target @2026Q1,@2026Q2
+
 mk target set dfly-install <<'MK'
 	cd ${STAGEDIR}/${PREFIX}/GNUstep/System/Library/Libraries/ && \
 		${LN} -s libgnustep-gui.so libgnustep-gui.so.0
