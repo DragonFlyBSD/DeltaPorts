@@ -37,3 +37,15 @@ mk target set dfly-patch <<'MK'
 		echo "${F} was not altered" || /usr/bin/true
 .endfor
 MK
+
+# 26.8 (2026Q4 on): the dragonfly/@<line> patches are re-cut for the new
+# sources, and pdfium-build__config.patch for pdfium-7681. pdfium's BSD
+# patch is now upstream's external/pdfium/freebsd.patch rather than the
+# pdfium-bsd.patch FreeBSD used to add, so hook our build_config patch in
+# after it and run the FREEBSD -> DRAGONFLY rename over it. REPLACE_LIST
+# and PERCENT_BSD_LIST came from Makefile.DragonFly and were lost in the
+# dops conversion; without them dfly-patch runs sed -i on no files.
+target @2026Q4,@main
+mk set REPLACE_LIST "external/curl/ExternalProject_curl.mk external/liblangtag/ExternalProject_liblangtag.mk external/libxslt/ExternalProject_libxslt.mk external/nss/ExternalProject_nss.mk external/openssl/ExternalProject_openssl.mk external/redland/ExternalProject_raptor.mk external/redland/ExternalProject_rasqal.mk external/redland/ExternalProject_redland.mk external/xmlsec/ExternalProject_xmlsec.mk external/pdfium/freebsd.patch include/osl/endian.h solenv/bin/modules/installer/parameter.pm soltools/mkdepend/main.c vcl/qa/cppunit/BitmapTest.cxx vcl/unx/generic/app/saldata.cxx vcl/unx/generic/dtrans/X11_selection.cxx vcl/unx/generic/printer/printerinfomanager.cxx desktop/unx/source/start.c sal/osl/unx/process_impl.cxx sal/osl/unx/sockimpl.hxx sal/osl/unx/pipe.cxx vcl/unx/gtk3/gtkdata.cxx"
+mk set PERCENT_BSD_LIST "Repository.mk desktop/Library_crashreport.mk libreofficekit/Module_libreofficekit.mk libreofficekit/Executable_gtktiledviewer.mk libreofficekit/Library_libreofficekitgtk.mk svl/Library_svl.mk vcl/Module_vcl.mk vcl/Library_vcl.mk"
+text replace-once file Makefile from "s,pdfium_patches += pdfium-bsd.patch,& pdfium-build__config.patch ,g" to "s,pdfium_patches += freebsd.patch,& pdfium-build__config.patch ,g"
