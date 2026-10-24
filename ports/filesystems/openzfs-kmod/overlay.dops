@@ -1,0 +1,6 @@
+port filesystems/openzfs-kmod
+type port
+reason "DragonFly: OpenZFS kernel module for the FreeBSD kernel; DragonFly's kernel is not a target"
+
+target @2026Q3,@2026Q4,@main
+mk set IGNORE "FreeBSD kernel module"
