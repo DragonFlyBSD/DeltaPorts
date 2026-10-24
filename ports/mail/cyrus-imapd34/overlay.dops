@@ -5,3 +5,11 @@ target @any
 
 mk add MAKE_ENV "LDVER=ld.bfd"
 mk add LDFLAGS "-lm"
+
+# The http flavor builds imap/icu_wrap.cpp against ICU 76, whose headers need
+# C++17 (std::is_convertible_v, auto template parameters). FreeBSD's clang
+# defaults to C++17; base gcc 8 defaults to gnu++14 and cyrus sets no C++
+# standard.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_CXXSTD "gnu++17"
