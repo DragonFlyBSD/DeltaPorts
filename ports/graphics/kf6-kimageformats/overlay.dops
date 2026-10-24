@@ -7,3 +7,10 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
 		${WRKSRC}/metainfo.yaml
 MK1
+
+# From 2026Q3 KF6 builds with clang and libc++, but OpenEXR's C++ API
+# (std::string) comes from libstdc++, so the EXR plugin cannot link. Leave
+# it out until OpenEXR moves to libc++ as well.
+target @2026Q3,@2026Q4,@main
+
+mk set OPTIONS_EXCLUDE_DragonFly "OPENEXR"
