@@ -6,4 +6,6 @@ reason "DragonFly: kms-message's object library misses the OpenSSL include dir"
 # kms_message_obj target, which links no OpenSSL target and so gets no
 # include path for it. That works where OpenSSL is in base (/usr/include);
 # DragonFly uses the ports OpenSSL in LOCALBASE.
+target @2026Q3,@2026Q4,@main
+
 mk add USES "localbase"
