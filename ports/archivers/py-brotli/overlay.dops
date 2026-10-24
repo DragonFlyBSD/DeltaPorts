@@ -1,0 +1,11 @@
+port archivers/py-brotli
+type port
+reason "brotli 1.2.1 no longer matches py-brotli's same-version pin"
+target @2026Q4,@main
+
+# archivers/brotli moved to 1.2.1 on its own; the bindings build against
+# any newer system library.
+text replace-once file Makefile \
+     from "brotli>=${PORTVERSION},1<${PORTVERSION}_99,1:archivers/brotli" \
+     to   "brotli>=${PORTVERSION},1:archivers/brotli" \
+     on-missing noop
