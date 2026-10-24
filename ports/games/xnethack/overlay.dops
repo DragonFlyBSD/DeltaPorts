@@ -1,0 +1,17 @@
+port games/xnethack
+type port
+reason "DragonFly: take the FreeBSD branches in unixconf.h, termcap.c and mail.c"
+
+# unixconf.h defines memcpy(d, s, n) as bcopy(s, d, n) on BSD systems other
+# than Free/Open/NetBSD; bcopy returns void, so 10.0's
+# "(char *) memcpy(...)" in objnam.c fails ("invalid use of void
+# expression"). Treat DragonFly as FreeBSD there and in the tparm, mail
+# reader and mail path choices. Q3 has 9.1.
+target @2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/defined(__FreeBSD__)/(defined(__FreeBSD__) || defined(__DragonFly__))/g' \
+		${WRKSRC}/include/unixconf.h \
+		${WRKSRC}/src/mail.c \
+		${WRKSRC}/win/tty/termcap.c
+MK
