@@ -2,3 +2,13 @@ port lang/crystal
 type dport
 reason "DragonFly-only port; source in newport/"
 target @any
+
+# pre-build compiles llvm_ext.o and links the bootstrap compiler without
+# MAKE_ENV, so they get DragonFly 6.5's default cc (gcc 12) instead of the
+# CCVER=gcc80 the rest of the build uses; the final link with gcc 8's
+# libstdc++ then misses std::__throw_bad_array_new_length(). Run both under
+# MAKE_ENV.
+target @2026Q3,@2026Q4,@main
+
+text replace-once file Makefile from "cd ${WRKSRC} && ${SETENV} LLVM_CONFIG=\"${LLVM_CONFIG}\" ${MAKE_CMD} llvm_ext" to "cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} LLVM_CONFIG=\"${LLVM_CONFIG}\" ${MAKE_CMD} llvm_ext"
+text replace-once file Makefile from "cd ${WRKSRC} && ${CC} -o .build/crystal-bootstrap" to "cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} ${CC} -o .build/crystal-bootstrap"
