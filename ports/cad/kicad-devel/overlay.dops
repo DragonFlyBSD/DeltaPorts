@@ -11,3 +11,18 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/kicad/kicad.cpp \
 		${WRKSRC}/thirdparty/libcontext/libcontext.h
 MK1
+
+# DragonFly's <sys/types.h> (pulled in by <cstdlib>) defines major() and
+# minor() as function-like macros, which mangle the major()/minor()
+# accessors protoc generates for the API's version message
+# (base_types.pb.h: "expected unqualified-id before 'int'"). FreeBSD has no
+# such macros in C++. Force-include a header that includes <sys/types.h>
+# once and drops the two macros; kicad never uses them on dev_t.
+target @2026Q4,@main
+
+mk target set post-patch <<'MK'
+	@${PRINTF} '#include <sys/types.h>\n#undef major\n#undef minor\n' > ${WRKDIR}/dfly-no-major-minor.h
+MK
+text line-insert-after file Makefile \
+     anchor "CXXFLAGS_powerpc=\t-O0" \
+     line   "CXXFLAGS+=\t-include ${WRKDIR}/dfly-no-major-minor.h"
