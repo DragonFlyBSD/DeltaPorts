@@ -1,0 +1,8 @@
+port www/forgejo16
+type port
+reason "DragonFly: let vendored zoekt build its mmap index file"
+target @any
+
+# dragonfly/patch-vendor_github.com_sourcegraph_zoekt_index_indexfile.go:
+# zoekt's only indexfile.go is tagged linux/darwin/freebsd, so NewIndexFile
+# was undefined on DragonFly. It uses unix.Mmap/Munmap, which DragonFly has.
