@@ -1,0 +1,9 @@
+port science/anari
+type port
+reason "DragonFly: std::filesystem needs GCC_DEFAULT"
+
+# The CTS test catalog uses std::filesystem, which base gcc 8.3 keeps in
+# libstdc++fs, so anariCatalogTests fails to link. Build with GCC_DEFAULT.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
