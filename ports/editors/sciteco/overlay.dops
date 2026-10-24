@@ -1,0 +1,6 @@
+port editors/sciteco
+type port
+reason "DragonFly: <stdlib.h> declares malloc_usable_size(const void *), which clashes with sciteco's dlmalloc replacement; leave MALLOC_REPLACEMENT off by default"
+
+target @2026Q3,@2026Q4,@main
+mk set OPTIONS_DEFAULT "LEXILLA"
