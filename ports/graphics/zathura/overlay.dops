@@ -13,3 +13,9 @@ mk add LDFLAGS "-lz"
 target @2026Q3,@2026Q4,@main
 
 mk set USE_GCC_VERSION "14"
+
+# meson.build finds libmagic with pkg-config. FreeBSD's base ships
+# libmagic.pc; DragonFly's base has libmagic but no .pc file, so take it
+# from sysutils/file, as graphics/hyprgraphics does. The plugins do not use
+# libmagic, and zathura.pc only requires girara and cairo.
+mk add LIB_DEPENDS "libmagic.so:sysutils/file"
