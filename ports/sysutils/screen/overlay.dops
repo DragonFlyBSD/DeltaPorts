@@ -1,0 +1,9 @@
+port sysutils/screen
+type port
+reason "DragonFly: no kinfo_getproc(); read the process start time via sysctl"
+target @any
+
+# dragonfly/@2026Q3, @2026Q4, @main: FreeBSD's patch-misc.c adds
+# SessionCreationTime() using libutil's kinfo_getproc() and ki_start.
+# DragonFly's libutil has no kinfo_getproc() and its kinfo_proc calls the
+# field kp_start; query KERN_PROC_PID with sysctl(3) instead.
