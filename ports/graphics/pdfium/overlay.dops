@@ -1,6 +1,6 @@
 port graphics/pdfium
 type port
-reason "DragonFly: no compiler-rt builtins to link; libc++ lives in the llvm prefix"
+reason "DragonFly: no compiler-rt builtins to link; libc++ lives in the llvm prefix; pkg-config wrapper ignores dragonfly"
 
 # dragonfly/patch-build_config_compiler_BUILD.gn: chromium's build links
 # clang's clang_rt.builtins; FreeBSD's port asks clang where it lives. Our
@@ -15,6 +15,11 @@ reason "DragonFly: no compiler-rt builtins to link; libc++ lives in the llvm pre
 # /usr/include/c++/v1, while devel/libcxx${LLVM_DEFAULT} installs them under
 # ${LOCALBASE}/llvm${LLVM_DEFAULT}. libpdfium.so is linked with -lc++, so
 # declare the library too.
+#
+# dragonfly/patch-build_config_linux_pkg-config.py: chromium's pkg-config
+# wrapper returns empty flags unless sys.platform names linux (FreeBSD's
+# patch adds freebsd). On DragonFly it answered nothing, so the system
+# openjpeg's include dir never reached the compile: 'openjpeg.h' not found.
 target @any
 
 mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_DEFAULT}"
