@@ -1,0 +1,9 @@
+port devel/mrc
+type port
+reason "DragonFly: C++23 needs GCC_DEFAULT"
+
+# CMakeLists.txt requires cxx_std_23, which CMake does not know for base
+# gcc 8.3. Build with GCC_DEFAULT.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
