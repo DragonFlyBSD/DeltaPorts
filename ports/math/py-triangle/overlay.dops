@@ -1,0 +1,18 @@
+port math/py-triangle
+type port
+reason "DragonFly: bundled triangle.h is shadowed by math/triangle's"
+
+# DragonFly's Python records -I/usr/local/include in its CFLAGS, and setuptools
+# puts those before the extension's -Ic, so triangle/core.c's
+# #include "triangle.h" finds math/triangle's installed header (a build
+# dependency), where triangulate() returns void, instead of the bundled
+# c/triangle.h, where it returns int: "void value not ignored". Include the
+# bundled header by path.
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's|^#include "triangle.h"$$|#include "../c/triangle.h"|' \
+		${WRKSRC}/triangle/core.c
+	${REINPLACE_CMD} -e 's|^cdef extern from "triangle.h":$$|cdef extern from "../c/triangle.h":|' \
+		${WRKSRC}/triangle/core.pyx
+MK
