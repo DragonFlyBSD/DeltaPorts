@@ -8,3 +8,8 @@ reason "DragonFly: ship the two AUR patches as dragonfly/@<line> patches; aur.ar
 target @2026Q3,@2026Q4
 mk unset PATCH_SITES
 mk eval PATCHFILES "${PATCHFILES:N*?h=ftxui*}"
+
+# USES=compiler:c++20-lang resolves to base gcc 8.3, which cannot compile
+# the examples' C++20 designated initializers (no matching Dropdown()).
+target @2026Q3,@2026Q4,@main
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
