@@ -1,0 +1,8 @@
+port sysutils/docker-cli
+type port
+reason "DragonFly: vendored moby/term picks Linux termios ioctls"
+target @any
+
+# dragonfly/@2026Q3, @2026Q4, @main: moby/term v0.5.2 tags its BSD termios
+# file for darwin/freebsd/openbsd/netbsd only, so DragonFly got the Linux
+# one and unix.TCGETS/TCSETS. Same patches as sysutils/helm.
