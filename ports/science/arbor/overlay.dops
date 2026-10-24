@@ -1,0 +1,10 @@
+port science/arbor
+type port
+reason "DragonFly: C++20 and std::filesystem need GCC_DEFAULT"
+
+# compiler:c++20-lang resolves to base gcc 8.3, whose std::filesystem lives
+# in libstdc++fs, so modcc fails to link (undefined std::filesystem::path
+# symbols). Build with GCC_DEFAULT.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
