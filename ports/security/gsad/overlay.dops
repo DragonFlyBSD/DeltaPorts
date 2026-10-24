@@ -2,3 +2,7 @@ port security/gsad
 type port
 reason "FreeBSD lists /var/run/gvm itself; nothing left to change"
 target @any
+
+# gsad_base.c skips <malloc.h> only for __FreeBSD__, which DragonFly no
+# longer defines since USES=alias went away; DragonFly has no <malloc.h>.
+# dragonfly/@<line>/patch-src_gsad__base.c adds __DragonFly__.
