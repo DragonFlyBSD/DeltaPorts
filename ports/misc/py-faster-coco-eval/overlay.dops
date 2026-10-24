@@ -1,0 +1,7 @@
+port misc/py-faster-coco-eval
+type port
+reason "DragonFly: drop an unused <execution> include base gcc 8 lacks"
+
+# dragonfly/: csrc/mask_api/src/rle.cpp includes <execution> but uses no
+# execution policy; base gcc 8's libstdc++ has no <execution> (gcc 9 added
+# it). The port exists only on 2026Q4 and later.
