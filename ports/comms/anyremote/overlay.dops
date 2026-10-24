@@ -1,0 +1,3 @@
+port comms/anyremote
+type port
+reason "DragonFly: take the __FreeBSD__ paths (BSD sendfile, signal.h) that USES=alias used to select (dragonfly/@<line> patches)"
