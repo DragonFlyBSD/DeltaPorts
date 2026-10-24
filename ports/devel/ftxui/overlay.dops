@@ -1,0 +1,10 @@
+port devel/ftxui
+type port
+reason "DragonFly: ship the two AUR patches as dragonfly/@<line> patches; aur.archlinux.org cgit cannot be fetched (no size), and no mirror has them"
+
+# The patches are the AUR files FreeBSD's distinfo pins (sha256 and size
+# checked): ftxui_build_docs_target_all.patch at AUR commit 38edf735 and
+# ftxui_make_examples_installable.patch, converted to -p0.
+target @2026Q3,@2026Q4
+mk unset PATCH_SITES
+mk eval PATCHFILES "${PATCHFILES:N*?h=ftxui*}"
