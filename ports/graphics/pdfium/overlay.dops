@@ -16,6 +16,10 @@ reason "DragonFly: no compiler-rt builtins to link; libc++ lives in the llvm pre
 # ${LOCALBASE}/llvm${LLVM_DEFAULT}. libpdfium.so is linked with -lc++, so
 # declare the library too.
 #
+# It also drops -Wa,--crel: libpdfium.so is linked from libpdfium.a with
+# base ld, which does not know CREL relocations; it copied the .crel.*
+# sections through unapplied, and strip then rejected the library.
+#
 # dragonfly/patch-build_config_linux_pkg-config.py: chromium's pkg-config
 # wrapper returns empty flags unless sys.platform names linux (FreeBSD's
 # patch adds freebsd). On DragonFly it answered nothing, so the system
