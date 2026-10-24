@@ -1,0 +1,3 @@
+port filesystems/py-llfuse
+type port
+reason "DragonFly: llfuse.h knows FreeBSD and NetBSD as BSD platforms only (dragonfly/@<line> patch)"
