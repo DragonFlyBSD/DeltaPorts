@@ -1,0 +1,18 @@
+port sysutils/util-linux
+type port
+reason "DragonFly: no glibc-style cpuset or GNU utmpx programs, as on FreeBSD"
+
+# DragonFly's cpu_set_t is cpumask_t, without the CPU_ALLOC/CPU_*_S API
+# that FreeBSD provides, and include/cpuset.h's fallback reaches into glibc
+# internals (__cpu_mask, ->__bits). Treat cpu_set_t as absent; bits(1),
+# which always builds and needs that API, then depends on it
+# (dragonfly/patch-configure.ac).
+#
+# DragonFly has updwtmpx(), FreeBSD does not, so configure would also build
+# su, runuser, login, last and others there; su-common.c needs Linux-PAM's
+# PAM_DATA_SILENT. Build the FreeBSD set of programs.
+target @2026Q3,@2026Q4,@main
+
+mk add CONFIGURE_ENV "ac_cv_type_cpu_set_t=no ac_cv_func_updwtmpx=no"
+text line-remove file pkg-plist exact "bin/bits"
+text line-remove file pkg-plist exact "share/man/man1/bits.1.gz"
