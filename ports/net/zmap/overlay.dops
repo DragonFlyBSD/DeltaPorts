@@ -1,0 +1,11 @@
+port net/zmap
+type port
+reason "DragonFly: no netmap, so the netmap flavor cannot build"
+target @2026Q4,@main
+
+# The netmap flavor (2026Q4 on) builds against net/netmap_user.h, and
+# zmap.c refuses anything but FreeBSD and Linux there. DragonFly has no
+# netmap.
+text line-insert-after file Makefile \
+     anchor "CMAKE_ON=\tWITH_NETMAP" \
+     line   "IGNORE=\t\tneeds netmap, which DragonFly does not have"
