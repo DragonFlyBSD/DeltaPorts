@@ -1,0 +1,3 @@
+port devel/ruff
+type port
+reason "DragonFly: notify's kqueue deps and no tikv-jemallocator (dragonfly/@<line> patches, as devel/py-ruff)"
