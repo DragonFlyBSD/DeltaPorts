@@ -1,0 +1,3 @@
+port databases/tkrzw
+type port
+reason "DragonFly: tkrzw_sys_config.h and configure only know FreeBSD among the BSDs (dragonfly/@<line> patches)"
