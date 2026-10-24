@@ -1,0 +1,7 @@
+port math/py-sparsediffpy
+type port
+reason "DragonFly: no <malloc.h>; malloc_usable_size() is in <malloc_np.h>"
+
+# dragonfly/@2026Q3, @2026Q4, @main: SparseDiffEngine's tracked_alloc.h
+# includes <malloc.h> for malloc_usable_size() outside Apple and Windows.
+# DragonFly has no <malloc.h>; it declares the function in <malloc_np.h>.
