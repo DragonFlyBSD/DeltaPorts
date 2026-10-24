@@ -1,3 +1,9 @@
 port math/obake
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: C++20 concepts need GCC_DEFAULT"
+
+# USES=compiler:c++20-lang resolves to base gcc 8.3, which has no C++20
+# concepts ("'SameCvr' does not name a type" in type_traits.hpp).
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
