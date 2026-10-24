@@ -4,3 +4,11 @@ reason "strip MPI from OPTIONS_DEFAULT (the .if 1 block; .else branch is dead)"
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NMPI}"
+
+# 5.6 builds mbcoupler only with MPI, but pkg-plist lists it
+# unconditionally; with MPI off (above) the package step cannot find it.
+target @2026Q4,@main
+
+text replace-once file pkg-plist from "include/mbcoupler/Coupler.hpp" to "%%MPI%%include/mbcoupler/Coupler.hpp"
+text replace-once file pkg-plist from "include/mbcoupler/ElemUtil.hpp" to "%%MPI%%include/mbcoupler/ElemUtil.hpp"
+text replace-once file pkg-plist from "lib/libmbcoupler.so" to "%%MPI%%lib/libmbcoupler.so"
