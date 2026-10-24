@@ -1,0 +1,6 @@
+port japanese/jishyo
+type port
+reason "DragonFly: the bundled xjdic C code calls its own functions without prototypes, which clang 19 now rejects"
+
+target @2026Q3,@2026Q4,@main
+mk eval CFLAGS "${CFLAGS} -Wno-error=implicit-function-declaration"
