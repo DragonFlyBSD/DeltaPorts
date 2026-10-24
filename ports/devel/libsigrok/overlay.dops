@@ -11,3 +11,8 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/src/std.c \
 		${WRKSRC}/src/strutil.c
 MK1
+
+# The FreeBSD libusb workarounds in src/libsigrok-internal.h (no
+# libusb_has_capability) and src/usb.c (libusb_get_port_numbers) are keyed on
+# __FreeBSD__, which DragonFly lost with USES=alias; its base libusb is the
+# FreeBSD one. dragonfly/@<line>/ adds __DragonFly__.
