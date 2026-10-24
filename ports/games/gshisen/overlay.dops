@@ -1,0 +1,8 @@
+port games/gshisen
+type port
+reason "DragonFly: comparator casts to int (*)() (clang 19)"
+
+# dragonfly/@2026Q3, @2026Q4, @main: board.m casts its NSComparisonResult
+# comparators to int (*)(id, id, void *) before passing them to the sort
+# methods; clang 16 and later reject the incompatible function pointer.
+# Cast to the declared type instead.
