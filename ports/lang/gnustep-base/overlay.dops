@@ -4,6 +4,11 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk set LLD_UNSAFE "yes\t# Needs linker to provide library search paths."
+# The dfly-install link (lib*.so.MAJOR) works around devel/gnustep-make's old
+# DragonFly target.make, which did not create it. From 2026Q3 gnustep-make
+# installs that link itself and a second ln -s would fail.
+target @2026Q1,@2026Q2
+
 mk target set dfly-install <<'MK1'
 	cd ${STAGEDIR}/${PREFIX}/GNUstep/System/Library/Libraries/ && \
 		${LN} -s libgnustep-base.so libgnustep-base.so.${DISTVERSION:R}
