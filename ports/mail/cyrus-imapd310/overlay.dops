@@ -1,0 +1,9 @@
+port mail/cyrus-imapd310
+type port
+reason "DragonFly: <sys/statvfs.h> pulls in <sys/uuid.h>'s uuid_t"
+
+# dragonfly/@2026Q3, @2026Q4, @main (as for cyrus-imapd312):
+#  - imap/{cyr_df,global,http_admin,partlist}.c: DragonFly's <sys/statvfs.h>
+#    includes <sys/uuid.h>, whose uuid_t clashes with libuuid's
+#    <uuid/uuid.h> (included via lib/util.h). Rename it around the include.
+#  - lib/byteorder.h: take <endian.h> on DragonFly.
