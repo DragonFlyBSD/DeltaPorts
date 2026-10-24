@@ -1,0 +1,3 @@
+port accessibility/onboard
+type port
+reason "DragonFly: take the sources' FreeBSD fallbacks for _NSIG and glibc's error() (dragonfly/@<line>)"
