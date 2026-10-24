@@ -1,0 +1,8 @@
+port security/kanidm
+type port
+reason "DragonFly: import std's MetadataExt in file_permissions"
+target @any
+
+# dragonfly/@2026Q3, @2026Q4, @main: libs/file_permissions/src/unix.rs
+# imports the per-OS MetadataExt (st_uid/st_gid/st_mode) for a list of
+# systems without DragonFly. std::os::dragonfly::fs has the same trait.
