@@ -1,0 +1,3 @@
+port net-p2p/eiskaltdcpp-lib
+type port
+reason "rename the DHT bucket-size macro K, which breaks boost 1.92 headers (dragonfly/@<line> patches)"
