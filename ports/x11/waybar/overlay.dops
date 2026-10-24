@@ -1,10 +1,21 @@
 port x11/waybar
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
+reason "DragonFly: C++20 with the ports GCC; no UDEV/PULSEAUDIO by default"
+
+# The retired lines keep the gcc 8 workarounds (misc/cxxfs_gcc8 for
+# <filesystem>, SIGRTMIN/SIGRTMAX stand-ins).
+target @2026Q1,@2026Q2
 
 mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
 mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
 mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NUDEV}"
 mk add CFLAGS "-DSIGRTMIN=50 -DSIGRTMAX=54"
+
+# 0.15 needs C++20 (std::ranges, map::contains); USES=compiler:c++20-lang
+# resolves to base gcc 8.3. GCC_DEFAULT ships <filesystem> in libstdc++,
+# and DragonFly defines SIGRTMIN/SIGRTMAX now.
+target @2026Q3,@2026Q4,@main
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NUDEV}"
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
