@@ -23,3 +23,12 @@ mk target set dfly-patch <<'MK1'
 		-e 's|^#include <gdk/gdkwayland.h>|#include "dfly_wayland.h"|' \
 		"${WRKSRC}/eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT PI/gtk/library/os.h"
 MK1
+
+# Tycho maps os.name to an OSGi os itself and knows no "DragonFlyBSD", so the
+# running environment is os=unknown: no osgi.native capability of the JNA
+# bundle matches, and org.eclipse.core.net (and every bundle requiring it,
+# e.g. p2.installer) fails to resolve. Tycho reads osgi.os first; build as
+# the freebsd environment the rest of this build already targets.
+# (MAVEN_PARAMS is assigned after bsd.port.pre.mk, so mk add would land
+# before it and be overwritten; edit the assignment itself.)
+text replace-once file Makefile from "-Dnative=gtk.freebsd.${MAVEN_ARCH}" to "-Dnative=gtk.freebsd.${MAVEN_ARCH} -Dosgi.os=freebsd"
