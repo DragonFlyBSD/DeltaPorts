@@ -3,10 +3,17 @@ type lock
 reason "auto-converted from compat (fragment + diffs/)"
 target @any
 
-mk add CONFIGURE_ARGS "--disable-scsistrings"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@<cam/@<bus/cam/@g' \
 		${WRKSRC}/lib/sg_pt_freebsd.c
 MK1
 file remove files/patch-lib_sg__pt__freebsd.c on-missing noop
 file remove files/patch-include_freebsd__nvme__ioctl.h on-missing noop
+
+# --disable-scsistrings came from the pre-lock Makefile.DragonFly for 1.44+.
+# The locked 1.42 defines sg_lib_read_pos_arr only with the full strings,
+# but sg_lib.c always uses it, so libsgutils2 fails to link without them;
+# the last DragonFly build of 1.42 did not pass it.
+target @2026Q1,@2026Q2
+
+mk add CONFIGURE_ARGS "--disable-scsistrings"
