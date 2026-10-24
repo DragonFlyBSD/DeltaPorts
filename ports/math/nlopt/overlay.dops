@@ -1,0 +1,21 @@
+port math/nlopt
+type port
+reason "DragonFly: build the full flavor with clang and libc++, like math/octave"
+
+# The full flavor compiles an Octave plugin against Octave's C++ headers.
+# Octave links Qt, so on DragonFly it is a clang + libc++ build, and its
+# headers need what libc++ provides and base gcc 8.3 lacks
+# (<memory_resource> in Array-fwd.h). Build the full flavor the same way.
+# The flavor's other bindings use C APIs (Python, NumPy, Guile), and
+# libnlopt's own API is C, so nothing else crosses. The minimal flavor is
+# unchanged. Mk/Uses/dfly-libcxx.mk exists from 2026Q3 on.
+target @2026Q3,@2026Q4,@main
+
+mk block set condition "${FLAVOR:U:Mfull}" <<'MK'
+USES+=	dfly-libcxx
+MK
+
+# Octave on DragonFly is configured for ${CONFIGURE_TARGET}
+# (x86_64-portbld-dragonfly...), and the plugin installs into that host's
+# oct-site-dir (octave-config --oct-site-dir); the plist used FreeBSD's.
+mk set GNU_HOST "${CONFIGURE_TARGET}"
