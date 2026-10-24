@@ -1,7 +1,9 @@
 port mail/thunderbird
 type port
-reason "strip PULSEAUDIO/PROFILE/LTO options, set MOZ/LLVM vars, add dfly-patch reinplace steps, materialize dragonfly patches"
-target @any
+reason "DragonFly: pre-158 setup on 2026Q1-Q3; Gecko 158 on 2026Q4/main built like www/firefox (clang + libc++ headers, per-line dragonfly/ patch sets)"
+
+# The pre-158 setup stays on the older lines.
+target @2026Q1,@2026Q2,@2026Q3
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NPROFILE}"
 mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NLTO}"
@@ -24,6 +26,54 @@ mk target set dfly-patch <<'MK'
 	(cd ${WRKSRC}/gfx/angle/checkout/src/compiler/translator && \
 		${REINPLACE_CMD} -e 's|<math.h>|<cmath>|' \
 		InfoSink.h IntermNode.cpp)
+	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
+		${WRKSRC}/media/libcubeb/src/cubeb_alsa.c
+	${REINPLACE_CMD} -e 's@_POSIX_SOURCE@&___@g' \
+		${WRKSRC}/media/libcubeb/src/cubeb_jack.cpp
+	${REINPLACE_CMD} -e 's@gtk+-wayland@&z@g' \
+		${WRKSRC}/toolkit/moz.configure
+MK
+mk eval USES "${USES:Nelfctl}"
+
+# 158.0.1 builds Gecko FIREFOX_158_0_1_BUILD1, the same tree as
+# www/firefox 158.0.1, so 2026Q4 and main take www/firefox's DragonFly setup
+# (see the notes there): clang with the llvm libc++ headers, XP_FREEBSD for
+# DragonFly, and the same dragonfly/@<line> patch set (all 33 apply to the
+# 158 tree with -F0), plus the system-headers malloc.h removal this port has
+# always carried. The old libwebrtc build_config.h patch is gone: 158 has no
+# such file (webrtc is disabled anyway), and the ANGLE sources moved from
+# gfx/angle/checkout to third_party/angle.
+target @2026Q4,@main
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NPROFILE}"
+mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NLTO}"
+mk add LDFLAGS "-R${PREFIX}/lib/thunderbird"
+mk add MOZ_OPTIONS --disable-webrtc
+mk add MOZ_OPTIONS --without-wasm-sandboxed-libraries
+mk eval MOZ_OPTIONS "${MOZ_OPTIONS:N--with-wasi-sysroot*}"
+mk add MOZ_OPTIONS "--with-libclang-path=${LLVM_PREFIX}/lib"
+mk add CXXFLAGS -Wno-multistatement-macros
+mk add CXXFLAGS -Wno-class-memaccess
+mk add CXXFLAGS "-stdlib=libc++"
+mk add CXXFLAGS "-cxx-isystem ${LLVM_PREFIX}/include/c++/v1"
+mk add BUILD_DEPENDS "${LOCALBASE}/llvm${LLVM_VERSION}/include/c++/v1/new:devel/libcxx${LLVM_VERSION}"
+mk add LDFLAGS "-L${LLVM_PREFIX}/lib"
+mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_VERSION}"
+mk add LDFLAGS "-Wl,-rpath,/usr/lib/gcc80"
+mk add CONFIGURE_ENV "BINDGEN_CFLAGS=\"-I${LOCALBASE}/include -stdlib=libc++ -cxx-isystem ${LLVM_PREFIX}/include/c++/v1\""
+mk set BINARY_ALIAS "clang=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang clang++=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang++ wasm-ld=${LOCALBASE}/llvm${LLVM_VERSION}/bin/wasm-ld"
+mk set CC "${LLVM_PREFIX}/bin/clang"
+mk set CXX "${LLVM_PREFIX}/bin/clang++"
+mk set CPP "${LLVM_PREFIX}/bin/clang-cpp"
+
+mk target set dfly-patch <<'MK'
+	# disable SCTP
+	${REINPLACE_CMD} -e 's|MOZ_SCTP|MOZ_DISABLE_SCTP|' \
+		${WRKSRC}/netwerk/moz.build
+	# ANGLE moved: gfx/angle/checkout/src/... -> third_party/angle/src/...
+	${REINPLACE_CMD} -e 's|<math.h>|<cmath>|' \
+		${WRKSRC}/third_party/angle/src/compiler/translator/InfoSink.h \
+		${WRKSRC}/third_party/angle/src/compiler/translator/IntermNode.cpp
 	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
 		${WRKSRC}/media/libcubeb/src/cubeb_alsa.c
 	${REINPLACE_CMD} -e 's@_POSIX_SOURCE@&___@g' \
