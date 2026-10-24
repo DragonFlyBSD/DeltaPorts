@@ -1,6 +1,16 @@
 port graphics/openimageio
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: locale and sysctl code paths; OpenImageIO 3 needs gcc 9.3+"
 target @any
 
 mk add CMAKE_ARGS "-DUSE_CPP11:BOOL=ON"
+
+# OpenImageIO 3.x documents gcc 9.3 as its minimum and uses std::filesystem
+# throughout libutil; base gcc 8.3 needs -lstdc++fs for that.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# dragonfly/patch-src_libutil_strutil.cpp was re-cut for 3.1 (NetBSD joined
+# the newlocale() condition); src/make/detectplatform.mk is gone since 3.0,
+# so its patch now lives only in @2026Q1/@2026Q2.
