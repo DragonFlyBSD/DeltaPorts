@@ -1,0 +1,16 @@
+port math/dune-spgrid
+type port
+reason "DragonFly: point CMake at openmpi's wrappers; C++20 needs GCC_DEFAULT"
+
+# dune-uggrid's CMake config requires MPI, and FindMPI does not find
+# openmpi under ${LOCALBASE}/mpi/openmpi on its own, so dune-grid is
+# rejected ("Could not find required module dune-grid"). Pass the MPI
+# compiler wrappers, as math/dune-grid and math/dune-uggrid do.
+# 2.11 (2026Q2 on) also includes dune-common 2.11 headers, which need C++20
+# (<concepts>); base gcc 8's libstdc++ has none. Keep compiler:c++17-lang,
+# as the other dune ports do.
+target @2026Q3,@2026Q4,@main
+
+mk add CMAKE_ARGS "-DMPI_C_COMPILER=\"${LOCALBASE}/mpi/openmpi/bin/mpicc\" -DMPI_CXX_COMPILER=\"${LOCALBASE}/mpi/openmpi/bin/mpicxx\" -DMPI_Fortran_COMPILER=\"${LOCALBASE}/mpi/openmpi/bin/mpifort\""
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
