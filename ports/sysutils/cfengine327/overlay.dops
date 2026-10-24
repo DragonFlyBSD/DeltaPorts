@@ -1,0 +1,16 @@
+port sysutils/cfengine327
+type port
+reason "DragonFly: take the FreeBSD branches that USES=alias used to select (usermod -e date format, pw_scan, statvfs sizes, locked-account marker)"
+
+target @2026Q3,@2026Q4,@main
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/defined __FreeBSD__/& || defined __DragonFly__/' \
+		-e 's/defined(__FreeBSD__)/& || defined(__DragonFly__)/' \
+		-e 's/ifdef __FreeBSD__$$/if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/cf-agent/verify_users_pam.c \
+		${WRKSRC}/cf-execd/cf-execd-runner.c \
+		${WRKSRC}/libntech/libutils/fsattrs.c \
+		${WRKSRC}/libntech/libutils/platform.h \
+		${WRKSRC}/libpromises/storage_tools.c \
+		${WRKSRC}/libpromises/systype.c
+MK1
