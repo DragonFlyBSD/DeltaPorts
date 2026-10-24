@@ -1,0 +1,11 @@
+port databases/ruby-xapian
+type port
+reason "DragonFly: rdoc 8 needs a UTF-8 default encoding"
+
+# The build runs rdoc, whose Aliki templates (rdoc 7 and later) contain UTF-8.
+# DragonFly's ports framework exports LANG=LC_ALL=C (base has no C.UTF-8),
+# so Ruby's default external encoding is US-ASCII and rdoc fails with
+# Encoding::InvalidByteSequenceError. FreeBSD exports C.UTF-8. Q3 has rdoc 6.
+target @2026Q4,@main
+
+mk add MAKE_ENV "RUBYOPT=-EUTF-8"
