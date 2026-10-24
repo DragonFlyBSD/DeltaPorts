@@ -1,0 +1,12 @@
+port games/nextgo
+type port
+reason "DragonFly: K&R-era C that clang 16+ rejects by default"
+
+# The 1990s sources declare functions with implicit int (findnext.c:
+# "extern countlib(int,int,int);") and the like, which clang 16 and later
+# make errors. Only 13 of 36 sources were compiled before the build stopped,
+# so turn the new defaults back into warnings rather than patch one by one.
+target @2026Q3,@2026Q4,@main
+
+mk set ADDITIONAL_CFLAGS "-Wno-error=implicit-int -Wno-error=implicit-function-declaration -Wno-error=int-conversion -Wno-error=incompatible-function-pointer-types"
+mk set ADDITIONAL_OBJCFLAGS "-Wno-error=implicit-int -Wno-error=implicit-function-declaration -Wno-error=int-conversion -Wno-error=incompatible-function-pointer-types"
