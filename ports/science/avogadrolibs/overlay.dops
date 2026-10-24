@@ -1,0 +1,12 @@
+port science/avogadrolibs
+type port
+reason "DragonFly: build with gmake; bmake misreads the template icon names"
+
+# DragonFly's cmake.mk does not use the ninja generator, so the build runs
+# CMake's Makefiles with bmake. templatetool's template.qrc lists files like
+# "ligands/dmpe-1,2-bis(dimethylphosphino)ethane.svg", which bmake parses as
+# archive member syntax ("don't know how to make ethane.svg"). GNU make reads
+# them as plain names, as do ninja and FreeBSD's default build.
+target @2026Q3,@2026Q4,@main
+
+mk eval USES "${USES} gmake"
