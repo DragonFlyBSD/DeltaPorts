@@ -1,0 +1,27 @@
+port graphics/f3d
+type port
+reason "DragonFly: no CMake runtime dependency sets; take the FreeBSD code paths"
+
+# library/CMakeLists.txt collects libf3d's runtime dependencies for an
+# optional "dependencies" install component; CMake implements
+# RUNTIME_DEPENDENCY_SET only for Windows, macOS, Linux and FreeBSD and
+# stops configure on DragonFly. Drop the set (the port never installs that
+# component). FreeBSD's patches give dmon (file watching through
+# libinotify) and the executable-path lookup (KERN_PROC_PATHNAME) FreeBSD
+# branches; DragonFly has both, so take them too. libf3d and the
+# application use std::filesystem throughout, which base gcc 8.3 cannot
+# link without libstdc++fs; build with GCC_DEFAULT (VTK and the other C++
+# dependencies are libstdc++ builds).
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/^    RUNTIME_DEPENDENCY_SET libf3dDeps$$/d' \
+		-e '/^  install(RUNTIME_DEPENDENCY_SET libf3dDeps$$/,/^    DIRECTORIES /d' \
+		${WRKSRC}/library/CMakeLists.txt
+	${REINPLACE_CMD} -e 's/^#elif defined(__linux__) || defined(__FreeBSD__)$$/& || defined(__DragonFly__)/' \
+		${WRKSRC}/external/dmon/dmon.h
+	${REINPLACE_CMD} -e 's/^#ifdef __FreeBSD__$$/#if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		-e 's/^#if defined(__FreeBSD__)$$/#if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/application/F3DSystemTools.cxx
+MK
