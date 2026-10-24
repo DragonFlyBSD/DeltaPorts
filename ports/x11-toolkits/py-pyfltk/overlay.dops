@@ -1,0 +1,3 @@
+port x11-toolkits/py-pyfltk
+type port
+reason "DragonFly: build with setup.py's FreeBSD settings (dragonfly/@<line>/patch-setup.py)"
