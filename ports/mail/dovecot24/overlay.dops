@@ -1,8 +1,15 @@
 port mail/dovecot24
 type port
-reason "DragonFly: let lib.h request BSD visibility as it does on the other BSDs"
+reason "DragonFly: let lib.h request BSD visibility as it does on the other BSDs; xapian 2 needs C++17"
 
 # dragonfly/patch-src_lib_lib.h: lib.h defines _POSIX_C_SOURCE/_XOPEN_SOURCE
 # and opts back into BSD interfaces with __BSD_VISIBLE only on Free/Net/
 # OpenBSD. On DragonFly that hid cpu_set_t and sched_getaffinity(), which
 # configure had found, and cpu-count.c failed to compile.
+#
+# The flatcurve FTS plugin includes xapian-core 2's headers, which use
+# std::string_view. FreeBSD's clang defaults to C++17; base gcc 8 defaults
+# to gnu++14 and the headers fail to parse. Dovecot sets no C++ standard.
+target @2026Q4,@main
+
+mk set USE_CXXSTD "gnu++17"
