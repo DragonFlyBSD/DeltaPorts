@@ -1,0 +1,3 @@
+port emulators/rvvm
+type port
+reason "DragonFly: the libatomic probe takes \"undefined main\" as success even when ld cannot find -latomic (dragonfly/@<line> patch)"
