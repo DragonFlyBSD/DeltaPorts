@@ -1,0 +1,10 @@
+port sysutils/fwupd-efi
+type port
+reason "DragonFly: depend on devel/binutils for the objcopy the build uses"
+
+# post-patch points meson at ${LOCALBASE}/bin/objcopy (GNU objcopy flags).
+# On FreeBSD, USE_GCC pulls in a ports gcc and with it devel/binutils; on
+# DragonFly it means base gcc 8, so nothing installs that objcopy.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_BINUTILS "yes"
