@@ -1,0 +1,10 @@
+port net/bone-kmods
+type port
+reason "FreeBSD netgraph kernel modules"
+
+# Netgraph kernel modules built against FreeBSD's kernel tree
+# (Makefile.kmods includes bsd.arch.inc.mk from FreeBSD's sys/conf); they
+# cannot build or load on DragonFly.
+target @2026Q3,@2026Q4,@main
+
+mk set IGNORE "FreeBSD netgraph kernel modules"
