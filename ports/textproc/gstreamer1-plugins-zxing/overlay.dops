@@ -1,0 +1,7 @@
+port textproc/gstreamer1-plugins-zxing
+type port
+reason "DragonFly: libc++ to match textproc/zxing-cpp"
+target @2026Q3,@2026Q4,@main
+
+# textproc/zxing-cpp is built against libc++ on these lines.
+mk add USES "dfly-libcxx"
