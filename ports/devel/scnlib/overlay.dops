@@ -1,0 +1,9 @@
+port devel/scnlib
+type port
+reason "DragonFly: C++20 needs GCC_DEFAULT"
+
+# compiler:c++20-lang resolves to base gcc 8.3, which rejects -std=c++20
+# (CMake's compiler check already fails). Build with GCC_DEFAULT.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
