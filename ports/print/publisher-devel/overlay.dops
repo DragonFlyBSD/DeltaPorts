@@ -1,0 +1,9 @@
+port print/publisher-devel
+type port
+reason "DragonFly: Go has no -buildmode=c-shared for dragonfly/amd64"
+
+# libsplib.so, which LuaTeX loads, is built with go build -buildmode=c-shared;
+# Go refuses it on dragonfly/amd64 ("-buildmode=c-shared not supported").
+target @2026Q3,@2026Q4,@main
+
+mk eval IGNORE "requires Go -buildmode=c-shared, which Go does not support on DragonFly"
