@@ -53,3 +53,9 @@ mk target set dfly-install <<'MK'
 MK
 
 patch apply diffs/Makefile.diff
+
+# qemu 11.1's meson.build requires GCC 10.4 or later; base gcc 8.3 stops
+# meson setup.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
