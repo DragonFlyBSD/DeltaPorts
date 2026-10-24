@@ -1,0 +1,16 @@
+port net/natscli
+type port
+reason "DragonFly: vendored termbox-go knows only darwin and the other BSDs"
+
+# termbox-go v1.1.2 builds its BSD termios code (TIOCGETA/TIOCSETA) for
+# darwin, freebsd, openbsd and netbsd, and the Linux one (TCGETS/TCSETS,
+# undefined on DragonFly) everywhere else. Add dragonfly to the BSD side;
+# the vendor tree exists by then (Uses/go.mk vendors at extract).
+target @2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@^//go:build darwin || freebsd@//go:build darwin || dragonfly || freebsd@' \
+		${WRKSRC}/vendor/github.com/nsf/termbox-go/syscalls_bsd.go
+	${REINPLACE_CMD} -e 's@^//go:build !darwin \&\& @//go:build !darwin \&\& !dragonfly \&\& @' \
+		${WRKSRC}/vendor/github.com/nsf/termbox-go/syscalls_nonbsd.go
+MK
