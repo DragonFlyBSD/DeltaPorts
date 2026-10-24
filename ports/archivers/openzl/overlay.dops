@@ -1,0 +1,15 @@
+port archivers/openzl
+type port
+reason "DragonFly: rename the bundled zstd's CCVER make variable"
+
+# deps/zstd/lib/libzstd.mk sets CCVER := $(shell $(CC) --version), and
+# gmake exports it to the compiler, where DragonFly's cc wrapper reads
+# CCVER to pick the compiler ("eval: ${cc ...}: Bad substitution"). Rename
+# the variable, as archivers/p5-Compress-Zstd does for its bundled zstd.
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@CCVER@ZSTD_&@g' \
+		${WRKSRC}/deps/zstd/lib/libzstd.mk \
+		${WRKSRC}/deps/zstd/lib/Makefile
+MK
