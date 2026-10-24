@@ -1,0 +1,10 @@
+port emulators/virtualbox-ose-kmod-70
+type port
+reason "FreeBSD specific: VirtualBox host kernel modules"
+
+# Builds vboxdrv and friends against the FreeBSD kernel sources; configure
+# already stops with "Cannot determine OS!". emulators/virtualbox-ose-kmod
+# and -kmod-legacy are ignored the same way.
+target @2026Q3,@2026Q4,@main
+
+mk eval IGNORE "FreeBSD specific kmod"
