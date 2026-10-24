@@ -1,0 +1,9 @@
+port cad/librnd
+type port
+reason "DragonFly: drop a clang-only warning flag base gcc rejects"
+
+# MOTIF_CFLAGS is a clang option; gcc 8.3 rejects it, so scconfig's
+# "Checking for cc (host)" fails and configure aborts.
+target @2026Q4,@main
+
+mk unset MOTIF_CFLAGS
