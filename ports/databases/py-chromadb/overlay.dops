@@ -1,0 +1,8 @@
+port databases/py-chromadb
+type port
+reason "DragonFly: aws-lc-sys does not know DragonFly and falls back to Linux urandom ioctls"
+
+# dragonfly/patch-cargo-crates_aws-lc-sys-0.39.0_*: aws-lc has no DragonFly
+# target macro, so rand_extra picks the Linux /dev/urandom path and its
+# RNDGETENTCNT ioctl. Define OPENSSL_DRAGONFLY and use getentropy() as on
+# FreeBSD (same patches as misc/py-hf-xet).
