@@ -1,0 +1,6 @@
+port devel/vali
+type port
+reason "DragonFly: base gcc 8 raises a -Wconversion false positive on char arithmetic, and the project builds with werror=true"
+
+target @2026Q3,@2026Q4,@main
+mk add MESON_ARGS "-Dwerror=false"
