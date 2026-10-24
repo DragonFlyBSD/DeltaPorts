@@ -1,0 +1,10 @@
+port net-im/libsignal
+type port
+reason "DragonFly: tell bindgen where libclang is"
+
+# boring-sys runs bindgen, whose clang-sys only searches its library
+# directory list on Linux and FreeBSD: "Unable to find libclang" here.
+# Point it at the LLVM the port already depends on for libclang.so.
+target @2026Q3,@2026Q4,@main
+
+mk add MAKE_ENV "LIBCLANG_PATH=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib"
