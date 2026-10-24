@@ -1,0 +1,10 @@
+port devel/hyprwire
+type port
+reason "DragonFly: C++20 needs GCC_DEFAULT"
+
+# hyprwire and the hyprutils headers it uses need C++20 (<span>, <bit>,
+# <ranges>), which base gcc 8.3's libstdc++ lacks; compiler:c++11-lib
+# resolves to it. Build with GCC_DEFAULT.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
