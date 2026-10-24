@@ -12,3 +12,10 @@ mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's@test_stdx_io_file_handle.cc@@g' \
 		${WRKSRC}/router/src/harness/tests/CMakeLists.txt
 MK
+
+# dragonfly/@2026Q3, @2026Q4, @main (also used by mysql80-client, which
+# builds from this port's patches): the bundled abseil 20230802 has no
+# DragonFly case in base/config.h (mmap, pthread_getschedparam),
+# base/internal/sysinfo.cc (GetTID() falls back to casting pthread_self())
+# or debugging/internal/vdso_support.cc (Elf64_auxv_t); handle DragonFly as
+# devel/abseil does.
