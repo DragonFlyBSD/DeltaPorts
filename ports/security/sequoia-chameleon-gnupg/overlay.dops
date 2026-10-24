@@ -1,0 +1,9 @@
+port security/sequoia-chameleon-gnupg
+type port
+reason "DragonFly: point bindgen (nettle-sys) at the ports libclang"
+
+# clang-sys has no DragonFly libclang search path, so nettle-sys's bindgen
+# panics with "Unable to find libclang".
+target @2026Q3,@2026Q4,@main
+
+mk add CARGO_ENV "LIBCLANG_PATH=${LLVM_PREFIX}/lib"
