@@ -1,0 +1,21 @@
+port multimedia/sfml3
+type port
+reason "DragonFly: build as FreeBSD (CMake OS check, Config.hpp), usbhid.h path; GCC_DEFAULT"
+
+target @2026Q4,@main
+
+# As multimedia/sfml2 does: cmake/Config.cmake rejects any system it does
+# not know ("Unsupported operating system or environment"), and
+# Config.hpp only sets SFML_SYSTEM_FREEBSD for __FreeBSD__; take the
+# FreeBSD code paths on DragonFly. DragonFly's usbhid.h lives in bus/u4b.
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|' \
+		${WRKSRC}/cmake/Config.cmake \
+		${WRKSRC}/include/SFML/Config.hpp
+	${REINPLACE_CMD} -e 's|dev/usb/usbhid.h|bus/u4b/usbhid.h|' \
+		${WRKSRC}/src/SFML/Window/FreeBSD/JoystickImpl.hpp
+MK1
+
+# SFML 3 uses std::filesystem, which base gcc 8.3 keeps in libstdc++fs
+# (compiler:c++17-lang resolves to it).
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
