@@ -1,0 +1,28 @@
+--- build.xml.orig
++++ build.xml
+@@ -107,6 +107,9 @@
+         <condition property="dist.os" value="macosx">
+             <equals arg1="${os.name}" arg2="Mac OS X"/>
+         </condition>
++        <condition property="dist.os" value="dragonfly">
++            <equals arg1="${os.name}" arg2="DragonFlyBSD"/>
++        </condition>
+         <condition property="dist.os" value="freebsd">
+             <equals arg1="${os.name}" arg2="FreeBSD"/>
+         </condition>
+@@ -328,6 +331,7 @@
+         <condition property="make.name" value="gmake">
+             <or>
+                 <isset property="is.freebsd"/>
++                <isset property="is.dragonfly"/>
+                 <isset property="is.solaris"/>
+                 <isset property="is.hpux"/>
+             </or>
+@@ -453,6 +457,7 @@
+                 <isset property="is.linux"/>
+                 <isset property="is.alpine"/>
+                 <isset property="is.freebsd"/>
++                <isset property="is.dragonfly"/>
+                 <isset property="is.solaris"/>
+             </or>
+         </condition>

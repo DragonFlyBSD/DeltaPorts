@@ -1,6 +1,10 @@
 port sysutils/javaservicewrapper
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: build as dist.os dragonfly with the FreeBSD makefile; per-line patches in dragonfly/@<line>"
+
+# dragonfly/@2026Q4 and @main re-cut build.xml for 3.7.3 and read
+# kinfo_proc's kp_ppid in wrapperGetPPid(), which the FREEBSD build flags
+# select; App.sh.in is not installed, so its patch stays on the older lines.
 target @any
 
 mk target set dfly-patch <<'MK1'

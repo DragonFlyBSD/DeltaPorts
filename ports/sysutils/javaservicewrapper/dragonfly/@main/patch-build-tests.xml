@@ -1,0 +1,22 @@
+--- build-tests.xml.orig	2019-10-30 07:02:29 UTC
++++ build-tests.xml
+@@ -110,6 +110,10 @@
+         <property name="is.Unix" value="true"/>
+         <property name="is.shell.sh" value="true"/>
+     </target>
++    <target name="init-dragonfly" if="is.DragonFlyBSD">
++        <property name="is.Unix" value="true"/>
++        <property name="is.shell.sh" value="true"/>
++    </target>
+     <target name="init-freebsd" if="is.FreeBSD">
+         <property name="is.Unix" value="true"/>
+         <property name="is.shell.sh" value="true"/>
+@@ -118,7 +122,7 @@
+     <!-- =================================================================== -->
+     <!-- Initialize build.                                                   -->
+     <!-- =================================================================== -->
+-    <target name="init" depends="init-windows, init-linux, init-solaris, init-aix, init-hpux, init-macosx, init-freebsd">
++    <target name="init" depends="init-windows, init-linux, init-solaris, init-aix, init-hpux, init-macosx, init-freebsd, init-dragonfly">
+     </target>
+ 
+     <!-- =================================================================== -->
