@@ -1,0 +1,11 @@
+port textproc/cg3
+type port
+reason "DragonFly: cg3 1.5 wants C++20 and std::filesystem; base gcc 8 has neither in full"
+
+# With base gcc 8.3, CMakeLists.txt falls back to -std=c++2a and links
+# -lstdc++fs, which base gcc does not ship ("cannot find -lstdc++fs").
+# Build with GCC_DEFAULT; its C++ dependencies (boost, ICU) are libstdc++
+# builds.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
