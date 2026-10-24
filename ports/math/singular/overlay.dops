@@ -4,3 +4,8 @@ reason "add libexec entries for p_Procs shared libs to pkg-plist, comment on oma
 target @any
 
 patch apply diffs/pkg-plist.diff
+
+# dragonfly/@2026Q1, @2026Q2: the old patch-kernel_combinatorics_hilb.cc.
+# dragonfly/@2026Q3, @2026Q4, @main: the same change regenerated for 4.4.1
+# (the guards moved and gained __CYGWIN__): DragonFly's qsort_r has the BSD
+# argument order.
