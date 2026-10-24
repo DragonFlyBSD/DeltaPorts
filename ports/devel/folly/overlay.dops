@@ -1,0 +1,20 @@
+port devel/folly
+type port
+reason "DragonFly: C++20 with the ports GCC; per-line DragonFly patch sets in dragonfly/@<line>"
+
+# 2026Q1-Q3 keep the 2024-era Makefile.DragonFly and patches (gcc 8 with
+# misc/cxxfs_gcc8 for <filesystem>).
+target @2026Q1,@2026Q2,@2026Q3
+
+file materialize Makefile.DragonFly -> Makefile.DragonFly
+
+# folly sets CMAKE_CXX_STANDARD 20, and USES=compiler:c++17-lang resolves to
+# base gcc 8.3 here. The patches in dragonfly/@2026Q4 and @main add DragonFly
+# to folly's FreeBSD checks where DragonFly behaves the same (setpgrp(2)
+# arguments, posix_memalign, ELF macros, environ, endian helpers), map gettid
+# to SYS_lwp_gettid and supply off64_t; DragonFly has fdatasync() now, so the
+# old FileUtil.cpp patch is gone.
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Nelfutils*}"
