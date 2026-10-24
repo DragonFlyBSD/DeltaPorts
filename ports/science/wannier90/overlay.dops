@@ -8,3 +8,11 @@ mk target set dfly-patch <<'MK1'
 			 -e "/F90 =/s@gfortran.*@${FC}@g" \
 		${WRKSRC}/config/make.inc.gfort
 MK1
+
+# 4.x installs its Fortran modules in lib/<compiler id>-<version>/modules,
+# and pkg-plist names FreeBSD's gfortran (GNU-14.2.0); DragonFly's
+# GCC_DEFAULT gfortran is 12.x. Install them where pkg-plist expects (no
+# port consumes the directory; Wannier90's CMake config records it).
+target @2026Q4,@main
+
+mk add CMAKE_ARGS "-DCMAKE_INSTALL_MODULEDIR=lib/GNU-14.2.0/modules"
