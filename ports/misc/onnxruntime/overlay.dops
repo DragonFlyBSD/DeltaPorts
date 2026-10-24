@@ -1,6 +1,6 @@
 port misc/onnxruntime
 type port
-reason "DragonFly: onnxruntime needs GCC >= 11.1"
+reason "DragonFly: onnxruntime needs GCC >= 11.1; thread-id, affinity and bundled abseil fixes"
 
 # cmake/CMakeLists.txt stops with "GCC version must be greater than or
 # equal to 11.1" (every version on every line: 1.23 to 1.31); the port's
@@ -8,3 +8,24 @@ reason "DragonFly: onnxruntime needs GCC >= 11.1"
 target @any
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# The same source as misc/py-onnxruntime, which carries the same fixes.
+# dragonfly/@<line>/:
+#  - posix/env.cc, logging.cc: no SYS_gettid; skip the affinity block as
+#    FreeBSD does, and use lwp_gettid() for the log thread id.
+#  - abseil-cpp.cmake + absl_dragonfly.patch: the bundled abseil
+#    20250814 defines _XOPEN_SOURCE 500 in time_zone_format.cc on
+#    DragonFly (hiding wcstof, isblank...), casts pthread_self() to pid_t
+#    and lacks DragonFly in its mmap/auxv checks (what devel/abseil patches).
+target @2026Q4,@main
+
+# FreeBSD's files/patch-onnxruntime_core_common_spin__pause.cc comments out
+# tpause_spin_delay_cycles: on FreeBSD CMAKE_SYSTEM_PROCESSOR is amd64, so
+# spin_pause.cc is built without -mwaitpkg and the constant is unused. On
+# DragonFly it is x86_64, -mwaitpkg defines __WAITPKG__ and _tpause() needs it.
+file remove files/patch-onnxruntime_core_common_spin__pause.cc on-missing noop
+
+# onnxruntime_set_compile_flags() turns on COMPILE_WARNING_AS_ERROR for every
+# onnxruntime target; gcc 12 stops on a -Wstringop-overread false positive in
+# model_package_variant_selector.cc (seen in misc/py-onnxruntime).
+mk add CMAKE_ARGS "--compile-no-warning-as-error"
