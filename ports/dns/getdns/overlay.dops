@@ -1,6 +1,6 @@
 port dns/getdns
 type port
-reason "mark libressl as broken SSL"
+reason "mark libressl as broken SSL; DragonFly: keep BSD visibility like FreeBSD (dragonfly/@<line> patch)"
 target @any
 
 mk set BROKEN_SSL "libressl"
