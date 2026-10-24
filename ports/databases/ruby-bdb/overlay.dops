@@ -8,3 +8,12 @@ reason "Give bdb_append_internal()'s retval a type"
 target @2026Q3,@2026Q4,@main
 
 text replace-once file files/patch-src-common.c from "+bdb_append_internal(int argc, VALUE *argv, VALUE obj, int flag, retval)" to "+bdb_append_internal(int argc, VALUE *argv, VALUE obj, int flag, VALUE retval)"
+
+# ALL_TARGET includes rdoc, and rdoc 8's Aliki templates contain UTF-8.
+# DragonFly's ports framework exports LANG=LC_ALL=C (base has no C.UTF-8),
+# so Ruby's default external encoding is US-ASCII and rdoc stops with
+# Encoding::InvalidByteSequenceError (the error is ignored, leaving docs/doc
+# incomplete). FreeBSD exports C.UTF-8. Q3 has rdoc 6.
+target @2026Q4,@main
+
+mk add MAKE_ENV "RUBYOPT=-EUTF-8"
