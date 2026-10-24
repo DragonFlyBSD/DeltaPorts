@@ -7,3 +7,8 @@ mk add MAKE_ENV LDVER=ld.bfd
 
 text replace-once file Makefile from "		liblz4.so:archivers/liblz4 \\" to "		liblz4.so:archivers/liblz4"
 text line-remove file Makefile exact "		libpcap.so:net/libpcap" on-missing noop
+
+# dragonfly/@2026Q3,@2026Q4,@main: USES=qt adds -Wl,--undefined-version to
+# LDFLAGS for lld. Base gold accepts it, but the base ld.bfd 2.34 this port
+# builds with (LDVER above) does not ("unrecognized option"), and cmake.mk
+# passes LDFLAGS as the CMake linker flags. Strip it in CMakeLists.txt.
