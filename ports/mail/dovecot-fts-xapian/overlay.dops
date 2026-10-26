@@ -1,3 +1,7 @@
 port mail/dovecot-fts-xapian
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-src_*: take the FreeBSD sysctl code for page size
+# and free memory instead of /proc/meminfo. Re-cut for 1.9.3 (2026Q3 on),
+# which moved the guards (the plugin.c one is gone).
