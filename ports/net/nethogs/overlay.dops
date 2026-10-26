@@ -10,3 +10,7 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/doc/Makefile \
 		${WRKSRC}/src/MakeLib.mk
 MK1
+
+# dragonfly/@<line>/patch-src_{nethogs.h,packet.cpp,connection.cpp}:
+# DragonFly no longer has <malloc.h>; take the <stdlib.h> branch the
+# sources already have for FreeBSD.
