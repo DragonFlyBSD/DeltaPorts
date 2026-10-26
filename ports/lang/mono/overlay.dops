@@ -1,7 +1,12 @@
 port lang/mono
 type port
 reason "DragonFly: localbase USES, iconv/charset deps, configure fix"
-target @any
+
+# lang/mono has been a metaport for mono${MONO_DEFAULT} since 2023 (the real
+# port, and its DragonFly overlay, is lang/mono5.20): there is no source to
+# patch, and dsynth failed on the first dragonfly/ patch. The ops and the
+# dragonfly/@2026Q1, @2026Q2 patches are left only on the retired lines.
+target @2026Q1,@2026Q2
 
 mk add USES localbase
 
