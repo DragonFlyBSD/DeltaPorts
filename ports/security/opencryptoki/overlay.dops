@@ -9,3 +9,9 @@ mk add CONFIGURE_ARGS "--enable-locks"
 # LibreSSL, which DragonFly no longer uses, and its context is gone;
 # patch-usr_sbin_pkcsslotd_log.c is re-cut (cast pthread_self() for %lu).
 # Both old patches stay for 2026Q1/Q2 in dragonfly/@2026Q1, @2026Q2.
+
+# dragonfly/@<line>/ (3.19): FreeBSD's patches key their BSD paths on
+# __FreeBSD__ (USES=alias used to cover DragonFly); add __DragonFly__ for
+# <limits.h>, getenv, sys/endian.h, rfork and LOCAL_PEERCRED. DragonFly's
+# xucred has no cr_pid or cr_gid: take cr_groups[0], and let the client
+# fill in its own pid.
