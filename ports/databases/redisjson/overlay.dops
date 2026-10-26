@@ -4,3 +4,7 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add MAKE_ENV "LIBCLANG_PATH=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib"
+
+# dragonfly/@<line>/patch-cargo-crates_linkme-impl-0.3.35_src_declaration.rs: linkme's
+# distributed_slice has no DragonFly case; use the FreeBSD/OpenBSD
+# __start_/__stop_ section symbols, which DragonFly's linkers provide too.
