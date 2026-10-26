@@ -13,3 +13,13 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/deps/zstd/lib/libzstd.mk \
 		${WRKSRC}/deps/zstd/lib/Makefile
 MK
+
+# FreeBSD's portability.h patch adds __FreeBSD__ to the systems known to use
+# IEEE 754 doubles without defining __STDC_IEC_559__; DragonFly is one too,
+# and without it ZL_HAS_IEEE_754 is 0 and tests/unittest/common/test_bits.cpp
+# hits its #error.
+text replace-once file files/patch-src_openzl_shared_portability.h from "defined(_MSC_VER) || defined(__FreeBSD__)" to "defined(_MSC_VER) || defined(__FreeBSD__) || defined(__DragonFly__)"
+
+# dragonfly/@<line>/patch-deps_xgboost_include_xgboost_collective_socket.h:
+# the bundled xgboost reads the socket family with SO_DOMAIN, which DragonFly
+# lacks; use getsockname() there.
