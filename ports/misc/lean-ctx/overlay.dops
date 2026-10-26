@@ -1,0 +1,7 @@
+port misc/lean-ctx
+type port
+reason "DragonFly: ort dylib name (dragonfly/@<line> cargo-crate patch)"
+
+# dragonfly/@<line>/patch-cargo-crates_ort-2.0.0-rc.12_src_lib.rs: on top of FreeBSD's
+# files/ patch, add DragonFly to the platforms that load libonnxruntime.so;
+# otherwise the ORT_DYLIB_PATH match is not exhaustive.
