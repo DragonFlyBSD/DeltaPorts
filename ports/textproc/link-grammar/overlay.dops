@@ -7,3 +7,7 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e '/AC_CHECK_LIB(stdc++, main)/s/# test x/test x/g'	\
 		${WRKSRC}/configure.ac
 MK1
+
+# dragonfly/@<line>/patch-link-grammar_parse_extract-links.c: DragonFly no
+# longer has <malloc.h>; it is included only for malloc_trim(), which
+# configure does not find on DragonFly (HAVE_MALLOC_TRIM unset).
