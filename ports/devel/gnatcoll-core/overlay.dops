@@ -1,0 +1,8 @@
+port devel/gnatcoll-core
+type port
+reason "DragonFly: struct dirent has no d_off or d_reclen (dragonfly/patch-core_src_os_unix_libc-wrappers.c)"
+
+# __gnatcoll_readdir() copies d_off (except on macOS) and d_reclen, which
+# DragonFly's struct dirent does not have (d_fileno, d_namlen, d_type,
+# d_name). Report offset 0 as on macOS and the record length from
+# _DIRENT_DIRSIZ().
