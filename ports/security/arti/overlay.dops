@@ -8,3 +8,7 @@ target @any
 # DragonFly, but DragonFly has no IP_ADD_SOURCE_MEMBERSHIP/ip_mreq_source
 # (neither in <netinet/in.h> nor in the libc crate). Narrow the gate to
 # FreeBSD.
+#
+# Also patch-cargo-crates_notify-8.2.0_Cargo.toml: notify keys its kqueue
+# and mio dependencies on target_os "dragonflybsd", which does not exist
+# (devel/ruff's patch).
