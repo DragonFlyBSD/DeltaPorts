@@ -10,3 +10,9 @@ reason "DragonFly: C++20 and hyprutils need GCC 14"
 target @2026Q3,@2026Q4,@main
 
 mk set USE_GCC_VERSION "14"
+
+# dragonfly/@<line>/: hyprwire 0.3.1 calls std::vector::append_range, which
+# libstdc++ only has from GCC 15; the patches use insert() instead. GCC 15
+# would make hyprwire need a newer libstdc++ than hyprutils and the
+# consumers. DragonFly's LOCAL_PEERCRED xucred has no cr_pid, so the peer
+# pid stays unknown (-1) here.
