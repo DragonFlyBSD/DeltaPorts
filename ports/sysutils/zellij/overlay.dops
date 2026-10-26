@@ -10,3 +10,6 @@ target @any
 # - aws-lc-sys 0.39.0: define OPENSSL_DRAGONFLY and use getentropy() like
 #   the other BSDs; otherwise urandom.c needs Linux's RNDGETENTCNT
 #   (misc/py-hf-xet's patches).
+# dragonfly/@2026Q4, @main:
+# - notify 8.2.0: its kqueue and mio dependencies are keyed on a
+#   "dragonflybsd" target_os that does not exist (devel/ruff's patch).
