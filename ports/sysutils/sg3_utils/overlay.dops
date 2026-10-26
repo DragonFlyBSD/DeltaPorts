@@ -19,7 +19,10 @@ target @2026Q1,@2026Q2
 mk add CONFIGURE_ARGS "--disable-scsistrings"
 
 # The locked 1.42 plist lists its man pages under man/man8, where
-# bsd.port.mk used to point --mandir; it now defaults to share/man.
+# bsd.port.mk used to point --mandir; it now defaults to share/man. Install
+# them there, and have compress-man look there too: it only walks MANDIRS
+# (share/man), so the plist's .8.gz files were missing.
 target @2026Q3,@2026Q4,@main
 
 mk set GNU_CONFIGURE_MANPREFIX "${PREFIX}"
+mk add MANDIRS "${PREFIX}/man"
