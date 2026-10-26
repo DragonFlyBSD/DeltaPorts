@@ -1,3 +1,9 @@
 port sysutils/gdu
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-pkg_*: gdu picks its stat, device and SQLite
+# code per OS and lists none for DragonFly (undefined
+# setPlatformSpecificAttrs, ...). DragonFly takes the Linux/OpenBSD
+# Stat_t code (Mtim), the FreeBSD/macOS mount(8) parser, and the no-modernc
+# SQLite stub (modernc.org/libc has no DragonFly port).
