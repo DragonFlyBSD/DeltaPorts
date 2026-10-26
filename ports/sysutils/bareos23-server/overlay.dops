@@ -12,3 +12,8 @@ target @2026Q3,@2026Q4,@main
 
 mk add CMAKE_ARGS "-Dacl=OFF -DHAVE_SYS_EXTATTR_H:BOOL=OFF"
 mk set NLS_LDFLAGS "-lintl"
+
+# dragonfly/@<line>/patch-core_src_plugins_stored_CMakeLists.txt: the
+# server build links the client's installed libbareosfastlz, and FreeBSD's
+# patch adds the bundled fastlz include dir for autoxflate-sd only under
+# HAVE_FREEBSD_OS; take that branch on DragonFly too.
