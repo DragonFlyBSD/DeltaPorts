@@ -1,0 +1,10 @@
+port filesystems/rar2fs
+type port
+reason "DragonFly: add the OpenSSL include path for libunrar's headers (OPENSSL_AES build)"
+
+# rar2fs compiles against libunrar's headers; its configure finds that
+# libunrar was built with -DOPENSSL_AES, so os.hpp includes <openssl/evp.h>,
+# which FreeBSD has in base. Point the compile at the ports OpenSSL.
+target @2026Q3,@2026Q4,@main
+mk add USES "ssl"
+mk add CPPFLAGS "-I${OPENSSLINC}"
