@@ -1,0 +1,8 @@
+port devel/codemark
+type port
+reason "DragonFly: wasmtime trap registers (dragonfly/@<line> cargo-crate patch)"
+
+# dragonfly/@<line>/patch-cargo-crates_wasmtime-29.0.1_src_runtime_vm_sys_unix_signals.rs:
+# wasmtime reads the trapping PC/FP from the signal context per OS and has no
+# DragonFly case (compile_error "unsupported platform"); DragonFly's x86_64
+# mcontext has FreeBSD's mc_rip/mc_rbp. Also catch SIGBUS as on FreeBSD.
