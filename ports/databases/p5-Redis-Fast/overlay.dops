@@ -1,0 +1,11 @@
+port databases/p5-Redis-Fast
+type port
+reason "DragonFly: build the bundled hiredis against the ports OpenSSL (FreeBSD relies on base OpenSSL)"
+
+# Build.PL always builds the bundled hiredis with USE_SSL=1, which finds
+# OpenSSL in the base system on FreeBSD. Depend on the ports OpenSSL and
+# pass OPENSSL_PREFIX (deps/hiredis/Makefile adds -I/-L from it); the XS
+# link gets -L/usr/local/lib from perl's lddlflags.
+target @2026Q3,@2026Q4,@main
+mk add USES "ssl"
+mk add CONFIGURE_ENV "OPENSSL_PREFIX=${OPENSSLBASE}"
