@@ -1,0 +1,7 @@
+port archivers/unpackerr
+type port
+reason "DragonFly: give the vendored rotatorr filer a DragonFly Stat (dragonfly/@<line> patch)"
+
+# dragonfly/@<line>/patch-vendor_golift.io_rotatorr_filer_stat__dragonfly.go:
+# the vendored golift.io/rotatorr filer reads the creation time per OS
+# (undefined Stat); add DragonFly, whose Stat_t has Ctim like Linux.
