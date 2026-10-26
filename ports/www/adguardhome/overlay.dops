@@ -1,3 +1,10 @@
 port www/adguardhome
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-*: AdGuardHome's internal packages (aghos,
+# aghnet, arpdb, dhcpd, ossvc) and the vendored dnsproxy pick their code
+# per OS and leave DragonFly out (undefined setRlimit, newARPDB,
+# isConnBroken...). DragonFly takes the FreeBSD/BSD files: added to their
+# build tags, with _dragonfly copies of the _freebsd ones. The whole program
+# type-checks for GOOS=dragonfly.
