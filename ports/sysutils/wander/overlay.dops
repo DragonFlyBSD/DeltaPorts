@@ -1,0 +1,8 @@
+port sysutils/wander
+type port
+reason "DragonFly: vendored containerd/console and moby/term lack DragonFly (dragonfly/@<line> patches)"
+
+# dragonfly/@<line>/patch-vendor_*: the vendored containerd/console
+# (v1.0.4-0.20230313162750-1ae8d489ac81) has no DragonFly termios/pty code
+# (undefined checkConsole, newMaster), and moby/term (v0.5.0) treats
+# DragonFly as non-BSD (unix.TCGETS). Add DragonFly to both, as for FreeBSD.
