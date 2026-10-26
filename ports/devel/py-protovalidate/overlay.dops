@@ -10,3 +10,7 @@ target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 mk add MAKE_ENV "CC=${CC} CXX=${CXX}"
+
+# dragonfly/@<line>/: libstdc++'s <ostream> pulls in <sys/types.h>, whose
+# major()/minor() macros mangle the major()/minor() accessors in the
+# generated syntax.pb.h and cel-cpp's metadata.h; undefine them there.
