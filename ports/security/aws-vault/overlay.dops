@@ -1,3 +1,7 @@
 port security/aws-vault
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-server_*: aws-vault's EC2 metadata proxy aliases
+# 169.254.169.254 on lo0 with ifconfig on the BSDs it lists; DragonFly's
+# ifconfig takes the same alias/-alias syntax, so add it to those tags.
