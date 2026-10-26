@@ -15,3 +15,7 @@ mk target set pre-configure <<'MK'
 		${WRKSRC}/configure.ac
 .endif
 MK
+
+# dragonfly/@<line>/patch-configure.ac, patch-src_backend__bsd.c: DragonFly's
+# USB HID headers (bus/u4b); re-cut for 1.6.4 (2026Q4 on), which added the
+# dev/hid/hid.h check.
