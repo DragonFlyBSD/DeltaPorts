@@ -12,3 +12,7 @@ mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's/^#if defined(_AIX) || defined(__OpenBSD__) ||/#if defined(_AIX) || defined(__OpenBSD__) || defined(__DragonFly__) ||/' \
 		${WRKSRC}/vendor/sheredom/subprocess.h
 MK
+
+# dragonfly/@2026Q4: patch-common_common.cpp. b10975's cache and config
+# directory lookups #error on systems they do not list; DragonFly takes the
+# XDG branch with FreeBSD. main's b11669 rewrote them without the #error.
