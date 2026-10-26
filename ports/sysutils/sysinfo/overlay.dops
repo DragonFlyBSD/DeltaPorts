@@ -1,0 +1,10 @@
+port sysutils/sysinfo
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1746750995" to "TIMESTAMP = 1791702801"
+text replace-once file distinfo from "SHA256 (sysinfo-1.0.4.tar.gz) = 08a167d1476da3c740022282dbcf8244ce098b9d7528c5ef82364566dfd0d87b" to "SHA256 (sysinfo-1.0.4.tar.gz) = 4e6f7cd237822521813cfb0dde0d4213cba0d4c9ed266f8edce7a1def85c9d32"
+text replace-once file distinfo from "SIZE (sysinfo-1.0.4.tar.gz) = 15618" to "SIZE (sysinfo-1.0.4.tar.gz) = 15546"
