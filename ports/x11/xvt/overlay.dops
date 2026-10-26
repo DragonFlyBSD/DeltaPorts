@@ -1,0 +1,10 @@
+port x11/xvt
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1708633938" to "TIMESTAMP = 1791703024"
+text replace-once file distinfo from "SHA256 (xvt-3.0.6.tar.gz) = c9eafb999841bc8843bd6fde2a100328f703106a4e06d4f6ece708760b4919ed" to "SHA256 (xvt-3.0.6.tar.gz) = d24e2017b69ccb5df472e9cd11d970f4eea7c9353984976e67c28a43df6353b0"
+text replace-once file distinfo from "SIZE (xvt-3.0.6.tar.gz) = 609999" to "SIZE (xvt-3.0.6.tar.gz) = 610066"
