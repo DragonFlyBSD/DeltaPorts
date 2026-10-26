@@ -9,6 +9,11 @@ reason "DragonFly: map Java's os.name dragonflybsd to GOOS dragonfly in the bund
 # single_version_override in MODULE.bazel, as FreeBSD does for rules_python.
 # Bazel's OS enum knows no "DragonFlyBSD" either: the dragonfly/ OS.java patch
 # maps it to FREEBSD, as CommandBuilder refuses to run commands on UNKNOWN.
+# The external C++ repos key their platform code on __FreeBSD__: grpc's
+# port_platform.h stops at "Could not auto-detect platform", and abseil's
+# vdso_support.cc defines Elf64_auxv_t for FreeBSD only. The same
+# MODULE.bazel overrides add toolchain_local/grpc_dragonfly.patch (DragonFly
+# takes the FreeBSD block) and abseil_dragonfly.patch.
 target @2026Q3,@2026Q4,@main
 
-text replace-once file files/toolchain_local-BUILD from "exports_files([\"rules_python_freebsd.patch\"])" to "exports_files([\"rules_python_freebsd.patch\", \"rules_go_dragonfly.patch\"])"
+text replace-once file files/toolchain_local-BUILD from "exports_files([\"rules_python_freebsd.patch\"])" to "exports_files([\"rules_python_freebsd.patch\", \"rules_go_dragonfly.patch\", \"grpc_dragonfly.patch\", \"abseil_dragonfly.patch\"])"
