@@ -8,3 +8,10 @@ target @any
 target @2026Q3,@2026Q4,@main
 
 mk add CFLAGS "-Wno-error=deprecated-declarations"
+
+# The source Makefile installs man pages under ${PREFIX}/man, which the
+# ports mtree no longer creates, so stage failed on .../man/man3. Install
+# them under share/man like everything else.
+mk add MAKE_ARGS "MANDIR=${PREFIX}/share/man/man"
+text replace-once file Makefile from "man/man3/libtacplus.3.gz" to "share/man/man3/libtacplus.3.gz"
+text replace-once file Makefile from "man/man5/tacplus.conf.5.gz" to "share/man/man5/tacplus.conf.5.gz"
