@@ -1,0 +1,10 @@
+port deskutils/fyi
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1725520537" to "TIMESTAMP = 1791703388"
+text replace-once file distinfo from "SHA256 (fyi-1.0.4.tar.gz) = 6d196b4725df02dba39ca736c0f5b485f6a204a98f68de6bbe8155bdc1e56d24" to "SHA256 (fyi-1.0.4.tar.gz) = 584fc3966a21949dbcc655d8693497384dade382d332be1cf92eae958336a145"
+text replace-once file distinfo from "SIZE (fyi-1.0.4.tar.gz) = 13938" to "SIZE (fyi-1.0.4.tar.gz) = 13894"
