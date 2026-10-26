@@ -1,0 +1,8 @@
+port sysutils/bsdsensors
+type port
+reason "DragonFly: read SuperIO ports with inb/outb after opening /dev/io (no IODEV_PIO ioctl)"
+
+# dragonfly/@<line>/patch-lib_port__io.cc: FreeBSD's /dev/io takes IODEV_PIO
+# ioctls (dev/io/iodev.h); DragonFly's /dev/io instead grants the opening
+# process I/O privilege, after which inb()/outb() from machine/cpufunc.h
+# work directly. Port I/O is bsdsensors' only OS interface.
