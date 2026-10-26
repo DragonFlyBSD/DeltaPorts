@@ -7,3 +7,7 @@ mk add CMAKE_ARGS "-DLAPACK_LIBRARIES:STRING=\"-L${LOCALBASE}/lib -llapack -lbla
 mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibmpich*:Nlibtcmalloc*}"
 mk add CMAKE_OFF "ENABLE_MPI ENABLE_MKL ENABLE_ACML ENABLE_GPERFTOOLS ENABLE_TCMALLOC_MINIMAL"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NTBB}"
+
+# dragonfly/@2026Q1-Q3: the hardware.h, stubmpi.h and thread.cc patches for
+# the 2018 snapshot. The 2026.09.05 snapshot (2026Q4 on) has no hardware.h,
+# fixed the MPI_Errhandler typedef and no longer includes <sys/cpuset.h>.
