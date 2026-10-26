@@ -37,8 +37,10 @@ mk add MASTER_SITES "https://avalon.dragonflybsd.org/misc/distfiles/rust-bootstr
 
 # ld.gold cannot link std into the rustc driver.
 mk add MAKE_ENV "LDVER=ld.bfd"
-# The stage0 rustc/cargo need their own shared libs plus base libgcc.
-mk add MAKE_ENV "LD_LIBRARY_PATH=${WRKDIR}/bootstrap/lib:/usr/lib/gcc80"
+# The stage0 rustc/cargo need their own shared libs plus the base compiler's
+# libstdc++/libgcc (gcc80 on 6.4, gcc120 on 6.5: it must match what the rest
+# of the build loads, or e.g. cmake fails on a missing GLIBCXX version).
+mk add MAKE_ENV "LD_LIBRARY_PATH=${WRKDIR}/bootstrap/lib:/usr/lib/${DFLY_BASE_CCVER}"
 
 # =======================================================================
 # @2026Q3: rust 1.96.1, bootstrap 1.95.0.
@@ -129,8 +131,10 @@ mk add MASTER_SITES "https://avalon.dragonflybsd.org/misc/distfiles/rust-bootstr
 
 # ld.gold cannot link std into the rustc driver.
 mk add MAKE_ENV "LDVER=ld.bfd"
-# The stage0 rustc/cargo need their own shared libs plus base libgcc.
-mk add MAKE_ENV "LD_LIBRARY_PATH=${WRKDIR}/bootstrap/lib:/usr/lib/gcc80"
+# The stage0 rustc/cargo need their own shared libs plus the base compiler's
+# libstdc++/libgcc (gcc80 on 6.4, gcc120 on 6.5: it must match what the rest
+# of the build loads, or e.g. cmake fails on a missing GLIBCXX version).
+mk add MAKE_ENV "LD_LIBRARY_PATH=${WRKDIR}/bootstrap/lib:/usr/lib/${DFLY_BASE_CCVER}"
 
 # rustc 1.98.1 needs LLVM 22. @2026Q3 keeps the 20/21 its own port pins.
 mk set LLVM_VERSION "22"
