@@ -1,0 +1,6 @@
+port audio/wavegain
+type port
+reason "DragonFly: skip <malloc.h>, which DragonFly no longer has (dragonfly/@<line> patches)"
+
+# dragonfly/@<line>/patch-{audio,wavegain}.c (on top of FreeBSD's files/
+# patches): DragonFly has no <malloc.h>; stdlib.h is already included.
