@@ -2,3 +2,9 @@ port security/openssl-static
 type dport
 reason "DragonFly-only port; source in newport/"
 target @any
+
+# OpenSSL 1.1.1 enables the devcrypto engine on its BSD targets, which
+# includes <crypto/cryptodev.h>; DragonFly has no /dev/crypto. The engines
+# are removed in post-install, so the plist does not change.
+target @2026Q3,@2026Q4,@main
+mk add CONFIGURE_ARGS "no-devcryptoeng"
