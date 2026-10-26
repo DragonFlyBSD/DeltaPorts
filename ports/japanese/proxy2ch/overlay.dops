@@ -1,0 +1,10 @@
+port japanese/proxy2ch
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1782395205" to "TIMESTAMP = 1791703983"
+text replace-once file distinfo from "SHA256 (proxy2ch-20260625.tar.gz) = 0d76771441a95a83e0cf72b024218d8fa0734f7ca9df4c79436166a4f1ef0669" to "SHA256 (proxy2ch-20260625.tar.gz) = b5e25de5ec135979a4eefec1efb580ba2a67677c1df2309f903c030abea1d707"
+text replace-once file distinfo from "SIZE (proxy2ch-20260625.tar.gz) = 112523" to "SIZE (proxy2ch-20260625.tar.gz) = 112448"
