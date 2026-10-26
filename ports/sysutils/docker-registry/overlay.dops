@@ -1,3 +1,7 @@
 port sysutils/docker-registry
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@2026Q1, @2026Q2: the bugsnag/osext patch. 2.8.3 builds without
+# the bundled vendor/ (EXTRACT_AFTER_ARGS excludes it), and panicwrap only
+# uses kardianos/osext before go1.8.
