@@ -1,3 +1,22 @@
 port sysutils/amazon-ssm-agent
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# DragonFly: amazon-ssm-agent gates ~117 Unix files on
+# "freebsd || linux || netbsd || openbsd" (+darwin); dfly-patch adds
+# dragonfly next to freebsd on every //go:build line under agent, common,
+# core and internal (no per-file patches, version-independent).
+# dragonfly/@<line>/patch-*: report DragonFly as the Linux platform type,
+# like FreeBSD (agent/ssm, ec2roleprovider) and read its version via uname
+# (agent/platform); fix the statfs arithmetic (Bfree/Blocks are int64 on
+# DragonFly); and the vendored mitchellh/go-ps v1.0.0 gets process_dragonfly.go
+# (same patch as textproc/dyff).
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${FIND} ${WRKSRC}/agent ${WRKSRC}/common ${WRKSRC}/core \
+		${WRKSRC}/internal -name '*.go' \
+		-exec ${GREP} -l '^//go:build.*freebsd' {} + | \
+		${XARGS} ${REINPLACE_CMD} -e '/^\/\/go:build/{' \
+		-e '/dragonfly/!s/freebsd/(freebsd || dragonfly)/' -e '}'
+MK
