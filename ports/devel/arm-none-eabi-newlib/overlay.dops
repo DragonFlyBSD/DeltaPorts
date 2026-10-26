@@ -1,3 +1,7 @@
 port devel/arm-none-eabi-newlib
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@2026Q1, @2026Q2: the newlib/libc/stdlib str*/wcs* patches that
+# define LONG_MIN and friends. 4.4 (2026Q3 on) includes <limits.h> in those
+# files and the *_r ones are empty stubs, so the patches no longer apply.
