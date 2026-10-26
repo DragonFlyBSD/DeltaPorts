@@ -1,0 +1,11 @@
+port lang/dotnet-host
+type port
+reason "DragonFly: no .NET runtime port"
+
+# corehost's build.sh stops at "Unsupported OS dragonfly detected!"; .NET
+# has no DragonFly platform layer, and lang/dotnet would also need a
+# DragonFly-native bootstrap SDK (the FreeBSD one does not run here).
+# It has never built on DragonFly.
+target @2026Q3,@2026Q4,@main
+
+mk eval IGNORE "the .NET runtime has no DragonFly port and there is no DragonFly bootstrap SDK"
