@@ -8,3 +8,9 @@ reason "DragonFly: cvc5 requires GCC 10 or later"
 target @2026Q3,@2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# SymFPU's headers use NULL without including <cstddef>; libc++ provides it
+# indirectly, but DragonFly's libstdc++ does not, so cvc5's SymFPU probe fails
+# ("incompatible version") and so would its own users of the headers. The
+# proper fix belongs in math/symfpu; until then pre-include <cstddef>.
+mk add CXXFLAGS_x86_64 "-include cstddef"
