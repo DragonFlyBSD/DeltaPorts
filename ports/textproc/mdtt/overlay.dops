@@ -1,0 +1,9 @@
+port textproc/mdtt
+type port
+reason "DragonFly: vendored containerd/console has no DragonFly support (dragonfly/@<line> patches)"
+
+# dragonfly/@<line>/patch-vendor_github.com_containerd_console_*: the
+# vendored containerd/console (v1.0.4-0.20230313162750-1ae8d489ac81) has
+# no DragonFly termios/pty code (undefined checkConsole, newMaster). Add
+# DragonFly to its unix build tags with TIOCGETA/TIOCSETA and
+# posix_openpt/unlockpt/ptsname from libc (cgo), as for FreeBSD.
