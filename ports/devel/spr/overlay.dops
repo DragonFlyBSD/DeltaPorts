@@ -1,0 +1,12 @@
+port devel/spr
+type port
+reason "DragonFly: build against ports OpenSSL (no OpenSSL in base)"
+
+# The port points openssl-sys at base OpenSSL (OPENSSLINC=/usr/include,
+# OPENSSLLIB=/usr/lib). DragonFly base has no OpenSSL headers or libssl, so
+# take USES=ssl's paths (security/openssl) instead.
+target @2026Q3,@2026Q4,@main
+
+mk add USES "ssl"
+mk unset OPENSSLINC
+mk unset OPENSSLLIB
