@@ -1,3 +1,8 @@
 port security/assh
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-*: assh builds its desktop-notification hook
+# (gnotifier, D-Bus) everywhere but the other BSDs and Windows; give
+# DragonFly the no-op driver as FreeBSD has. The vendored bugsnag/osext
+# gets DragonFly's KERN_PROC_PATHNAME (9) in its sysctl Executable().
