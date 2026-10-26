@@ -4,3 +4,7 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add CONFIGURE_ARGS "--with-ssl-includes=${OPENSSLINC} --with-ssl-libs=${OPENSSLLIB}"
+
+# dragonfly/@2026Q1-Q3: patch-configure adds a DragonFly case (FreeBSD
+# settings, no SCTP). 1.0.8 (2026Q4 on) regenerates configure (USES=autoreconf)
+# and ships none, so the same case goes into configure.ac there.
