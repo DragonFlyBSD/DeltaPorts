@@ -1,0 +1,15 @@
+port devel/libclc
+type port
+reason "DragonFly: build the llvm17/llvm18 flavors' host tool with clang and libc++, like the LLVM they link"
+
+# devel/llvm17 and llvm18 set USE_CLANG_FALLBACK=default, so their libraries
+# are built with clang${LLVM_DEFAULT} against that generation's libc++, but
+# their own clang++ (which USES=llvm exports as CXX) defaults to libstdc++.
+# prepare_builtins calls LLVM's C++ API and failed to link (undefined
+# llvm:: symbols with std::__cxx11 types). Build it like the libraries, as
+# devel/spirv-llvm-translator does; llvm19-22's clang already uses libc++.
+# The Makefile includes bsd.port.pre.mk, so an .if block would land after
+# USES is read: add the flavor-dependent word to USES itself.
+target @2026Q3,@2026Q4,@main
+
+mk add USES "${FLAVOR:Mllvm1[78]:C/.+/dfly-libcxx/}"
