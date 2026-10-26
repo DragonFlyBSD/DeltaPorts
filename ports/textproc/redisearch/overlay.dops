@@ -1,3 +1,17 @@
 port textproc/redisearch
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@2026Q1, @2026Q2: the 2.x concurrent_ctx.h and search_ctx.h
+# CLOCK_MONOTONIC_RAW patches. 8.x (2026Q3 on) no longer maps it in
+# concurrent_ctx.h; search_ctx.h still does, for FreeBSD only
+# (dragonfly/@<line>/patch-src_search__ctx.h, re-cut for 8.10 on 2026Q4).
+#
+# FreeBSD's files/ patches pick CLOCK_MONOTONIC for freebsd in the Rust code,
+# leaving `clock` undefined on dragonfly; take the FreeBSD branch there too.
+target @2026Q3,@2026Q4,@main
+
+mk target set dfly-patch <<'MK'
+	${GREP} -rlF 'cfg(target_os = "freebsd")] let clock' ${WRKSRC}/src/redisearch_rs | \
+		${XARGS} ${REINPLACE_CMD} -e 's|#\[cfg(target_os = "freebsd")] let clock|#[cfg(any(target_os = "freebsd", target_os = "dragonfly"))] let clock|'
+MK
