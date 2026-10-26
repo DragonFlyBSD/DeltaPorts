@@ -6,3 +6,8 @@ target @any
 # dragonfly/@2026Q3, @2026Q4, @main: libs/file_permissions/src/unix.rs
 # imports the per-OS MetadataExt (st_uid/st_gid/st_mode) for a list of
 # systems without DragonFly. std::os::dragonfly::fs has the same trait.
+
+# dragonfly/@<line>/patch-cargo-crates_notify-8.2.0_Cargo.toml (as in
+# devel/ruff): notify 8.2.0 spells DragonFly "dragonflybsd" in the target
+# cfg for its kqueue and mio dependencies, so its kqueue backend was built
+# without them.
