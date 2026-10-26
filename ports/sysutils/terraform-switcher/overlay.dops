@@ -1,0 +1,8 @@
+port sysutils/terraform-switcher
+type port
+reason "DragonFly: give the vendored gookit/goutil sysutil a DragonFly file (dragonfly/@<line> patch)"
+
+# dragonfly/@<line>/patch-vendor_github.com_gookit_goutil_sysutil_sysutil__dragonfly.go:
+# the vendored gookit/goutil v0.7.1 defines IsWindows, OpenURL & co. per
+# OS (linux, darwin, windows; FreeBSD's files/ adds freebsd). Add a
+# DragonFly one that opens URLs like Linux (xdg-open).
