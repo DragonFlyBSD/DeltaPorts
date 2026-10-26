@@ -1,0 +1,8 @@
+port www/restbed
+type port
+reason "DragonFly: needs C++20 <format>, which neither base gcc 8 nor GCC_DEFAULT (12) provides; build with gcc 13"
+
+# <format> is in libstdc++ from GCC 13; base gcc 8 and GCC_DEFAULT (12) on
+# DragonFly lack it (same fix as devel/libunicode-contour).
+target @2026Q3,@2026Q4,@main
+mk set USE_GCC_VERSION "13"
