@@ -4,3 +4,6 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add CFLAGS "-D__FreeBSD_version=1300000"
+
+# dragonfly/@<line>/patch-syslibs.h: DragonFly no longer has <malloc.h>;
+# skip it as for the other BSDs (stdlib.h is included first).
