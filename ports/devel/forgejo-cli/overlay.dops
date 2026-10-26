@@ -1,0 +1,10 @@
+port devel/forgejo-cli
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1776867859" to "TIMESTAMP = 1791703277"
+text replace-once file distinfo from "SHA256 (forgejo-cli-v0.5.0.tar.gz) = 028ebcbd744301fbfd144cd9bc5ff0a27e02d99b02c8abafb20742299715c556" to "SHA256 (forgejo-cli-v0.5.0.tar.gz) = ec24a63964b01dadf8a29de4656110a976344aa44b0e9b5fee135b9115da2c89"
+text replace-once file distinfo from "SIZE (forgejo-cli-v0.5.0.tar.gz) = 105814" to "SIZE (forgejo-cli-v0.5.0.tar.gz) = 105573"
