@@ -10,3 +10,8 @@ mk add MAKE_ENV "LDVER=ld.bfd"
 target @2026Q3,@2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# FreeBSD adds clang's -fexperimental-library for std::jthread; gcc rejects
+# the option, so every C++ configure test failed ("supports C++20... no").
+# libstdc++ has std::jthread since gcc 10.
+mk remove CXXFLAGS "-fexperimental-library"
