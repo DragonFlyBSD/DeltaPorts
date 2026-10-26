@@ -1,0 +1,7 @@
+port x11/wayst
+type port
+reason "DragonFly: take the Makefile's FreeBSD branch (LOCALBASE freetype2/fontconfig paths)"
+
+# dragonfly/@<line>/patch-Makefile-dragonfly (after FreeBSD's patch-Makefile):
+# the Makefile uses /usr/local include and lib paths only when uname -s is
+# FreeBSD, and /usr/include/freetype2 otherwise; DragonFly needs the former.
