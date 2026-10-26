@@ -1,0 +1,9 @@
+port sysutils/uhubctl
+type port
+reason "DragonFly: build against the base libusb (no BOS/container-id API)"
+
+# dragonfly/@<line>/patch-uhubctl.c: include <libusb.h> as on the other BSDs
+# (DragonFly has libusb-1.0 in base, with libusb-1.0.pc), and skip the BOS
+# container-id lookup: DragonFly's libusb lacks libusb_get_bos_descriptor
+# and the container-id calls, so container_id stays empty as for hubs that
+# report none. Syntax-checked against acemagic's /usr/include/libusb.h.
