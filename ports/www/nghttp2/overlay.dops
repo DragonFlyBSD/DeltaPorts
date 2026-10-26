@@ -5,8 +5,9 @@ target @any
 
 mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--with-jemalloc}"
 
-# 1.70 is C++23 (compiler:c++23-lang, USE_CXXSTD=c++23), which base gcc 8.3
-# (what compiler:c++23-lang resolves to) does not accept.
+# 1.70 is C++23 (compiler:c++23-lang, USE_CXXSTD=c++23) and includes
+# <print>, which base gcc 12's libstdc++ lacks (GCC 14 has it). Its C++
+# code links only C libraries, so no ABI ties to other ports.
 target @2026Q4,@main
 
-mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk set USE_GCC_VERSION "14"
