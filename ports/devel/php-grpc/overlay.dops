@@ -1,0 +1,17 @@
+port devel/php-grpc
+type port
+reason "DragonFly: take grpc's and abseil's FreeBSD platform paths (was devel/pecl-grpc)"
+
+# The bundled grpc's port_platform.h does not know DragonFly ("Could not
+# auto-detect platform", then no GPR_ARCH_*, atomics or CPU); let DragonFly
+# take the FreeBSD block, GPR_FREEBSD included, so the iomgr, event-engine,
+# directory and system-roots code follow it too. The bundled abseil gates
+# mmap, pthread_getschedparam, low-level write, sysctl and GetTID on
+# __FreeBSD__ (dfly-patch, as devel/pecl-grpc did), and vdso_support.cc
+# needs FreeBSD's Elf64_Auxinfo (dragonfly/patch-*).
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|' \
+		${WRKSRC}/third_party/abseil-cpp/absl/base/config.h \
+		${WRKSRC}/third_party/abseil-cpp/absl/base/internal/sysinfo.cc \
+		${WRKSRC}/third_party/abseil-cpp/absl/base/internal/raw_logging.cc
+MK1
