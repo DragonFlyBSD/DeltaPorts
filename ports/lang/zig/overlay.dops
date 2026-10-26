@@ -1,6 +1,6 @@
 port lang/zig
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly: drop -lmd from STATIC_LDFLAGS, add -llzma; build with clang21 and libc++ like the devel/llvm21 it links, and have build.zig link that libc++ (dragonfly/@<line> patch)"
 target @any
 
 mk eval STATIC_LDFLAGS "${STATIC_LDFLAGS:N-lmd} -llzma"
@@ -11,3 +11,9 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/cmake/Findllvm.cmake
 
 MK1
+
+# devel/llvm21 is built against libc++ on DragonFly, and zig's C++ glue
+# calls LLVM's C++ API, so built with base gcc and libstdc++ zig2 fails to
+# link: undefined llvm:: symbols with std::__cxx11 types.
+target @2026Q3,@2026Q4,@main
+mk add USES "dfly-libcxx:21"
