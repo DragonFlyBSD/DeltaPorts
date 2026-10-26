@@ -1,7 +1,11 @@
 port math/singular
 type port
 reason "add libexec entries for p_Procs shared libs to pkg-plist, comment on omalloc, materialize dragonfly patches"
-target @any
+
+# diffs/pkg-plist.diff lists libexec/singular/MOD/p_Procs_*.so.0* that
+# older releases installed; 4.4.1 (2026Q3 on) builds them as unversioned
+# modules only, so the extra entries failed the package phase.
+target @2026Q1,@2026Q2
 
 patch apply diffs/pkg-plist.diff
 
