@@ -1,0 +1,49 @@
+port devel/llvm23
+type port
+reason "build against libc++; disable LLDB/FLANG/COMPILER_RT/OPENMP; add LLD_LINK; dfly-patch/install"
+# Modelled on devel/llvm22. Without an overlay the default flavor built
+# with base gcc and libstdc++ and failed in lldb's Host code
+# (HostInfoPosix.cpp: GetProgramFileSpec is not a member of HostInfo):
+# lldb has no DragonFly host, and llvm19-22 drop LLDB as well.
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLLDB:NFLANG:NCOMPILER_RT:NOPENMP}"
+mk add OPTIONS_DEFINE LLD_LINK
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's,set(ENABLE_LIBOMPTARGET ON),set(ENABLE_LIBOMPTARGET OFF),g' \
+		${WRKSRC}/openmp/CMakeLists.txt
+MK
+
+mk target set dfly-install <<'MK'
+	-${RM} -fv ${STAGEDIR}${PREFIX}/bin/llvm-omp-device-info${LLVM_SUFFIX}
+MK
+
+# gcc will not convert the std::make_unique overload set to std::function;
+# clang picks an overload, gcc rejects the whole set. Wrap each entry in a
+# lambda with an explicit return type.
+# dragonfly/patch-clang-tools-extra_clangd_index_dex_dexp_Dexp.cpp
+
+# llvm23 has no GOLD option any more, so llvm22's binutils@native edit of
+# GOLD_BUILD_DEPENDS does not apply here.
+mk target rename post-install-LLD-on -> post-install-LLD_LINK-on
+# pkg-plist edits are pure line deletions: express them directly so
+# there is no context to drift, and a line that vanishes upstream
+# fails loudly instead of rejecting a hunk.
+text line-remove file pkg-plist exact "%%LLD%%llvm%%LLVM_SUFFIX%%/bin/ld"
+
+# libclang's API passes std:: types across the boundary, so every port that
+# links it has to agree on the standard library. gcc15 is the floor libc++ 23
+# documents, and it is used here rather than clang because clang comes from
+# this port.
+#
+# devel/libcxx23 installs into ${LLVM_PREFIX} itself, the layout clang's
+# driver derives from its own location, so clang finds libc++ with no
+# clang++.cfg (see devel/llvm22 for why a cfg is not used).
+mk block set condition "${OPSYS} == DragonFly" <<'MK'
+USE_GCC_VERSION=	15
+LIB_DEPENDS+=		libc++.so.1:devel/libcxx23
+CMAKE_ARGS+=		-DCLANG_DEFAULT_CXX_STDLIB=libc++
+CXXFLAGS+=		-nostdinc++ -nostdlib++ -isystem ${LLVM_PREFIX}/include/c++/v1
+LDFLAGS+=		-L${LLVM_PREFIX}/lib -Wl,-rpath=${LLVM_PREFIX}/lib -lc++ -lc++abi -lm
+MK
