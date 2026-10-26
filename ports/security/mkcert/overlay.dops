@@ -1,0 +1,8 @@
+port security/mkcert
+type port
+reason "DragonFly: add a trust-store file for mkcert (dragonfly/@<line> patch)"
+
+# dragonfly/@<line>/patch-truststore__dragonfly.go: mkcert has per-OS
+# trust-store files (FreeBSD's port adds truststore_freebsd.go, which
+# runs certctl). DragonFly has no certctl and keeps its bundle in
+# ca_root_nss, so its file handles only the NSS (Firefox/Chrome) stores.
