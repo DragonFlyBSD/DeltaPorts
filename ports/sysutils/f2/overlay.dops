@@ -1,3 +1,8 @@
 port sysutils/f2
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-vendor_github.com_barasher_go-exiftool_platform__dragonfly.go:
+# the vendored go-exiftool v1.10.0 keeps its exiftool tokens and binary
+# name in per-OS files (undefined readyToken, exiftoolBinary...); add a
+# DragonFly copy of the FreeBSD one.
