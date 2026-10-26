@@ -8,3 +8,10 @@ mk add LDFLAGS "-L${OPENSSLLIB}"
 mk block set condition "${DFLYVERSION} > 500700" <<'MK'
 LIB_DEPENDS+=	libmd.so:security/libmd
 MK
+
+# The @any "mk add CFLAGS" above lands in the Makefile's ".else" (non-OPENSSL)
+# branch, its only CFLAGS line (poly-85cy), so the default OPENSSL build
+# never sees -I and misses libmd's <md4.h> in ${LOCALBASE}/include. Add it
+# unconditionally.
+target @2026Q3,@2026Q4,@main
+text line-insert-after file Makefile anchor "OPENSSL_USES=\tssl" line "CFLAGS+=\t-I${LOCALBASE}/include"
