@@ -4,3 +4,10 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add MAKE_ENV "OSTYPE=DragonFly"
+
+# 15.x builds a bundled bsddialog (misc/src/bsddialog) whose GNUmakefile
+# hardcodes -I/usr/include/ncursesw and links -lncursesw -ltinfo; FreeBSD
+# has those in base. On DragonFly they come from the ncurses port, whose
+# CFLAGS/LDFLAGS (-I${NCURSESINC}, -L${LOCALBASE}/lib) the GNUmakefiles take.
+target @2026Q3,@2026Q4,@main
+mk add USES "ncurses"
