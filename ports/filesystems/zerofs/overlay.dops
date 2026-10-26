@@ -1,0 +1,7 @@
+port filesystems/zerofs
+type port
+reason "DragonFly: add a region crate backend (dragonfly/@<line> cargo-crate patches)"
+
+# dragonfly/@<line>/patch-cargo-crates_region-3.0.2_src_os_*: region has no
+# DragonFly backend, so region::query() has no os::QueryIter; add one that
+# reads /proc/curproc/map (DragonFly has no kinfo_getvmmap(3)).
