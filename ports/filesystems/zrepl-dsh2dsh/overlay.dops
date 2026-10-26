@@ -1,0 +1,8 @@
+port filesystems/zrepl-dsh2dsh
+type port
+reason "DragonFly: add a DragonFly clockNanosleep to zrepl's nanosleep package (dragonfly/@<line> patch)"
+
+# dragonfly/@<line>/patch-internal_daemon_nanosleep_dragonfly.go: zrepl's
+# nanosleep package has clockNanosleep for Linux and FreeBSD only. The new
+# file calls clock_nanosleep(2) (syscall 241, not in x/sys/unix for DragonFly)
+# and takes the error from the return value, where DragonFly's kernel puts it.
