@@ -1,0 +1,11 @@
+port databases/vchord
+type port
+reason "DragonFly: assemble with ports binutils (AVX512-FP16)"
+
+# The simd crate's C shim uses AVX512-FP16 (vfmadd231ph); base gcc emits it,
+# but base as (binutils 2.34) does not know the instructions. Make gcc use
+# devel/binutils' as.
+target @2026Q3,@2026Q4,@main
+
+mk set USE_BINUTILS "yes"
+mk add CFLAGS_x86_64 "-B${LOCALBASE}/bin"
