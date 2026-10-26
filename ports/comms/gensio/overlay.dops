@@ -4,3 +4,7 @@ reason "DragonFly: configure only marks pselect() as non-atomic for *bsd* hosts,
 
 target @2026Q3,@2026Q4,@main
 mk add CONFIGURE_ARGS "--with-broken-pselect"
+
+# dragonfly/@<line>/patch-lib_gensio__pty.c: gensio_pty.c includes <errno.h>
+# only when ptsname_r() exists, which DragonFly lacks, but uses errno in
+# pty_control() regardless.
