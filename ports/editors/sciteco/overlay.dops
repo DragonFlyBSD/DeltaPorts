@@ -1,6 +1,16 @@
 port editors/sciteco
 type port
-reason "DragonFly: <stdlib.h> declares malloc_usable_size(const void *), which clashes with sciteco's dlmalloc replacement; leave MALLOC_REPLACEMENT off by default"
+reason "DragonFly: keep <stdlib.h> from declaring malloc_usable_size(const void *) over sciteco's dlmalloc; BSD mktemp in xvfb-run.sh"
 
+# DragonFly's <stdlib.h> includes <malloc_np.h>, whose
+# malloc_usable_size(const void *) clashes with the one sciteco's dlmalloc
+# replacement declares and defines. Turning the replacement off is no way
+# out: configure enables it by default, and memory.c's sysctl fallback reads
+# FreeBSD's kinfo_proc.ki_rssize. Pre-define the header guard instead.
+#
+# The gtk flavor builds under files/xvfb-run.sh, which calls mktemp -p;
+# DragonFly's mktemp has no -p, so give it a template path.
 target @2026Q3,@2026Q4,@main
-mk set OPTIONS_DEFAULT "LEXILLA"
+
+mk add CFLAGS_x86_64 "-D_MALLOC_NP_H_"
+text replace-once file files/xvfb-run.sh from "AUTHFILE=$(mktemp -p \"$XVFB_RUN_TMPDIR\" Xauthority)" to "AUTHFILE=$(mktemp \"$XVFB_RUN_TMPDIR/Xauthority.XXXXXX\")"
