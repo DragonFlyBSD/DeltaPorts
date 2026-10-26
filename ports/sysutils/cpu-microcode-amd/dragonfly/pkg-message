@@ -1,0 +1,18 @@
+[
+{ type: install
+  message: <<EOM
+To enable microcode updates at boot time, add these lines to
+/boot/loader.conf:
+
+cpu_microcode_load="YES"
+cpu_microcode_name="/boot/firmware/amd-ucode.bin"
+
+Nothing is applied until the system is rebooted with those lines in place.
+
+Late loading, via sysutils/cpu-microcode-rc and cpucontrol(8), applies the
+same images after the root filesystem is mounted.  It is the fallback, not
+the equivalent: by then the kernel has already probed CPU features, and any
+feature a microcode update adds or removes is missed.
+EOM
+}
+]
