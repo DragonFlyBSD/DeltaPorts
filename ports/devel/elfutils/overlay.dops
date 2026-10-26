@@ -61,3 +61,15 @@ mk target set dfly-install <<'MK'
 MK
 
 patch apply diffs/pkg-plist.diff
+
+# dragonfly/@2026Q3, @2026Q4, @main: gelf.h typedefs GElf_Lib from
+# Elf64_Lib, which only elfutils' own elf.h defines; consumers include
+# DragonFly's <elf.h>, which has no Elf64_Lib (emulators/qemu with libdw,
+# devel/libabigail). Add a fallback in gelf.h guarded by a
+# LIBELF_ELF_LIB_DEFINED marker in elfutils' elf.h, as FreeBSD's files/
+# patches do for Elf64_Section and Elf64_auxv_t (patch-libelf_gelf.h, and
+# patch-libelf_elf.h, which also keeps NT_BSD_ABI_TAG). Bump PORTREVISION
+# so the package carrying the new header is rebuilt.
+target @2026Q3,@2026Q4,@main
+
+mk bump PORTREVISION
