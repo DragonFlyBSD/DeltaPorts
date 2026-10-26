@@ -3,3 +3,9 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1766851126" to "TIMESTAMP = 1791704295"
+text replace-once file distinfo from "SHA256 (arcan-0.7.1.tar.gz) = b015dba937a5dc3ef525d09d07cd59f8aeeb8173e37a2f514ff5d19f7bc1ed0c" to "SHA256 (arcan-0.7.1.tar.gz) = d39f9b6b46354720b9cd55b8fce69e917fb2746c8e39a2c6658bbf7ea08e3719"
+text replace-once file distinfo from "SIZE (arcan-0.7.1.tar.gz) = 13392556" to "SIZE (arcan-0.7.1.tar.gz) = 13388075"
