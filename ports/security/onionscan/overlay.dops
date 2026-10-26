@@ -1,3 +1,7 @@
 port security/onionscan
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-vendor_github.com_HouzuoGuo_tiedot_gommap_mmap__unix.go:
+# the vendored tiedot 3.4 gommap builds its mmap/unmap for the other Unixes
+# only; add DragonFly.
