@@ -15,3 +15,6 @@ target @2026Q3,@2026Q4,@main
 
 mk add USES "localbase:ldflags"
 mk add LIB_DEPENDS "libstdthreads.so:misc/libstdthreads"
+
+# dragonfly/@<line>/patch-server.c: the passed-socket check reads SO_DOMAIN,
+# which DragonFly lacks; check the family with getsockname() instead.
