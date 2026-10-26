@@ -1,0 +1,15 @@
+port www/iocaine
+type port
+reason "DragonFly: add a region crate backend (cargo-crate patches applied in WRKDIR)"
+
+# region 3.0.2 has no DragonFly backend, so region::query() has no
+# os::QueryIter; add one that reads /proc/curproc/map (DragonFly has no
+# kinfo_getvmmap(3)). The port vendors its crates in ${WRKDIR}/cargo-crates,
+# outside WRKSRC, so the dragonfly/@<line>/cargo-crates_region-3.0.2_* diffs
+# are not named patch-* and are applied from WRKDIR here.
+target @any
+
+mk target set dfly-patch <<'MK'
+	${PATCH} -d ${WRKDIR} ${PATCH_ARGS} < ${DFLY_PATCHDIR}/cargo-crates_region-3.0.2_src_os_mod.rs
+	${PATCH} -d ${WRKDIR} ${PATCH_ARGS} < ${DFLY_PATCHDIR}/cargo-crates_region-3.0.2_src_os_dragonfly.rs
+MK
