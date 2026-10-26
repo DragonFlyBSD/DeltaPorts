@@ -1,0 +1,16 @@
+port sysutils/bareos24-server
+type port
+reason "DragonFly: build without ACL and xattr support; link libintl for NLS"
+
+# core/CMakeLists.txt only knows FreeBSD among the BSDs: on DragonFly it
+# finds sys/acl.h and sys/extattr.h, turns on HAVE_ACL and HAVE_XATTR, but
+# no OS section of findlib/acl.cc or xattr.cc provides the os_*_streams
+# functions, so those files do not compile. Turn both off, as the last
+# DragonFly bareos build did. The FreeBSD section also adds
+# link_libraries(intl), which the NLS build needs for gettext (bconsole:
+# undefined libintl_gettext). sysutils/bareos24-client builds from this
+# Makefile.
+target @2026Q3,@2026Q4,@main
+
+mk add CMAKE_ARGS "-Dacl=OFF -DHAVE_SYS_EXTATTR_H:BOOL=OFF"
+mk set NLS_LDFLAGS "-lintl"
