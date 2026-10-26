@@ -11,3 +11,6 @@ mk set GNULS_RUN_DEPENDS "gls:sysutils/coreutils"
 mk set CFLAGS "-D__STDC_WANT_IEC_60559_BFP_EXT__"
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+# Native compilation needs libgccjit, which only a ports gcc ships (base gcc
+# has none); FreeBSD asks for gcc 13 with USE_GCC, which DragonFly ignores.
+mk set NATIVECOMP_VARS "USE_GCC_VERSION=13"
