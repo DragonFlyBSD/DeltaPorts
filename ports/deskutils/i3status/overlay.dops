@@ -1,3 +1,7 @@
 port deskutils/i3status
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-src_print_disk_info.c: statfs(ctx->path) on
+# DragonFly, whose branch still calls statfs() on an undeclared 'path'. 2.15
+# (2026Q3 on) has the f_bsize sizes upstream, so only that hunk is left.
