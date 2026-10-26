@@ -1,0 +1,8 @@
+port net/devfile
+type port
+reason "DragonFly: give the vendored containerd content store its atime helper (dragonfly/@<line> patch)"
+
+# dragonfly/@<line>/patch-vendor_github.com_containerd_containerd_content_local_store__unix.go:
+# the vendored containerd v1.7.29 content/local defines getATime per OS
+# (Atimespec on the BSDs it lists, Atim on Linux/Solaris); DragonFly's
+# Stat_t has Atim, so add it to store_unix.go.
