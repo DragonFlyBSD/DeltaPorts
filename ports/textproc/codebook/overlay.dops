@@ -1,0 +1,7 @@
+port textproc/codebook
+type port
+reason "DragonFly: pprof crate fixes (dragonfly/@<line> cargo-crate patches)"
+
+# dragonfly/@<line>/patch-cargo-crates_pprof-0.15.0_*: pprof has no DragonFly
+# errno accessor, signal-context PC or create_pipe(); use __errno_location(),
+# mcontext mc_rip (as on FreeBSD) and the FreeBSD pipe+fcntl variant.
