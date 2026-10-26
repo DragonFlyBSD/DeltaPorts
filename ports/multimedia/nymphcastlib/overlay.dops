@@ -1,0 +1,7 @@
+port multimedia/nymphcastlib
+type port
+reason "DragonFly: take the Makefile's FreeBSD branch (LOCALBASE include/lib paths)"
+
+# dragonfly/@<line>/patch-Makefile-dragonfly (after FreeBSD's patch-Makefile):
+# the Makefile adds -I/-L /usr/local only when uname -s is FreeBSD, so
+# nymph/nymph.h and the Poco headers are not found on DragonFly.
