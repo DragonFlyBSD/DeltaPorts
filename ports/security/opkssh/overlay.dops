@@ -1,0 +1,11 @@
+port security/opkssh
+type port
+reason "DragonFly: give the vendored awnumar/memcall a DragonFly backend (dragonfly/@<line> patches)"
+
+# dragonfly/@<line>/patch-vendor_github.com_awnumar_memcall_*: the vendored
+# awnumar/memcall treats DragonFly as Linux and wants MADV_DONTDUMP; give
+# it FreeBSD's implementation (MADV_NOCORE, MAP_NOCORE), which DragonFly
+# shares.
+# dragonfly/@<line>/patch-commands_readhome.go: FreeBSD's patch adds
+# freebsd to ReadHome()'s build tag (linux, darwin); add dragonfly too, or
+# main.go's ReadHome is undefined.
