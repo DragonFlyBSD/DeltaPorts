@@ -4,3 +4,7 @@ reason "DragonFly: include the BSD routing headers in wps_upnp.c; l2_packet patc
 
 # 2.12 includes <net/bpf.h> for __DragonFly__ in l2_packet_freebsd.c
 # itself, so that patch stays on the lines that still ship 2.11.
+
+# dragonfly/@2026Q3, @2026Q4, @main: patch-src_drivers_driver__bsd.c.
+# FreeBSD's files/ patch adds an IFM_IEEE80211_VHT5G media mode, which
+# DragonFly's <net/if_media.h> does not define; guard it.
