@@ -1,3 +1,8 @@
 port net/deltachat-rpc-server
 type port
-reason "DragonFly: quinn-udp takes the recvmsg path, without IP_RECVTOS (dragonfly/@<line> cargo-crate patches)"
+reason "DragonFly: quinn-udp takes the recvmsg path, without IP_RECVTOS; netdev lists interfaces as on the BSDs, without a gateway (dragonfly/@<line> cargo-crate patches)"
+
+# patch-cargo-crates_netdev-0.31.0_*: netdev gates its interface code on
+# the other BSDs only (no interfaces(), InterfaceType::value()). Take the
+# BSD getifaddrs path on DragonFly, without the routing-socket gateway
+# lookup, whose rt_msghdr layout is FreeBSD's.
