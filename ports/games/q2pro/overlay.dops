@@ -1,5 +1,8 @@
 port games/q2pro
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly: build the FreeBSD code paths with -D__FreeBSD__=9 (was USES=alias); cd_linux.c picks sys/cdio.h only under __FreeBSD__, else Linux-only linux/cdrom.h"
 target @any
 
+# CFLAGS+= by text op: "mk add" would write "CFLAGS=", poly-bhz2.
+target @2026Q3,@2026Q4,@main
+text line-insert-after file Makefile anchor "ALL_TARGET=\t#" line "CFLAGS+=\t-D__FreeBSD__=9"
