@@ -1,0 +1,8 @@
+port devel/lets
+type port
+reason "DragonFly: add dragonfly to the vendored go-tree-sitter dup_unix.go (dragonfly/@<line> patch)"
+
+# dragonfly/@<line>/patch-vendor_github.com_tree-sitter_go-tree-sitter_dup__unix.go:
+# FreeBSD's patch adds freebsd to dupeFD()'s build tag (linux, darwin);
+# add dragonfly as well. FreeBSD's endian.h patch already covers DragonFly,
+# which shares that branch.
