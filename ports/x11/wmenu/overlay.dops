@@ -1,0 +1,10 @@
+port x11/wmenu
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1762081709" to "TIMESTAMP = 1791703054"
+text replace-once file distinfo from "SHA256 (wmenu-0.2.0.tar.gz) = 4e6aea3f8975fec720f6eb87aad620d5297a8a5a137615e4cf047e95d2b9d308" to "SHA256 (wmenu-0.2.0.tar.gz) = b1b593a80310085a90bd349d458ffbcfacf875d74468ae4428bdf5692a671ef9"
+text replace-once file distinfo from "SIZE (wmenu-0.2.0.tar.gz) = 20654" to "SIZE (wmenu-0.2.0.tar.gz) = 20601"
