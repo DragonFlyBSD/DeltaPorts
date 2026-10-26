@@ -1,0 +1,9 @@
+port ftp/py-curl-cffi
+type port
+reason "DragonFly: libs.json entry for the system libcurl-impersonate (dragonfly/patch-libs.json)"
+
+# scripts/build.py matches platform.uname() against libs.json and raises
+# "Unsupported arch" when nothing matches. FreeBSD's files/patch-libs.json
+# adds FreeBSD entries that link the ftp/curl-impersonate library in
+# /usr/local/lib dynamically; dragonfly/patch-libs.json adds the same for
+# DragonFly/x86_64 (uname reports machine x86_64, not amd64).
