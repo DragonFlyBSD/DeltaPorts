@@ -1,3 +1,10 @@
 port security/doas
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1772842448" to "TIMESTAMP = 1791703773"
+text replace-once file distinfo from "SHA256 (doas-6.4.tar.gz) = 33e1fba4346db7f3578b1c7ed75c9a42f2b90fe1dfdea60d5af23c248f0997d4" to "SHA256 (doas-6.4.tar.gz) = e88ed42abac267526e1acf0c53881d4d3591c3b7c482eb5064fc88501936ec4d"
+text replace-once file distinfo from "SIZE (doas-6.4.tar.gz) = 35007" to "SIZE (doas-6.4.tar.gz) = 34921"
