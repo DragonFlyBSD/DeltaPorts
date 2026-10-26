@@ -10,3 +10,11 @@ patch apply diffs/Makefile.diff
 # dragonfly/@2026Q1, @2026Q2: patch-src_util_compress_api_miniz_miniz__zip.c.
 # 2.17.0 merged miniz into miniz.c, whose 64-bit stdio branch now keys on
 # glibc's __USE_LARGEFILE64, so DragonFly no longer needs excluding.
+
+# devel/elfutils installs libdw in ${LOCALBASE}/lib/elfutils on DragonFly
+# (base has its own libelf), so the libdw.so LIB_DEPENDS is never met and
+# configure could not link -ldw anyway. libdw only adds stack traces.
+target @2026Q3,@2026Q4,@main
+
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibdw.so*}"
+mk add CONFIGURE_ARGS "--without-libdw"
