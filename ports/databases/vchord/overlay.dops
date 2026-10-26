@@ -1,11 +1,9 @@
 port databases/vchord
 type port
-reason "DragonFly: assemble with ports binutils (AVX512-FP16)"
+reason "DragonFly: leave out the AVX-512 FP16 shim (dragonfly/@<line> patches)"
 
-# The simd crate's C shim uses AVX512-FP16 (vfmadd231ph); base gcc emits it,
-# but base as (binutils 2.34) does not know the instructions. Make gcc use
-# devel/binutils' as.
-target @2026Q3,@2026Q4,@main
-
-mk set USE_BINUTILS "yes"
-mk add CFLAGS_x86_64 "-B${LOCALBASE}/bin"
+# AVX-512 is unsupported on DragonFly. The simd crate's C shim
+# (cshim/x86_64_fp16.c) is AVX-512 FP16, which base binutils 2.34 cannot
+# assemble either. The patches skip it in build.rs and drop its v4:avx512fp16
+# multiversion entries; the remaining v4 (AVX-512) variants are runtime
+# dispatched only when the OS enables AVX-512, which DragonFly never does.
