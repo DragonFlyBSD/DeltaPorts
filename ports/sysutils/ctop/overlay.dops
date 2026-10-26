@@ -1,3 +1,8 @@
 port sysutils/ctop
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-vendor_*: the vendored moby/term
+# (v0.0.0-20201110203204-bea5bbe245bf) treats DragonFly as non-BSD
+# (unix.TCGETS), and moby/sys/mount v0.2.0 defines its mount flags for
+# FreeBSD/OpenBSD only. Add DragonFly to both BSD build tags.
