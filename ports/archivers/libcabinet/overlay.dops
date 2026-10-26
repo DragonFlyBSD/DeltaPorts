@@ -1,0 +1,10 @@
+port archivers/libcabinet
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1750731954" to "TIMESTAMP = 1791704069"
+text replace-once file distinfo from "SHA256 (libcabinet-0.31.tar.gz) = 0ecf6476268442344361bb6aa3a41eda509ccc229863e40d69d7484b21408308" to "SHA256 (libcabinet-0.31.tar.gz) = c4ebafc97b125528c857bcbe308e51a1712acbb8c7f0911ef726740c38ad7ec1"
+text replace-once file distinfo from "SIZE (libcabinet-0.31.tar.gz) = 120564" to "SIZE (libcabinet-0.31.tar.gz) = 120336"
