@@ -1,0 +1,8 @@
+port emulators/fab-agon-emulator
+type port
+reason "DragonFly: serialport crate fixes (dragonfly/@<line> cargo-crate patches)"
+
+# dragonfly/@<line>/patch-cargo-crates_serialport-4.3.0_*: serialport 4.3.0
+# spells DragonFly "dragonflybsd" in its termios/tty cfgs, and its port
+# enumeration has no DragonFly branch (the fallback lacks its Error imports);
+# use the FreeBSD /dev/cua* scan.
