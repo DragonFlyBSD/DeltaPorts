@@ -1,0 +1,10 @@
+port filesystems/lizardfs
+type port
+reason "DragonFly: add USES=localbase so the external spdlog headers are found"
+
+# FreeBSD's patch drops the bundled spdlog download (devel/spdlog is a
+# BUILD_DEPENDS instead), but nothing adds ${LOCALBASE}/include, and the
+# compiles still point at the absent external/spdlog-0.14.0/include.
+# USES=localbase adds the LOCALBASE include and library paths.
+target @2026Q3,@2026Q4,@main
+mk add USES "localbase"
