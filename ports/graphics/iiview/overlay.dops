@@ -1,3 +1,6 @@
 port graphics/iiview
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-compat.{c,h}: DragonFly has strlcpy/strlcat, skip
+# the compat copies. Re-cut for 0.32 (2026Q3 on), which reflowed the #if.
