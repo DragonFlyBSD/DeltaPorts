@@ -1,0 +1,12 @@
+port graphics/synaesthesia
+type port
+reason "DragonFly: compile with -D__FreeBSD__=9; the sources pick their BSD code (sys/soundcard.h, sys/cdio.h, machine/endian.h, no malloc.h) only under __FreeBSD__"
+
+# sound.cc, syna.h and xlib.c test __FreeBSD__ at ~22 sites to choose
+# sys/soundcard.h, sys/cdio.h, machine/endian.h and to skip malloc.h; the
+# other branch is Linux. DPorts built 2.4_7 with USES=alias, which added
+# exactly -D__FreeBSD__=9; keep that define for DragonFly. (CFLAGS+= by
+# text op: "mk add" would write "CFLAGS=", poly-bhz2. CXXFLAGS derives
+# from CFLAGS.)
+target @2026Q3,@2026Q4,@main
+text line-insert-after file Makefile anchor "USE_SDL=\tsdl" line "CFLAGS+=\t-D__FreeBSD__=9"
