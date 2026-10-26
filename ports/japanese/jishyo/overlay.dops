@@ -2,5 +2,8 @@ port japanese/jishyo
 type port
 reason "DragonFly: the bundled xjdic C code calls its own functions without prototypes, which clang 19 now rejects"
 
+# The CFLAGS route never reached the compiler (the 2026Q4 log shows the
+# GNUstep compile lines without it), while the port's CPPFLAGS (-fcommon) do;
+# pass the flag there.
 target @2026Q3,@2026Q4,@main
-mk eval CFLAGS "${CFLAGS} -Wno-error=implicit-function-declaration"
+mk add CPPFLAGS "-Wno-error=implicit-function-declaration"
