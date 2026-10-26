@@ -1,0 +1,10 @@
+port net/openradius
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1716509201" to "TIMESTAMP = 1791703857"
+text replace-once file distinfo from "SHA256 (openradius-0.9.14.tar.gz) = 544a1bc25bf214d3713320d81d8ad29951da2dfbe1474ab5824c398398834810" to "SHA256 (openradius-0.9.14.tar.gz) = 00cafe443294d0e0d860b9939d13df4c9bb35c0b880de5916e6defa7d3f00666"
+text replace-once file distinfo from "SIZE (openradius-0.9.14.tar.gz) = 252374" to "SIZE (openradius-0.9.14.tar.gz) = 252393"
