@@ -1,0 +1,10 @@
+port databases/mysql97-client
+type port
+reason "DragonFly: drop the SASLCLIENT default, no Kerberos/GSSAPI in base (as in mysql80 and mysql84)"
+
+# WITH_AUTHENTICATION_LDAP needs Kerberos development libraries, which
+# FreeBSD has in base and DragonFly does not; configure stopped on
+# "-DWITH_AUTHENTICATION_LDAP=ON, but missing system libraries".
+target @2026Q3,@2026Q4,@main
+
+text line-remove file Makefile exact "OPTIONS_DEFAULT+=\tSASLCLIENT"
