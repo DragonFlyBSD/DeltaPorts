@@ -1,0 +1,10 @@
+port devel/cons
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1751328837" to "TIMESTAMP = 1791703362"
+text replace-once file distinfo from "SHA256 (cons-2.2.1.tar.gz) = 8dc8f1e2d73884545c57228a5367693312eb6470531d4d4e44f06c4fc682ea01" to "SHA256 (cons-2.2.1.tar.gz) = fd735aa7ce8df782ddcd43d2cb6a0c30039cbd5ba0df2b74e212bb6fae197089"
+text replace-once file distinfo from "SIZE (cons-2.2.1.tar.gz) = 201500" to "SIZE (cons-2.2.1.tar.gz) = 200242"
