@@ -1,0 +1,8 @@
+port devel/rcs
+type port
+reason "DragonFly: drop noreturn from obstack.c's handler too (dragonfly/@<line> patch)"
+
+# FreeBSD's files/patch-lib_obstack.h removes __attribute_noreturn__ from the
+# obstack_alloc_failed_handler declaration for clang; gcc 12 then rejects
+# the definition in lib/obstack.c, which still has it ("conflicting
+# types"). dragonfly/@<line>/patch-lib_obstack.c drops it there as well.
