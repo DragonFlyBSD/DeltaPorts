@@ -1,3 +1,6 @@
 port emulators/stella
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-src_*SerialPortUNIX.cxx: DragonFly has no
+# <sys/termios.h>. 7.0 (2026Q3 on) moved the file to src/os/unix/.
