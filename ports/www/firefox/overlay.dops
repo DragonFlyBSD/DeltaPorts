@@ -65,7 +65,7 @@ mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_VERSION}"
 # env var cannot fix the exec-time `Shared object "libstdc++.so.9" not found`.
 # Bake the path in as RPATH instead: port LDFLAGS flow into
 # MOZ_CARGO_WRAP_LDFLAGS, which the wrapper appends to every cargo link.
-mk add LDFLAGS "-Wl,-rpath,/usr/lib/gcc80"
+mk add LDFLAGS "-Wl,-rpath,/usr/lib/${DFLY_BASE_CCVER}"
 # Bindgen (used by the gecko-profiler rust crate and others) runs libclang
 # with BINDGEN_CFLAGS, not CXXFLAGS, so it needs the same libc++ header path
 # or it dies on `#include <version>` in mfbt/Attributes.h. This later
