@@ -4,3 +4,7 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk eval USES "${USES:S/cargo/cargo:extra/} gmake"
+
+# dragonfly/@<line>/patch-cargo-crates_glfw-0.41.0_src_ffi_mod.rs: glfw declares
+# glfwGetX11Window/Display/GLXContext for Linux and FreeBSD only, but calls
+# them on DragonFly too (lib.rs); declare them there as well.
