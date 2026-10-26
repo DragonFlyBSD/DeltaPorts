@@ -1,0 +1,9 @@
+port sysutils/conmon
+type port
+reason "DragonFly: take conmon's FreeBSD paths, binding the attach socket without bindat() (dragonfly/@<line> patches)"
+
+# conmon's BSD code is keyed on __FreeBSD__ (ECOMM, procctl reaper and
+# pdeathsig, kqueue signal descriptor, /dev/fd, attach sockets), so on
+# DragonFly cmsg.c stopped at an undeclared ECOMM and the rest would have
+# fallen through to Linux-only code. Add __DragonFly__; DragonFly has no
+# bindat(), so bind the socket name from inside the directory instead.
