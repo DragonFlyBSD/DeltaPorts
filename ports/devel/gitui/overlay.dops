@@ -4,3 +4,10 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk eval USES "${USES:S/cargo/cargo:extra/}"
+
+# The vendored OpenSSL (openssl-src) enables the devcrypto engine on the
+# BSD targets, which includes <crypto/cryptodev.h>; DragonFly has no
+# /dev/crypto. Turn vendoring off: openssl-sys then uses the ports OpenSSL
+# that cargo.mk points it at (OPENSSL_LIB_DIR/OPENSSL_INCLUDE_DIR).
+target @2026Q3,@2026Q4,@main
+mk add CARGO_ENV "OPENSSL_NO_VENDOR=1"
