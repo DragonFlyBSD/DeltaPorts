@@ -1,0 +1,7 @@
+port sysutils/aoostar-rs
+type port
+reason "DragonFly: serialport crate fix (dragonfly/@<line> cargo-crate patch)"
+
+# dragonfly/@<line>/patch-cargo-crates_serialport-4.7.3_src_posix_enumerate.rs:
+# serialport's port enumeration has no DragonFly branch, and the fallback lacks
+# its Error imports there; use the FreeBSD /dev/cua* scan.
