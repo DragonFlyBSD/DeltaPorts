@@ -1,0 +1,10 @@
+port www/freenginx-acme
+type port
+reason "DragonFly: set LIBCLANG_PATH for bindgen"
+
+# nginx-sys and openssl-sys (bindgen feature) run bindgen, and clang-sys only
+# searches its built-in libclang directories on Linux and FreeBSD; on
+# DragonFly it finds nothing. Point it at the llvm that USES=llvm:lib installs.
+target @2026Q3,@2026Q4,@main
+
+mk add CARGO_ENV "LIBCLANG_PATH=${LLVM_PREFIX}/lib"
