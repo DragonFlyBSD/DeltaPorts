@@ -1,0 +1,21 @@
+port devel/vite-plus
+type port
+reason "DragonFly: take FreeBSD's no-op fspy backend and vp_js_runtime platform"
+
+# FreeBSD's files/fspy-freebsd.patch (applied in post-patch to the vite-task
+# tree) gives FreeBSD a no-op fspy backend and gates the Linux/macOS
+# supervision crates off it, and files/patch-vp_js_runtime-freebsd adds a
+# FreeBSD platform. Neither covers DragonFly, so cargo built the
+# Linux/macOS-only sigsafe crate (no `imp` module). Widen both FreeBSD
+# conditions to DragonFly once they are applied (dfly-patch runs after
+# post-patch).
+mk target set dfly-patch <<'MK'
+	@for d in ${WRKDIR}/vite-task-*; do \
+		[ -d "$$d" ] || continue; \
+		${REINPLACE_CMD} -e 's/target_os = "freebsd"/any(target_os = "freebsd", target_os = "dragonfly")/g' \
+			$$d/crates/fspy/Cargo.toml $$d/crates/fspy/src/lib.rs \
+			$$d/crates/fspy/src/command.rs; \
+	done
+	${REINPLACE_CMD} -e 's/target_os = "freebsd"/any(target_os = "freebsd", target_os = "dragonfly")/g' \
+		${WRKSRC}/crates/vp_js_runtime/src/platform.rs
+MK
