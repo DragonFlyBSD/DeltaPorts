@@ -1,3 +1,6 @@
 port net/gobgp
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-pkg_zebra_zapi__bsd.go: zebra's intfflag2string()
+# has a BSD version for FreeBSD/NetBSD/OpenBSD only; add DragonFly.
