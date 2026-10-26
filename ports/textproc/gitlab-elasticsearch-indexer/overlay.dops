@@ -1,0 +1,3 @@
+port textproc/gitlab-elasticsearch-indexer
+type port
+reason "DragonFly: vendored gitlab-code-parser chunker has cgo flags for freebsd only; add a dragonfly_amd64 variant (dragonfly/@<line> vendor patches)"
