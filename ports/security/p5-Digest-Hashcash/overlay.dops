@@ -1,3 +1,6 @@
 port security/p5-Digest-Hashcash
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@2026Q1-Q3: patch-Hashcash.xs (/dev/urandom on DragonFly). 1.1
+# (2026Q4 on) no longer reads /dev/urandom itself.
