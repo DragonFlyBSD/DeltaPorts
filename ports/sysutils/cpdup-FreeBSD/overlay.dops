@@ -1,0 +1,12 @@
+port sysutils/cpdup-FreeBSD
+type port
+reason "DragonFly: add the ports OpenSSL include and library paths (FreeBSD builds against base OpenSSL)"
+
+# Makefile.bsd links -lcrypto and src/cpdup.h includes <openssl/evp.h>;
+# both come from the base system on FreeBSD. Point CFLAGS/LDFLAGS at the
+# ports OpenSSL that USES=ssl already depends on.
+target @2026Q3,@2026Q4,@main
+# (CFLAGS+= by text op: "mk add" on a variable the Makefile does not set
+# writes "CFLAGS=", which would drop the sys.mk/make.conf defaults.)
+text line-insert-after file Makefile anchor "MAKEFILE=\tMakefile.bsd" line "CFLAGS+=\t-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"
