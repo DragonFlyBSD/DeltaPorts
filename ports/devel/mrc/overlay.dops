@@ -7,3 +7,8 @@ reason "DragonFly: C++23 needs GCC_DEFAULT"
 target @2026Q3,@2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# dragonfly/@<line>/patch-src_mrc.cpp: main() picks the host's ELF OS ABI
+# and executable path per OS and stops at #error "Unsupported OS" on
+# DragonFly; take the FreeBSD path (argv[0]) with ELFOSABI_NONE, which
+# DragonFly binaries carry.
