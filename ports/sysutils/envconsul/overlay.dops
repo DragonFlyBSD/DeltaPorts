@@ -1,3 +1,7 @@
 port sysutils/envconsul
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-vendor_github.com_hashicorp_consul-template_signals_*:
+# the vendored consul-template signals package (v0.41.1 on 2026Q3, v0.42.1
+# later) builds SignalLookup for the other Unixes only; add DragonFly.
