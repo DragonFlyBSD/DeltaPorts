@@ -3,3 +3,8 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
+
+# dragonfly/@2026Q1, @2026Q2: patch-CMakeLists.txt (static osrm_guidance,
+# -Wno-ignored-qualifiers) and patch-include_util_ieee754.hpp. The 6.0
+# snapshot (2026Q3 on) has no ieee754.hpp, builds its libraries static
+# already and no longer sets -Werror flags in CMakeLists.txt.
