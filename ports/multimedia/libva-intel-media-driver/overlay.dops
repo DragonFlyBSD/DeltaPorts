@@ -1,0 +1,8 @@
+port multimedia/libva-intel-media-driver
+type port
+reason "DragonFly: use FreeBSD's linux/types.h stand-in for the xe dma-buf.h"
+
+# dragonfly/@<line>/patch-media__softlet_linux_common_os_xe_include_dma-buf.h-dragonfly
+# (after FreeBSD's patch of the same file): FreeBSD swaps <linux/types.h> for
+# its freebsd_compat_linux_types.h only under __FreeBSD__; take it on
+# DragonFly too. The upstream PATCHFILES (PR 1785) already test __DragonFly__.
