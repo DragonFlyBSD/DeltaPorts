@@ -1,0 +1,10 @@
+port math/gap
+type port
+reason "DragonFly: the browse package needs <ncurses.h>, which base does not ship; use devel/ncurses"
+
+# FreeBSD finds <ncurses.h> and -lpanel in base. DragonFly's base ncurses is
+# private, so pkg/browse failed on ncurses.h; USES=ncurses adds the port's
+# include/ncurses to the CFLAGS that the package builds pass to gac.
+target @2026Q4,@main
+
+mk add USES "ncurses"
