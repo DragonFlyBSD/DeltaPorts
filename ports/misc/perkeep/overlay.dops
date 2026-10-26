@@ -1,3 +1,7 @@
 port misc/perkeep
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-internal-osutil-restart_unix.go.diff: build the unix
+# SelfPath/RestartProcess on DragonFly (/proc/curproc/file); re-cut for 0.12
+# (2026Q3 on), which uses //go:build.
