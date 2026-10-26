@@ -1,3 +1,7 @@
 port games/openjk
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@2026Q4,@main/patch-codemp_rd-rend2_qgl.h: 1a6a643 also builds
+# the rend2 renderer, whose qgl.h takes <GL/gl.h> only for __FreeBSD__ and
+# falls back to <gl.h>; add DragonFly as the flat rd-vanilla patches do.
