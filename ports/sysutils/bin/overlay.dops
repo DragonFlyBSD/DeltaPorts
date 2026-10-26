@@ -1,0 +1,7 @@
+port sysutils/bin
+type port
+reason "DragonFly: vendored moby/term leaves DragonFly out of its BSD termios ioctls (dragonfly/@<line> patches)"
+
+# dragonfly/@<line>/patch-vendor_github.com_moby_term_*: the vendored
+# moby/term (v0.5.2) treats DragonFly as non-BSD and wants Linux's
+# TCGETS/TCSETS; add it to the BSD (TIOCGETA/TIOCSETA) build tags.
