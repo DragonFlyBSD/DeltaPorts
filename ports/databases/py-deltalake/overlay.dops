@@ -6,3 +6,7 @@ reason "DragonFly: rustix 1.1.4 enables IPv4 source multicast, which DragonFly's
 # setters for all of freebsdlike, but the libc crate defines neither the
 # constants nor ip_mreq_source for DragonFly. Limit them to FreeBSD, as
 # rustix 1.1.5 (main) does upstream; same patches as security/arti.
+
+# dragonfly/@2026Q4, @main: dns-lookup 3.0.1 matches libc::EAI_NODATA on
+# every unix but FreeBSD; the libc crate does not define it for DragonFly
+# either.
