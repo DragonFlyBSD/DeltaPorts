@@ -1,12 +1,21 @@
 port editors/mg
 type port
 reason "auto-converted from Makefile.DragonFly"
-target @any
+
+# The port never assigns CFLAGS and its first target sits inside
+# .if ${FLAVOR} == static, so `mk add CFLAGS` writes a plain CFLAGS= there:
+# the dynamic flavor got none of these defines (and static lost sys.mk's
+# CFLAGS). 2026Q3 on add them unconditionally after USES instead.
+target @2026Q1,@2026Q2
 
 mk add CFLAGS "-DSLIST_FOREACH_SAFE=SLIST_FOREACH_MUTABLE"
+
+target @any
+
 mk set DFLY_UNMAINTAINED "yes"
 
-# DragonFly's <sys/queue.h> spells TAILQ_FOREACH_SAFE as
-# TAILQ_FOREACH_MUTABLE, and there is no MAXNAMLEN (NAME_MAX is 255).
+# DragonFly's <sys/queue.h> spells the *_FOREACH_SAFE macros
+# *_FOREACH_MUTABLE, and there is no MAXNAMLEN (NAME_MAX is 255).
 target @2026Q3,@2026Q4,@main
-mk add CFLAGS "-DTAILQ_FOREACH_SAFE=TAILQ_FOREACH_MUTABLE -DMAXNAMLEN=255"
+
+text line-insert-after file Makefile anchor "USES=\t\tncurses uidfix" line "CFLAGS+=\t-DSLIST_FOREACH_SAFE=SLIST_FOREACH_MUTABLE -DTAILQ_FOREACH_SAFE=TAILQ_FOREACH_MUTABLE -DMAXNAMLEN=255"
