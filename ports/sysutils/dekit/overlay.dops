@@ -1,0 +1,6 @@
+port sysutils/dekit
+type port
+reason "DragonFly: lua-src target (dragonfly/@<line> cargo-crate patch)"
+
+# dragonfly/@<line>/patch-cargo-crates_lua-src-548.1.1_src_lib.rs: lua-src only knows
+# *bsd targets, so it refuses x86_64-unknown-dragonfly; build Lua as on the BSDs.
