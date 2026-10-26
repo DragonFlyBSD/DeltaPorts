@@ -1,3 +1,7 @@
 port textproc/pup
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-vendor_github.com_mattn_go-isatty_isatty__bsd.go:
+# the vendored go-isatty (56b76bdf51f7) builds IsTerminal for the other
+# BSDs only; add DragonFly.
