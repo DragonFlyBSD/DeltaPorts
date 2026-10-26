@@ -1,0 +1,7 @@
+port sysutils/incus-client
+type port
+reason "DragonFly: add dragonfly to incus' and the vendored incus-os' stdin helper build tags (dragonfly/@<line> patches)"
+
+# dragonfly/@<line>/patch-*: incus' cmd/incus and the vendored
+# lxc/incus-os incus-osd/cli define getStdinFd() for Linux, macOS, FreeBSD
+# and OpenBSD only; add DragonFly. cmd/incus type-checks for dragonfly.
