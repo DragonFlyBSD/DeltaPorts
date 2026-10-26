@@ -9,3 +9,10 @@ reason "DragonFly: no eventfd(2)"
 target @2026Q3,@2026Q4,@main
 
 mk add MESON_ARGS "-Deventfd=disabled"
+
+# The work-stealing queue stores 16-byte _Atomic(DexWorkItem) values. gcc
+# never inlines 16-byte atomics and calls __atomic_load_16/_store_16 from
+# libatomic, which FreeBSD's compiler-rt provides and DragonFly's base gcc
+# does not ship. Build with gcc 13, whose libatomic is in the ports, and link
+# it as upstream already does on Linux (dragonfly/@<line>/patch-src_meson.build).
+mk set USE_GCC_VERSION "13"
