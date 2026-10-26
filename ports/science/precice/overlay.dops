@@ -7,3 +7,6 @@ reason "DragonFly: C++17 library features need GCC_DEFAULT"
 target @2026Q3,@2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# dragonfly/@2026Q4, @main: 3.4's loopbackInterfaceName() has no DragonFly
+# case (FreeBSD's files/ patch lists only FreeBSD, NetBSD, OpenBSD); "lo0".
