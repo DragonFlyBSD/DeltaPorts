@@ -1,0 +1,9 @@
+port databases/pg_auto_failover
+type port
+reason "DragonFly: add USES=ncurses; pg_autoctl includes <ncurses.h>, which FreeBSD has in base"
+
+# src/bin/pg_autoctl/watch.h includes <ncurses.h> and its Makefile links
+# -lncurses; FreeBSD has both in base. USES=ncurses adds -I${NCURSESINC},
+# which pg_autoctl's Makefile appends ("override CFLAGS := ... $(CFLAGS)").
+target @2026Q3,@2026Q4,@main
+mk add USES "ncurses"
