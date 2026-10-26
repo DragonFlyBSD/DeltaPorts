@@ -1,9 +1,9 @@
 port databases/libzdb
 type port
-reason "DragonFly: C++20 needs GCC_DEFAULT"
+reason "DragonFly: the C++ test program needs <format>, gcc 13"
 
-# 3.6.0 builds with -std=c++20 (compiler:c++20-lang), which base gcc 8.3
-# rejects. Q3 has 3.5.0.
+# 3.6.0 builds test/zdbpp.cpp by default; it includes <format>, which
+# libstdc++ has only from gcc 13 (base is gcc 12.5). Q3 has 3.5.0.
 target @2026Q4,@main
 
-mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk set USE_GCC_VERSION "13"
