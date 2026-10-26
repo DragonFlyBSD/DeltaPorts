@@ -1,0 +1,10 @@
+port devel/llvm
+type port
+reason "DragonFly: the composed tree has no top-level COPYRIGHT for LICENSE_FILE"
+
+# LICENSE_FILE points at the ports tree's COPYRIGHT (${.CURDIR}/../../),
+# which the composed DragonFly tree does not carry, so the license check
+# stopped the patch phase. BSD2CLAUSE is a known license and needs no file.
+target @2026Q3,@2026Q4,@main
+
+mk unset LICENSE_FILE
