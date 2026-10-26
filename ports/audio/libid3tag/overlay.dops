@@ -1,0 +1,11 @@
+port audio/libid3tag
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the 0.16.4 archive (size 49086 -> 49058) and every
+# mirror now serves the new one; freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+
+text replace-once file distinfo from "TIMESTAMP = 1773966690" to "TIMESTAMP = 1791703601"
+text replace-once file distinfo from "SHA256 (libid3tag-0.16.4.tar.gz) = ceb88ada1aa867c87c1d748a8aa40e68db5b0d2df636a9dab0ab1f7741d5e009" to "SHA256 (libid3tag-0.16.4.tar.gz) = 2e9058af51e5f3881c13c55a9790abb9870812cc0f5917b6f3e825c6ae9b9f39"
+text replace-once file distinfo from "SIZE (libid3tag-0.16.4.tar.gz) = 49086" to "SIZE (libid3tag-0.16.4.tar.gz) = 49058"
