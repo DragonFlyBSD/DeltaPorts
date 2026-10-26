@@ -1,0 +1,8 @@
+port textproc/ov
+type port
+reason "DragonFly: add dragonfly to the vendored golang.design/x/clipboard build tags (dragonfly/@<line> patches)"
+
+# dragonfly/@<line>/patch-vendor_golang.design_x_clipboard_*: the vendored
+# clipboard (v0.8.0 on 2026Q4, v0.11.0 on main) lists the BSDs for its
+# X11/Wayland backend and leaves DragonFly with neither it nor the no-cgo
+# stub (undefined initialize, read, write). Add DragonFly to the BSD tags.
