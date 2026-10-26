@@ -1,3 +1,8 @@
 port sysutils/duf
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-{mounts,filesystems}__dragonfly.go: duf lists
+# mounts and classifies filesystems per OS (no DragonFly: undefined mounts,
+# isNetworkFs, ...). Add DragonFly files from the FreeBSD ones: getfsstat,
+# with the mount flags DragonFly has and its int32 Statfs_t.Flags.
