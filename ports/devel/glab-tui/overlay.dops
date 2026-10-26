@@ -1,0 +1,8 @@
+port devel/glab-tui
+type port
+reason "DragonFly: rustix source-membership sockopts (dragonfly/@<line> cargo-crate patches)"
+
+# dragonfly/@<line>/patch-cargo-crates_rustix-<ver>_src_*sockopt.rs: libc 0.2.189
+# (2026Q4 on) defines IP_ADD_SOURCE_MEMBERSHIP and ip_mreq_source for FreeBSD
+# only (DragonFly has neither); limit rustix's source-membership setters to
+# freebsd, as rustix 1.1.5 does.
