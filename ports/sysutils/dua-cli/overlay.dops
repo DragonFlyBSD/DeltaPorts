@@ -4,3 +4,6 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk eval USES "${USES:S/cargo/cargo:extra/}"
+
+# dragonfly/@<line>/patch-cargo-crates_trash-5.2.5_src_freedesktop.rs: the libc crate has no
+# MNT_WAIT for DragonFly; pass <sys/mount.h>'s value (1) to getmntinfo().
