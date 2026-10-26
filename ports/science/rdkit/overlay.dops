@@ -1,0 +1,11 @@
+port science/rdkit
+type port
+reason "DragonFly: build with the base compiler, not llvm23"
+
+# FreeBSD builds rdkit with clang23 only to avoid a crash in FreeBSD's base
+# clang 16; it does not use LLVM's libraries. On DragonFly clang 19+ means
+# libc++, while boost-libs (which rdkit links) is libstdc++, so build with
+# the base gcc and drop the llvm23 dependency.
+target @2026Q4,@main
+
+text replace-once file Makefile from "gnome llvm:23 pkgconfig" to "gnome pkgconfig"
