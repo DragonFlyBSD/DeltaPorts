@@ -1,0 +1,9 @@
+port devel/highway
+type port
+reason "DragonFly: never build or dispatch to AVX-512 targets (dragonfly/@<line> patch)"
+
+# AVX-512 is unsupported on DragonFly (the kernel does not enable its XCR0
+# state), and base binutils 2.34 cannot assemble the AVX-512 FP16 that gcc 12
+# emits for HWY_AVX3_SPR. The patch adds every 512-bit target to
+# HWY_BROKEN_TARGETS under __DragonFly__ in the installed detect_targets.h, so
+# ports compiling against highway (libjxl, ...) leave them out as well.
