@@ -1,9 +1,15 @@
 port devel/nimble
 type port
-reason "DragonFly: the bundled nim-chronos tests defined(dragonflybsd) for its BSD sendfile(); Nim calls the OS dragonfly"
+reason "DragonFly: the bundled nim-chronos tests defined(dragonflybsd) for its BSD sendfile(); Nim calls the OS dragonfly. DragonFly's ln -sF does not replace bearssl's empty csources directory"
 
+# post-extract links BearSSL in with "ln -sF bearsslc .../bearssl/csources".
+# FreeBSD's ln -F replaces the existing (empty) csources directory;
+# DragonFly's ln still treats it as a target directory and puts the link
+# inside it, so bearssl/csources/src/... was not found. Redo the link.
 target @2026Q4,@main
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's|defined(dragonflybsd)|defined(dragonfly)|' \
 		${WRKSRC_chronos}/chronos/sendfile.nim
+	${RM} -r ${WRKSRC_bearssl}/bearssl/csources
+	${LN} -s ${WRKSRC_bearsslc} ${WRKSRC_bearssl}/bearssl/csources
 MK1
