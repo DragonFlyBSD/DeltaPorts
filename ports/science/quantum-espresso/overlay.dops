@@ -16,3 +16,12 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e "s@gfortran g95@gfortran gfortran${_GCC_VER} g95@g" \
 		${WRKSRC}/install/configure
 MK1
+
+# QE 7.6 builds with CMake: the MPI filter above leaves ${MPI_LIBS}
+# (-lmpifort) in LDFLAGS and ${MPI_CFLAGS} in FFLAGS, so CMake's Fortran
+# compiler test failed to link; build the serial version CMake supports.
+target @2026Q4,@main
+
+text line-remove file Makefile exact "FFLAGS+=\t${MPI_CFLAGS}"
+text replace-once file Makefile from "libgfortran.so -lm \\\n\t\t${MPI_LIBS}" to "libgfortran.so -lm"
+mk set CMAKE_OFF "QE_ENABLE_MPI"
