@@ -6,3 +6,11 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 # on DragonFly too (there is no libresolv). 4.11 (2026Q3 on) already has a
 # FreeBSD case for that, so the patch now adds DragonFly to it; the old
 # patch, which deleted the -lresolv line, stays on 2026Q1/Q2.
+
+# dragonfly/@2026Q4, @main: patch-CMakeLists.txt. re-config.cmake defines
+# HAVE_ROUTE_LIST on every UNIX, but only Darwin, FreeBSD and OpenBSD build
+# src/net/bsd/brt.c, so libre.so had net_rt_list undefined and baresip
+# failed to link. Bump PORTREVISION so the package is rebuilt.
+target @2026Q4,@main
+
+mk bump PORTREVISION
