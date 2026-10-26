@@ -10,3 +10,8 @@ mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's/MATCHES "FreeBSD")/MATCHES "FreeBSD|DragonFly")/' \
 		${WRKSRC}/driver/CMakeLists.txt
 MK
+
+# dragonfly/@<line>/patch-test_CMakeLists.txt: the C++ unit tests pull
+# util/stringutil.cc out of libmyodbc-util.a, which needs
+# myodbc::my_charset_latin1 from the bundled mysql_strings library; the
+# tests did not link it, so the build failed at my_catalog3.
