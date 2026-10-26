@@ -1,0 +1,10 @@
+port net/widentd
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1709489923" to "TIMESTAMP = 1791703863"
+text replace-once file distinfo from "SHA256 (widentd-widentd-1.05.tar.gz) = fc685d69dd268bd66b655e8ea0c3a8490c69902c543894b37abff4def04684c6" to "SHA256 (widentd-widentd-1.05.tar.gz) = ed44c63a5d40f3563737d94540e0d71d8d3b044597de781367f66cca9dc3d9d8"
+text replace-once file distinfo from "SIZE (widentd-widentd-1.05.tar.gz) = 5961" to "SIZE (widentd-widentd-1.05.tar.gz) = 5950"
