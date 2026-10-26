@@ -189,3 +189,8 @@ target @2026Q4,@main
 
 file remove dragonfly/patch-rollup_rust_Cargo.toml
 file remove dragonfly/patch-third__party_devtools-frontend_src_scripts_build_build__inspector__overlay.py
+
+# dragonfly/@2026Q4,@main/patch-v8_BUILD.gn-metagen: V8 156's metagen parses
+# with libclang using the flags `gn desc` reports; the libcxx dport include
+# dir arrives only via extra_cxxflags, so pass -nostdinc++ and -isystem it
+# with --extra-flag (named apart from the flat patch-v8_BUILD.gn).
