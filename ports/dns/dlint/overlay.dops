@@ -1,0 +1,10 @@
+port dns/dlint
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1752259636" to "TIMESTAMP = 1791703543"
+text replace-once file distinfo from "SHA256 (dlint-1.4.3.tar.gz) = b32ad16abb8526c562d1a9a023059db4e163a053c33c7c4c3789cda1b06e25be" to "SHA256 (dlint-1.4.3.tar.gz) = 2cbca0b6b3ab6bf59dfeb53355578eea0b312b085fbf98084311c3db78a5e649"
+text replace-once file distinfo from "SIZE (dlint-1.4.3.tar.gz) = 23320" to "SIZE (dlint-1.4.3.tar.gz) = 23234"
