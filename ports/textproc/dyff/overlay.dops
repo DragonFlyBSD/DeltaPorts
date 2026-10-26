@@ -1,0 +1,9 @@
+port textproc/dyff
+type port
+reason "DragonFly: give the vendored mitchellh/go-ps a DragonFly backend (dragonfly/@<line> patch)"
+
+# dragonfly/@<line>/patch-vendor_github.com_mitchellh_go-ps_process__dragonfly.go:
+# the vendored mitchellh/go-ps v1.0.0 has no DragonFly backend (undefined
+# processes, findProcess). Add one reading kern.proc like FreeBSD's, with
+# DragonFly's struct kinfo_proc size and field offsets (checked against
+# sys/kinfo.h with the compiler).
