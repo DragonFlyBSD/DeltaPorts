@@ -1,3 +1,7 @@
 port net/gnu-radius
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@2026Q1, @2026Q2: the pam_radius.c, cryptpass.c and slist.c include
+# patches; 1.7 (2026Q3 on) includes <arpa/inet.h> and <ctype.h> itself.
+# dragonfly/@<line>/patch-radiusd_version.c re-cut for 1.7's reindented list.
