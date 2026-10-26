@@ -14,3 +14,10 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/libpromises/storage_tools.c \
 		${WRKSRC}/libpromises/systype.c
 MK1
+
+# The FreeBSD branches above call pw_scan() and gr_scan(), which DragonFly
+# also has in libutil, but cf-agent links -lutil only `if FREEBSD`, and
+# cf3_platforms.m4 sets that conditional for freebsd hosts alone. Making it
+# true would also build process_freebsd.c (FreeBSD's kinfo_proc fields), so
+# add -lutil to LIBS instead.
+mk add LIBS "-lutil"
