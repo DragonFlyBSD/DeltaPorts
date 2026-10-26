@@ -1,0 +1,10 @@
+port sysutils/cronolog-devel
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1753419785" to "TIMESTAMP = 1791702785"
+text replace-once file distinfo from "SHA256 (cronolog-1.7.2.tar.gz) = 93f200adc1eda530e618ebf989d3512b9f5281b69e6fa1b39067345095d7acc7" to "SHA256 (cronolog-1.7.2.tar.gz) = 52ce1733d09f58f20b8e5d204acbcda14ac56854e6ae390f15ed919e865b3b86"
+text replace-once file distinfo from "SIZE (cronolog-1.7.2.tar.gz) = 170500" to "SIZE (cronolog-1.7.2.tar.gz) = 170460"
