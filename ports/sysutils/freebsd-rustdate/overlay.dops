@@ -1,0 +1,9 @@
+port sysutils/freebsd-rustdate
+type port
+reason "DragonFly: build against the ports OpenSSL (BUNDLED_OPENSSL off); the bundled openssl-src devcrypto engine needs <crypto/cryptodev.h>"
+
+# BUNDLED_OPENSSL (default) builds the vendored openssl-src, whose devcrypto
+# engine needs <crypto/cryptodev.h>; DragonFly has none. Default the option
+# off: the port then uses USES=ssl and --no-default-features.
+target @2026Q3,@2026Q4,@main
+mk unset OPTIONS_DEFAULT
