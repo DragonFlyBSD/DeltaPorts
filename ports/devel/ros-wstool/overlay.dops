@@ -1,0 +1,7 @@
+port devel/ros-wstool
+type port
+reason "setup.py imports imp, which Python 3.12 removed (dragonfly/@<line> patch)"
+
+# Not DragonFly-specific: FreeBSD's build fails the same way. setup.py only
+# uses imp to read the version from src/wstool/__version__.py;
+# dragonfly/@<line>/patch-setup.py reads that file directly.
