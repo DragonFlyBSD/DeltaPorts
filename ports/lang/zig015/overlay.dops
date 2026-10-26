@@ -1,0 +1,9 @@
+port lang/zig015
+type port
+reason "DragonFly: build with clang20 and libc++ like the devel/llvm20 it links, and have build.zig link that libc++ (dragonfly/@<line> patch)"
+
+# devel/llvm20 is built against libc++ on DragonFly, and zig's C++ glue
+# calls LLVM's C++ API, so built with base gcc and libstdc++ zig2 fails to
+# link: undefined llvm:: symbols with std::__cxx11 types.
+target @2026Q3,@2026Q4,@main
+mk add USES "dfly-libcxx:20"
