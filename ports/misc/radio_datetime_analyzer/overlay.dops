@@ -1,0 +1,10 @@
+port misc/radio_datetime_analyzer
+type port
+reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+
+# codeberg regenerated the archive and every mirror serves the new one;
+# freebsd-ports main re-rolled distinfo for it.
+target @2026Q3,@2026Q4
+text replace-once file distinfo from "TIMESTAMP = 1760475760" to "TIMESTAMP = 1791702697"
+text replace-once file distinfo from "SHA256 (radio_datetime_analyzer-1.2.0.tar.gz) = e5f825acec996a14af7aaef32293dfda2f926809a0e7753a2863df34a667aaa4" to "SHA256 (radio_datetime_analyzer-1.2.0.tar.gz) = 187160b04fc1e5cd29ea8968b24bd22c1696e4038ad603af2a9834c48c4a1e6b"
+text replace-once file distinfo from "SIZE (radio_datetime_analyzer-1.2.0.tar.gz) = 35709" to "SIZE (radio_datetime_analyzer-1.2.0.tar.gz) = 35649"
