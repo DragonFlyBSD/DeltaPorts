@@ -1,0 +1,7 @@
+port sysutils/hl
+type port
+reason "DragonFly: fix notify's kqueue dependency gate (dragonfly/@<line> cargo-crate patch)"
+
+# dragonfly/@<line>/patch-cargo-crates_notify-8.2.0_Cargo.toml: notify gates its kqueue and mio
+# dependencies on target_os = "dragonflybsd", so the kqueue backend it builds
+# for dragonfly cannot import them.
