@@ -1,0 +1,8 @@
+port dns/zdns
+type port
+reason "DragonFly: root CA locations for the vendored zcrypto (dragonfly/@<line> patch)"
+
+# dragonfly/@<line>/patch-vendor_github.com_zmap_zcrypto_x509_root__dragonfly.go:
+# the vendored zmap/zcrypto x509 (a crypto/x509 fork) only lists root CA
+# locations for Linux (undefined certFiles, certDirectories); add
+# DragonFly's, as in Go's own root_bsd.go.
