@@ -1,0 +1,10 @@
+port devel/cgit
+type port
+reason "DragonFly: give git's Makefile the OpenSSL prefix, not ssl.mk's OPENSSLDIR config dir"
+
+# ssl.mk exports OPENSSLDIR (the OpenSSL config dir, /usr/local/openssl),
+# and git's Makefile reads OPENSSLDIR as the install prefix: it adds
+# -I/usr/local/openssl/include. FreeBSD finds base OpenSSL in /usr/include
+# anyway; DragonFly needs the real prefix, set on the make command line.
+target @2026Q3,@2026Q4,@main
+mk add MAKE_ARGS "OPENSSLDIR=${OPENSSLBASE}"
