@@ -1,3 +1,7 @@
 port sysutils/viddy
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+
+# dragonfly/@<line>/patch-vendor_github.com_moby_term_*: the vendored
+# moby/term (v0.0.0-20210619224110-3f7ff695adc6) treats DragonFly as non-BSD and wants Linux's
+# TCGETS/TCSETS; add it to the BSD (TIOCGETA/TIOCSETA) build tags.
