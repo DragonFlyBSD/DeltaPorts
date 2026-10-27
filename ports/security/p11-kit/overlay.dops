@@ -1,3 +1,16 @@
 port security/p11-kit
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly patches; trust ca_root_nss's bundle, as DragonFly has no /etc/ssl/certs"
+target @any
+
+# The trust module reads ${DATADIR}/certs, whose anchors link points at
+# /etc/ssl/certs, the store FreeBSD's certctl(8) maintains (at
+# /usr/share/certs/trusted before freebsd-ports 94d525cb7bc4). DragonFly has
+# neither, so p11-kit, and GnuTLS through it, trusted no CA. Add
+# ca_root_nss's bundle to the trust paths, as Debian names its
+# ca-certificates.crt; the anchors link stays, so a local /etc/ssl/certs
+# still counts. The bump makes pkg upgrade replace packages built without it.
+# A text edit, as MESON_ARGS is assigned twice and mk remove refuses that.
+text replace-once file Makefile from "-Dtrust_paths=${DATADIR}/certs" to "-Dtrust_paths=${DATADIR}/certs:${LOCALBASE}/share/certs/ca-root-nss.crt"
+mk add RUN_DEPENDS "ca_root_nss>=0:security/ca_root_nss"
+mk bump PORTREVISION
