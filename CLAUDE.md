@@ -26,3 +26,13 @@ and the agentic build-failure repair loop — is a separate project,
 Do not reintroduce it here. If a task needs a change to the DSL, the compose
 pipeline, the tracker or the agent, that change belongs in Polytropos; what
 belongs here is the overlay data those tools consume.
+
+## Issue tracking
+
+Port work is tracked here with bd (prefix `dp`). Each build line has an
+epic: `2026Q4 line` closes when 2026Q4 is retired, `main line` never closes.
+A bead for a failing port is a child of each line's epic it fails on and
+carries a `line:<line>` label for each. Policy calls are `decision` beads and
+porting projects `feature` beads, under no line.
+
+Problems in the tooling itself belong in Polytropos's tracker, not here.
