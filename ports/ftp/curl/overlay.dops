@@ -1,6 +1,19 @@
 port ftp/curl
 type port
-reason "auto-converted from compat (fragment + diffs/)"
+reason "Select a GSSAPI option; trust OpenSSL's CA store, as DragonFly has no /etc/ssl/certs"
 target @any
 
+# The OSREL-keyed GSSAPI defaults match no DragonFly release, and the
+# GSSAPI group needs exactly one option.
 mk add OPTIONS_DEFAULT "GSSAPI_NONE"
+
+# Upstream compiles in --with-ca-path=/etc/ssl/certs, the trust store
+# FreeBSD's certctl(8) maintains (freebsd-ports b58e4ce60d7b). DragonFly has
+# neither, so curl and libcurl, and git over https with them, trusted no CA.
+# Build as before that commit: no CA path, and fall back to OpenSSL's
+# default store, where ca_root_nss links cert.pem. The bump makes pkg
+# upgrade replace packages built without a working store.
+mk remove CONFIGURE_ARGS "--with-ca-path=/etc/ssl/certs"
+mk add CONFIGURE_ARGS "--without-ca-path"
+mk add OPENSSL_CONFIGURE_ON "--with-ca-fallback"
+mk bump PORTREVISION
