@@ -1,0 +1,4 @@
+port devel/zoekt
+type dport
+reason "DragonFly-only port; source in newport/"
+target @any
