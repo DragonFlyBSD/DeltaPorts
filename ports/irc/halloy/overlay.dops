@@ -1,0 +1,6 @@
+port irc/halloy
+type port
+reason "opt into cargo:extra for the uptime_lib DragonFly backend"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
