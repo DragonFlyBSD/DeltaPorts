@@ -1,0 +1,6 @@
+port textproc/difftastic
+type port
+reason "tikv-jemalloc-sys runs gmake, which is not installed"
+target @any
+
+mk add BUILD_DEPENDS "gmake:devel/gmake"
