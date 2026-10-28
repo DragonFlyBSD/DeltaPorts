@@ -1,0 +1,6 @@
+port cad/veryl
+type port
+reason "opt into cargo:extra for the wasmtime signals DragonFly backend"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
