@@ -44,3 +44,18 @@
  RUSTFLAGS+=	${CFLAGS:M-march=*:S/-march=/-C target-cpu=/}
  .  elif ${ARCH:Mpowerpc*}
  RUSTFLAGS+=	${CFLAGS:M-mcpu=*:S/-mcpu=/-C target-cpu=/:S/power/pwr/}
+@@ -251,9 +251,14 @@
+ .  if ${_CARGO_CRATES:Mopenssl-sys}
+ # Make sure that openssl-sys can find the correct version of OpenSSL
+ CARGO_ENV+=	OPENSSL_LIB_DIR=${OPENSSLLIB} \
+ 		OPENSSL_INCLUDE_DIR=${OPENSSLINC}
++# DragonFly has no base OpenSSL, and ports using openssl-sys do not always
++# carry USES=ssl, which leaves OPENSSLLIB/OPENSSLINC empty and makes the
++# probe fall back to /usr/lib. Include ssl.mk, the way the pkg-config
++# block below includes pkgconfig.mk.
++.include "${USESDIR}/ssl.mk"
+ .  endif
+ 
+ .  if ${_CARGO_CRATES:Mpkg-config}
+ .include "${USESDIR}/pkgconfig.mk"
+ .  endif
