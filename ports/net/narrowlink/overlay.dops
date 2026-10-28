@@ -1,0 +1,6 @@
+port net/narrowlink
+type port
+reason "opt into cargo:extra for the quinn-udp fallback and libc IP_RECVTOS patches"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
