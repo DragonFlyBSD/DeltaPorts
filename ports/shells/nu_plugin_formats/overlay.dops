@@ -1,0 +1,7 @@
+port shells/nu_plugin_formats
+type port
+reason "DragonFly: uucore signal table (dragonfly/@<line> cargo-crate patch)"
+
+# dragonfly/@<line>/patch-cargo-crates_uucore-<ver>_src_lib_features_signals.rs:
+# uucore has no ALL_SIGNALS table for DragonFly; its signals 1-31 are the
+# FreeBSD ones, so use that table.
