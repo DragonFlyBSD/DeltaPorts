@@ -1,0 +1,6 @@
+port misc/aichat
+type port
+reason "opt into cargo:extra for the sysctl unix-backend patch"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
