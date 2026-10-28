@@ -1,0 +1,6 @@
+port sysutils/pfetch-rs
+type port
+reason "opt into cargo:extra for the if-addrs broadcast patch"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
