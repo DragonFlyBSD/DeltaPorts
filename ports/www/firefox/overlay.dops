@@ -38,11 +38,6 @@ mk add BUILD_DEPENDS "${LOCALBASE}/llvm${LLVM_VERSION}/include/c++/v1/new:devel/
 # link libc++, not the default libstdc++.
 mk add LDFLAGS "-L${LLVM_PREFIX}/lib"
 mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_VERSION}"
-# Abseil gates LowLevelAlloc/per-thread-sem (needed by libxul's mutex code) on
-# ABSL_HAVE_MMAP, which upstream enables for FreeBSD but not DragonFly; both
-# have POSIX mmap, so extend the condition.
-# dragonfly/patch-third__party_abseil-cpp_absl_base_config.h
-
 # DragonFly's target triple has kernel "DragonFly", so -fvisibility=hidden is
 # never applied upstream (visibility_flags only lists Darwin/FreeBSD/OpenBSD
 # kernels) while dport libc++19 still marks basic_string append/insert/push_back
