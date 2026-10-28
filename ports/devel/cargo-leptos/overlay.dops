@@ -9,3 +9,4 @@ reason "DragonFly: link the ports OpenSSL instead of the vendored openssl-src, w
 target @2026Q3,@2026Q4,@main
 mk add USES "ssl"
 mk add CARGO_ENV "OPENSSL_NO_VENDOR=1"
+mk eval USES "${USES:S/cargo/cargo:extra/}"
