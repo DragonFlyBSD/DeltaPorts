@@ -1,0 +1,6 @@
+port net/rayfish
+type port
+reason "opt into cargo:extra for the netdev DragonFly and libc ifreq patches"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
