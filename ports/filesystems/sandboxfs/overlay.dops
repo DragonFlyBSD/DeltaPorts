@@ -1,0 +1,6 @@
+port filesystems/sandboxfs
+type port
+reason "opt into cargo:extra for the nix EUNUSED94 patch"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
