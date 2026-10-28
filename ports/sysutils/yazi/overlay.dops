@@ -1,0 +1,6 @@
+port sysutils/yazi
+type port
+reason "opt into cargo:extra for the libc MNT_WAIT patch (trash crate)"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
