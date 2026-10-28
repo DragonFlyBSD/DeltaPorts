@@ -1,6 +1,6 @@
 port devel/nextest
 type port
-reason "opt into cargo:extra for the aws-lc-sys getentropy() patch"
+reason "opt into cargo:extra for the aws-lc-sys getentropy() and mac_address backend patches"
 target @any
 
 mk eval USES "${USES:S/cargo/cargo:extra/}"
