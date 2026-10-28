@@ -1,0 +1,6 @@
+port databases/datafusion-cli
+type port
+reason "opt into cargo:extra for the aws-lc-sys getentropy() patch"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
