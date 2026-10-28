@@ -9,3 +9,39 @@
  pub const MNT_NODEV: c_int = 0x00000010;
  pub const MNT_AUTOMOUNTED: c_int = 0x00000020;
  pub const MNT_TRIM: c_int = 0x01000000;
+--- cargo-crates/libc-0.2.186/src/unix/bsd/freebsdlike/dragonfly/mod.rs.orig
++++ cargo-crates/libc-0.2.186/src/unix/bsd/freebsdlike/dragonfly/mod.rs
+@@ -210,6 +210,33 @@
+         pub sdl_route: [c_ushort; 16],
+     }
+ 
++    pub struct ifreq_buffer {
++        pub length: size_t,
++        pub buffer: *mut c_void,
++    }
++
++    pub struct ifreq {
++        pub ifr_name: [c_char; crate::IFNAMSIZ],
++        pub ifr_ifru: __c_anonymous_ifr_ifru,
++    }
++
++    pub union __c_anonymous_ifr_ifru {
++        pub ifru_addr: crate::sockaddr,
++        pub ifru_dstaddr: crate::sockaddr,
++        pub ifru_broadaddr: crate::sockaddr,
++        pub ifru_buffer: ifreq_buffer,
++        pub ifru_flags: [c_short; 2],
++        pub ifru_index: c_short,
++        pub ifru_metric: c_int,
++        pub ifru_mtu: c_int,
++        pub ifru_phys: c_int,
++        pub ifru_media: c_int,
++        pub ifru_data: *mut c_void,
++        pub ifru_cap: [c_int; 2],
++        pub ifru_pollcpu: c_int,
++        pub ifru_tsolen: c_int,
++    }
++
+     pub struct xucred {
+         pub cr_version: c_uint,
+         pub cr_uid: crate::uid_t,
