@@ -5,6 +5,6 @@ target @any
 
 mk eval USES "${USES:S/cargo/cargo:extra/}"
 
-# dragonfly/@<line>/patch-cargo-crates_notify-8.2.0_Cargo.toml: notify gates its kqueue and mio
+# extra-notify-8.2.0: notify gates its kqueue and mio
 # dependencies on target_os = "dragonflybsd", so the kqueue backend it builds
 # for dragonfly cannot import them.
