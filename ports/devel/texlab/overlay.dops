@@ -1,0 +1,6 @@
+port devel/texlab
+type port
+reason "opt into cargo:extra for the notify kqueue target-cfg patch"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
