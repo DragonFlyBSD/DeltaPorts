@@ -1,0 +1,6 @@
+port finance/ord
+type port
+reason "opt into cargo:extra for the rustix/cap-primitives DragonFly patches"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
