@@ -1,0 +1,6 @@
+port lang/cairo-language-server
+type port
+reason "opt into cargo:extra for the linkme-impl DragonFly sections patch"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
