@@ -1,0 +1,6 @@
+port sysutils/framework-system
+type port
+reason "opt into cargo:extra for the hidapi DragonFly target patch"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
