@@ -1,6 +1,6 @@
 port editors/fresh
 type port
-reason "DragonFly: build rquickjs with bindgen, as on FreeBSD"
+reason "DragonFly: build rquickjs with bindgen, as on FreeBSD; notify kqueue target cfg (cargo:extra)"
 
 # rquickjs-sys ships no pre-generated bindings for DragonFly, and fresh turns
 # on rquickjs's bindgen feature for FreeBSD and NetBSD only (in
@@ -10,6 +10,7 @@ reason "DragonFly: build rquickjs with bindgen, as on FreeBSD"
 target @2026Q3,@2026Q4,@main
 
 mk add CARGO_ENV "LIBCLANG_PATH=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib"
+mk eval USES "${USES:S/cargo/cargo:extra/}"
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's|cfg(target_os = "freebsd")|cfg(any(target_os = "freebsd", target_os = "dragonfly"))|' \
 		${WRKSRC:H}/fresh-core/Cargo.toml ${WRKSRC:H}/fresh-plugin-runtime/Cargo.toml
