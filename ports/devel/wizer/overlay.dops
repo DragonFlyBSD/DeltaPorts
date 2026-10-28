@@ -1,7 +1,11 @@
 port devel/wizer
 type port
-reason "DragonFly: cap-primitives oflags (dragonfly/@<line> cargo-crate patch)"
+reason "DragonFly: cap-primitives oflags (dragonfly/@<line> cargo-crate patch); system-interface fadvise/fallocate (cargo:extra)"
 
 # dragonfly/@<line>/patch-cargo-crates_cap-primitives-3.4.5_src_rustix_fs_oflags.rs:
 # rustix has no OFlags::DSYNC or RSYNC on DragonFly; approximate DSYNC with
 # SYNC and skip RSYNC, as cap-primitives does for FreeBSD (as devel/uv).
+# The same fix also ships centrally as extra-cap-primitives-3.4.5; --forward
+# makes the duplicate harmless.
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
