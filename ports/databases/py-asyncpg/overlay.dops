@@ -7,6 +7,6 @@ reason "DragonFly: no C11 <threads.h>; tell Cython's module-state code"
 # standard is newer than C11 and __STDC_NO_THREADS__ is not defined.
 # DragonFly has no <threads.h> and its gcc does not define the macro, so
 # define it; Cython then uses pthreads.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk eval CFLAGS "${CFLAGS} -D__STDC_NO_THREADS__"

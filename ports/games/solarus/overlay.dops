@@ -4,6 +4,6 @@ reason "DragonFly: std::filesystem needs GCC_DEFAULT"
 
 # Solarus 2.0 uses std::filesystem, which base gcc 8.3 keeps in
 # libstdc++fs, so solarus-run fails to link against libsolarus.so.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

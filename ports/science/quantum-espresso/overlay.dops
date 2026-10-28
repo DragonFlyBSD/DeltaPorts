@@ -8,15 +8,6 @@ mk add CONFIGURE_ARGS "--disable-parallel FC=gfortran${_GCC_VER}"
 mk eval BINARY_ALIAS "${BINARY_ALIAS:Ncpp*} gfortran=gfortran${_GCC_VER}"
 mk eval LDFLAGS "${LDFLAGS:N*gfortran.so} -L${LOCALBASE}/lib/gcc${_GCC_VER} -lgfortran"
 
-# QE 7.6 (2026Q4 on) no longer ships install/configure, so this
-# REINPLACE_CMD fails the patch phase there.
-target @2026Q1,@2026Q2,@2026Q3
-
-mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e "s@gfortran g95@gfortran gfortran${_GCC_VER} g95@g" \
-		${WRKSRC}/install/configure
-MK1
-
 # QE 7.6 builds with CMake: the MPI filter above leaves ${MPI_LIBS}
 # (-lmpifort) in LDFLAGS and ${MPI_CFLAGS} in FFLAGS, so CMake's Fortran
 # compiler test failed to link; build the serial version CMake supports.

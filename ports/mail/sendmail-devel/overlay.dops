@@ -8,5 +8,5 @@ mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBLACKLISTD}"
 # FreeBSD renamed the option to BLOCKLISTD (and blacklist.h to blocklist.h);
 # DragonFly has neither blocklistd nor blacklistd, so strip the new name
 # (same as mail/sendmail).
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBLOCKLISTD}"

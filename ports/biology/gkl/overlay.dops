@@ -9,7 +9,7 @@ reason "DragonFly: include <omp.h> as FreeBSD's patches do for FreeBSD"
 # GKL links its shared libraries with -static-libstdc++ -static-libgcc. Base
 # gcc's libstdc++.a is not PIC, so ld.gold rejects it in a .so; link the
 # shared runtime instead.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's/^#ifdef __FreeBSD__$$/#if defined(__FreeBSD__) || defined(__DragonFly__)/' \

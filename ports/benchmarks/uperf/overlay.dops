@@ -5,6 +5,6 @@ target @any
 
 mk add CONFIGURE_ARGS "--with-ssl-includes=${OPENSSLINC} --with-ssl-libs=${OPENSSLLIB}"
 
-# dragonfly/@2026Q1-Q3: patch-configure adds a DragonFly case (FreeBSD
-# settings, no SCTP). 1.0.8 (2026Q4 on) regenerates configure (USES=autoreconf)
-# and ships none, so the same case goes into configure.ac there.
+# 1.0.8 regenerates configure (USES=autoreconf) and ships none, so the
+# DragonFly case (FreeBSD settings, no SCTP) goes into configure.ac
+# (dragonfly/@<line>/patch-configure.ac).

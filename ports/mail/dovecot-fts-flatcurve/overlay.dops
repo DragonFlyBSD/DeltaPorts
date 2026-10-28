@@ -5,6 +5,6 @@ reason "DragonFly: xapian 2's headers need C++17"
 # The plugin includes xapian-core 2's headers, which use std::string_view.
 # FreeBSD's clang defaults to C++17; base gcc 8 defaults to gnu++14 and the
 # headers fail to parse. Same as mail/dovecot24.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_CXXSTD "gnu++17"

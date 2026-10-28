@@ -2,7 +2,7 @@ port lang/angelscript
 type port
 reason "DragonFly: as_memory.cpp includes <malloc.h> unless __FreeBSD__; USES=alias no longer defines it"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's|!defined(__FreeBSD__) && !defined(__OpenBSD__)|& \&\& !defined(__DragonFly__)|' \
 		${WRKDIR}/sdk/angelscript/source/as_memory.cpp

@@ -2,6 +2,6 @@ port games/gnustep-ladder
 type port
 reason "DragonFly: GoDocument.m misses <unistd.h>"
 
-# dragonfly/@2026Q3, @2026Q4, @main: GoDocument.m calls unlink() and close()
+# dragonfly/@2026Q4, @main: GoDocument.m calls unlink() and close()
 # without <unistd.h>, which nothing it includes pulls in on DragonFly; clang
 # 16 and later reject the implicit declarations.

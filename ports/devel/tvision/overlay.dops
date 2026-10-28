@@ -2,5 +2,5 @@ port devel/tvision
 type port
 reason "DragonFly: devel/ncurses keeps ncurses.h in include/ncurses, where tvision's find_path does not look"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk add CMAKE_ARGS "-DCMAKE_INCLUDE_PATH=${NCURSESINC}"

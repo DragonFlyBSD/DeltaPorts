@@ -5,7 +5,7 @@ target @any
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 
-# dragonfly/@2026Q3,@2026Q4,@main: the installed C API header picks
+# dragonfly/@2026Q4,@main: the installed C API header picks
 # SFCGAL_DEPRECATED by testing __has_c_attribute, then __has_cpp_attribute.
 # gcc 8.3 has no __has_c_attribute but defines __has_cpp_attribute in C as
 # well, so C consumers built with base gcc (databases/postgis3*) got

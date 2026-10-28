@@ -9,7 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@-Werror@@g'		\
 		${WRKSRC}/Jamsettings ${WRKSRC}/Makefile
 MK1
-
-# dragonfly/@2026Q1, @2026Q2: patch-core_file.cpp, patch-db_query.cpp (size_t
-# in the private memcpy/strlen prototypes). The 2026 snapshots (2026Q3 on)
-# dropped those prototypes.

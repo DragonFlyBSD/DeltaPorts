@@ -5,7 +5,7 @@ reason "DragonFly: take FreeBSD's platform branch (_freebsd_, <netinet/in.h>)"
 # FreeBSD's patches define _freebsd_ (and so _unix_) in base/platform.h and
 # include <netinet/in.h> in base/socket.h under __FreeBSD__; without them
 # struct in6_addr is incomplete in columns/ip6.cpp on DragonFly.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's/^#elif defined(__FreeBSD__)$$/#elif defined(__FreeBSD__) || defined(__DragonFly__)/' \

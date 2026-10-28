@@ -2,24 +2,11 @@ port math/pdal
 type port
 reason "auto-converted from Makefile.DragonFly"
 
-# Base gcc 8 keeps std::filesystem in a separate libstdc++fs.
-target @2026Q1,@2026Q2
-
-mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
-mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
-mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
-
-# PDAL links -lstdc++fs for GCC < 9 into libpdalcpp only; tools/lasdump
-# compiles pdal/util/FileUtils.cpp itself and does not, so its link fails
-# on std::filesystem. CMAKE_CXX_STANDARD_LIBRARIES lands after the objects
-# on every C++ link line, where the static archive is searched.
-mk add CMAKE_ARGS "-DCMAKE_CXX_STANDARD_LIBRARIES:STRING=-lstdc++fs"
-
-# GDAL 3.12+ (2026Q3 on): gdal_multidim.h declares
+# GDAL 3.12+: gdal_multidim.h declares
 # "std::unique_ptr<GDALRasterAttributeTable> m_poRAT{};" with the class
 # incomplete. gcc 8 instantiates the deleter for that initializer and
 # fails in io/OGRWriter.cpp; gcc 12 does not, and has std::filesystem
 # in libstdc++ itself.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

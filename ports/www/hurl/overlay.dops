@@ -5,6 +5,6 @@ reason "DragonFly: set LIBCLANG_PATH for bindgen"
 # libxml runs bindgen, and clang-sys only searches its built-in libclang
 # directories on Linux and FreeBSD; on DragonFly it finds nothing. Point it at
 # the llvm that USES=llvm installs.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add CARGO_ENV "LIBCLANG_PATH=${LLVM_PREFIX}/lib"

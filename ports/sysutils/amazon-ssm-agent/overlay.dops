@@ -11,7 +11,7 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 # (agent/platform); fix the statfs arithmetic (Bfree/Blocks are int64 on
 # DragonFly); and the vendored mitchellh/go-ps v1.0.0 gets process_dragonfly.go
 # (same patch as textproc/dyff).
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'
 	${FIND} ${WRKSRC}/agent ${WRKSRC}/common ${WRKSRC}/core \

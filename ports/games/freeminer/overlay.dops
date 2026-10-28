@@ -1,6 +1,0 @@
-port games/freeminer
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-mk set USE_CLANG_FALLBACK "default"

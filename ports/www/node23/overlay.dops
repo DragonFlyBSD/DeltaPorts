@@ -1,6 +1,0 @@
-port www/node23
-type port
-reason "use the default GCC and apply DragonFly V8/source fixes"
-target @any
-
-mk set USE_GCC_VERSION "${GCC_DEFAULT}"

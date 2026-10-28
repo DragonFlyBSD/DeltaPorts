@@ -1,15 +1,9 @@
 port graphics/mesa-dri
 type lock
-reason "version-locked at 21.3.9 with graphics/mesa-libs, which ships dri.pc from 2026Q3"
+reason "version-locked at 21.3.9 with graphics/mesa-libs, which ships dri.pc"
 
 # dri.pc moved to graphics/mesa-libs, where FreeBSD's consumers take it from
-# since 67dae6618236. 2026Q1 and 2026Q2 still take it from here.
-
-target @2026Q3
-
-text replace-once file pkg-plist from "libdata/pkgconfig/dri.pc" to "@comment libdata/pkgconfig/dri.pc"
-mk set PORTREVISION "1"
-
+# since 67dae6618236.
 target @2026Q4
 
 text replace-once file pkg-plist from "libdata/pkgconfig/dri.pc" to "@comment libdata/pkgconfig/dri.pc"

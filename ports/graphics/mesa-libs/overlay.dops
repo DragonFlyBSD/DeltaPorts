@@ -1,18 +1,12 @@
 port graphics/mesa-libs
 type lock
-reason "version-locked at 21.3.9 with graphics/mesa-dri; clc disabled as fbsd ports do; ships dri.pc from 2026Q3"
+reason "version-locked at 21.3.9 with graphics/mesa-dri; clc disabled as fbsd ports do; ships dri.pc"
 target @any
 
 mk add MESON_ARGS "-Dmicrosoft-clc=disabled"
 
 # FreeBSD's consumers take dri.pc from mesa-libs since 67dae6618236. The
 # locked 21.3.9 build stages it here too; its plist left it to mesa-dri.
-
-target @2026Q3
-
-text replace-once file pkg-plist from "@comment libdata/pkgconfig/dri.pc" to "libdata/pkgconfig/dri.pc"
-mk set PORTREVISION "1"
-
 target @2026Q4
 
 text replace-once file pkg-plist from "@comment libdata/pkgconfig/dri.pc" to "libdata/pkgconfig/dri.pc"

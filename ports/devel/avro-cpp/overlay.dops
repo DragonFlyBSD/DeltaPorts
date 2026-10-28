@@ -2,5 +2,5 @@ port devel/avro-cpp
 type port
 reason "DragonFly: StreamTests uses std::filesystem, which base gcc 8 keeps in a separate library; tests are not installed, so don't build them"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk add CMAKE_OFF "AVRO_BUILD_TESTS"

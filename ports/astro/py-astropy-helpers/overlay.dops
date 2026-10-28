@@ -1,7 +1,0 @@
-port astro/py-astropy-helpers
-type port
-reason "Step 48 bootstrap: deterministic header; patch authors the body"
-
-# dragonfly/@2026Q1, @2026Q2, @2026Q3: drop the stdlib imp module (gone in
-# Python 3.12). FreeBSD's own files/patch-astropy__helpers_utils.py does
-# this from Q4 on, so the DragonFly patch no longer applies there.

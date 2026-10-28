@@ -5,5 +5,5 @@ reason "DragonFly: drop FreeBSD's Capsicum sandbox patch (no sys/capsicum.h)"
 # files/patch-par.c only adds a Capsicum cap_enter() sandbox (sys/capsicum.h),
 # which DragonFly does not have; build par as upstream ships it (as the last
 # DPorts 1.53.0 build did, before FreeBSD added the patch).
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 file remove files/patch-par.c

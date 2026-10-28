@@ -11,7 +11,5 @@ mk target set dfly-patch <<'MK'
 MK
 
 # dragonfly/@2026Q4, @main: patch-ckucmd.c re-cut for 11.0 (FILE is opaque on
-# DragonFly; read _r through struct __FILE_public). The 10.0 ckupty.c patch
-# stays on 2026Q1-Q3: in 11.0 openpty() is only used under __FreeBSD__, so
-# the <libutil.h> include is not needed, and its NO_PTY_XOPEN_SOURCE hunk
-# changes nothing on DragonFly.
+# DragonFly; read _r through struct __FILE_public). 11.0 needs no ckupty.c
+# patch: openpty() is only used under __FreeBSD__.

@@ -3,4 +3,4 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
 # dragonfly/@<line>/patch-src-mem_freebsd.c: read swap usage from DragonFly's
-# vm.swap_* sysctls; re-cut on top of FreeBSD's mib[3] change (2026Q3 on).
+# vm.swap_* sysctls, on top of FreeBSD's mib[3] change.

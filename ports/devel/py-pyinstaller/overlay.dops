@@ -2,7 +2,7 @@ port devel/py-pyinstaller
 type port
 reason "DragonFly: allow foreign binaries when DEVELOPER defined; DragonFly support patches per line in dragonfly/@<line>"
 
-# dragonfly/@2026Q4 and @main are re-cut for 6.22: waf reports DragonFly
+# dragonfly/@2026Q4 and @main (6.22): waf reports DragonFly
 # as DEST_OS 'generic', so map it to 'dragonfly', and take the FreeBSD paths
 # in the bootloader (floatingpoint, ntohl, /proc/curproc/file) and in
 # PyInstaller.compat.

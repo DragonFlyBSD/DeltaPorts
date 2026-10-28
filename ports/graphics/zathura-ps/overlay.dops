@@ -4,7 +4,7 @@ reason "DragonFly: c_std=c23 needs GCC 14 under meson"
 
 # meson.build sets c_std=c23, which meson offers only for GCC 14 and later;
 # base gcc 8.3 (what compiler:c17 gives) fails at configure. Same as
-# graphics/zathura. Q3's 2026.02.03 is c17.
+# graphics/zathura.
 target @2026Q4,@main
 
 mk set USE_GCC_VERSION "14"

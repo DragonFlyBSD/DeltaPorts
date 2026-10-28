@@ -9,5 +9,4 @@ mk target set dfly-patch <<'MK1'
 MK1
 
 # dragonfly/patch-qjs.c, patch-quickjs.c: report malloc usable size as 0,
-# as for EMSCRIPTEN, instead of calling malloc_usable_size(). Upstream
-# renamed EMSCRIPTEN to __EMSCRIPTEN__ in 2026, hence the 2026Q1/Q2 copies.
+# as for __EMSCRIPTEN__, instead of calling malloc_usable_size().

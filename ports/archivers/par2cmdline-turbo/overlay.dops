@@ -4,7 +4,7 @@ reason "DragonFly: 1.5.0 needs a newer libstdc++ than base gcc 8.3"
 
 # src/par2repairer.cpp calls .str() on (std::ostringstream() << ...), which
 # needs the rvalue stream insertion that returns the stream's own type
-# (LWG 1203, libstdc++ 11); gcc 8's returns std::ostream&. Q3 has 1.4.0.
+# (LWG 1203, libstdc++ 11); gcc 8's returns std::ostream&.
 target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

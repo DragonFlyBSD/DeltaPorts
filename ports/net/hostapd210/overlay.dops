@@ -1,3 +1,0 @@
-port net/hostapd210
-type port
-reason "Avoid ether_sprintf clash with DragonFly system header in src/drivers/driver_bsd.c"

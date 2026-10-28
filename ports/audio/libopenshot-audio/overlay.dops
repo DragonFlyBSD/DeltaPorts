@@ -7,7 +7,5 @@ mk add OPTIONS_EXCLUDE "DOCS"
 mk add CMAKE_BOOL_OFF "CMAKE_DISABLE_FIND_PACKAGE_Doxygen"
 mk add CMAKE_BOOL_OFF "CMAKE_DISABLE_FIND_PACKAGE_PythonInterp"
 
-# dragonfly/@2026Q1..Q3: the JUCE 5/6-era patches (JUCE_BSD for DragonFly,
-# missing <cstring>/<pthread_np.h> includes).
 # dragonfly/@2026Q4, @main (1.0.0, JUCE 8): JUCE_BSD for DragonFly, and
 # kinfo_proc's kp_flags instead of FreeBSD's ki_flag in the debugger check.

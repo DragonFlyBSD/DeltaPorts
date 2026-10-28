@@ -9,7 +9,7 @@ mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NWEBENGINE}"
 # knows Linux, FreeBSD, Darwin and Windows. Treat DragonFly as FreeBSD
 # (OS_IS_FBSD: ALSA audio and MIDI, no crashpad), and give the C++ code
 # that checks Q_OS_FREEBSD the same branches under Q_OS_DRAGONFLY.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's/MATCHES "FreeBSD")/MATCHES "FreeBSD|DragonFly")/' \

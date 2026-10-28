@@ -1,14 +1,9 @@
 port x11-drivers/xorgxrdp
 type port
-reason "override CONFIGURE_ARGS for strict locations; fix plist paths; materialize DragonFly patch"
+reason "override CONFIGURE_ARGS for strict locations; fix plist paths"
 target @any
 
 mk eval CONFIGURE_ARGS "--enable-strict-locations"
 
 text replace-once file pkg-plist from "@dir /etc/X11/xrdp" to "@dir etc/X11/xrdp"
 text replace-once file pkg-plist from "/etc/X11/xrdp/xorg.conf" to "etc/X11/xrdp/xorg.conf"
-
-# NASM object format: dragonfly needs adding to the BSD case of the m4
-# check, or NASM objects are built as 32-bit ELF. From 2026Q3 the port
-# applies upstream's 58e6a64 ("Add DragonFlyBSD support") as a PATCHFILE, so
-# our patch now fails there; dragonfly/@2026Q1, @2026Q2 keep theirs.

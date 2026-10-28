@@ -6,7 +6,7 @@ reason "DragonFly: take the FreeBSD branches in unixconf.h, termcap.c and mail.c
 # than Free/Open/NetBSD; bcopy returns void, so 10.0's
 # "(char *) memcpy(...)" in objnam.c fails ("invalid use of void
 # expression"). Treat DragonFly as FreeBSD there and in the tparm, mail
-# reader and mail path choices. Q3 has 9.1.
+# reader and mail path choices.
 target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'

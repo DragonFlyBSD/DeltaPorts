@@ -1,6 +1,0 @@
-port graphics/glad
-type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
-
-mk add USES "python:build"

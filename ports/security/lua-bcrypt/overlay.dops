@@ -7,6 +7,6 @@ mk add USES "ssl"
 mk add CFLAGS "-I${OPENSSLINC}"
 mk add LDFLAGS "-L${OPENSSLLIB}"
 
-# dragonfly/@2026Q3, @2026Q4, @main: src/ggentropy.c picks arc4random_buf()
+# dragonfly/@2026Q4, @main: src/ggentropy.c picks arc4random_buf()
 # on Free/Open/NetBSD and #errors on anything unlisted. DragonFly has
 # arc4random_buf() too.

@@ -8,14 +8,14 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/configure.ac
 MK1
 
-# 2.10 (2026Q3 on) requires C++17 std::filesystem, which base gcc 8 keeps
+# 2.10 requires C++17 std::filesystem, which base gcc 8 keeps
 # out of libstdc++ (configure: "C++17 filesystem library not supported").
 # The Fortran side already uses GCC_DEFAULT's gfortran; build C/C++ with
 # the same gcc.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 
-# dragonfly/@2026Q3, @2026Q4, @main: FILE is an incomplete type on DragonFly,
+# dragonfly/@2026Q4, @main: FILE is an incomplete type on DragonFly,
 # and TypesafePtr::get<FILE*>() instantiates sizeof(FILE). Give FILE the
 # same size-0 specialization as void; the wrapper never sends a FILE size.

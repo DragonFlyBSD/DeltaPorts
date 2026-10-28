@@ -6,6 +6,5 @@ target @any
 mk add OPTIONS_EXCLUDE "CAPSICUM"
 mk add CONFIGURE_ARGS "--disable-pcap-restart"
 
-# dragonfly/@2026Q1, @2026Q2: patch-configure (DragonFly as OS=BSD). 1.48
-# (2026Q3 on) regenerates configure (USES=autoreconf), so the same case goes
-# into configure.ac (dragonfly/@<line>/patch-configure.ac).
+# 1.48 regenerates configure (USES=autoreconf), so the DragonFly case
+# (OS=BSD) goes into configure.ac (dragonfly/@<line>/patch-configure.ac).

@@ -2,5 +2,5 @@ port emulators/virtualbox-ose-additions-71
 type port
 reason "DragonFly: FreeBSD guest additions (kernel module and tools); configure cannot determine the OS, as for virtualbox-ose-additions"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk set IGNORE "FreeBSD-specific (and requires 32-bit support)"

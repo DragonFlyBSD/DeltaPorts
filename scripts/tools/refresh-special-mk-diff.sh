@@ -11,9 +11,9 @@
 #       <old-diff-path> <new-diff-path>
 #
 # Example:
-#   ./refresh-special-mk-diff.sh Uses/gstreamer.mk 2025Q2 2026Q1 \
-#       special/Mk/diffs/Uses_gstreamer.diff \
-#       special/Mk/diffs/@2026Q1/Uses_gstreamer.diff
+#   ./refresh-special-mk-diff.sh Uses/gstreamer.mk main 2027Q1 \
+#       special/Mk/diffs/Uses_gstreamer.mk.diff \
+#       special/Mk/diffs/@2027Q1/Uses_gstreamer.mk.diff
 #
 set -euo pipefail
 
@@ -29,8 +29,8 @@ usage() {
   echo
   echo "arguments:"
   echo "  Mk-relative-file   file path relative to Mk/ (e.g. Uses/gstreamer.mk, bsd.port.mk)"
-  echo "  old-quarter         FreeBSD branch the old diff was written against (e.g. 2025Q2)"
-  echo "  new-quarter         FreeBSD branch to carry the change forward to (e.g. 2026Q1)"
+  echo "  old-quarter         FreeBSD branch the old diff was written against (e.g. main)"
+  echo "  new-quarter         FreeBSD branch to carry the change forward to (e.g. 2027Q1)"
   echo "  old-diff            path to the existing unscoped special/Mk diff"
   echo "  new-diff            path to write the new target-scoped diff"
   exit 1

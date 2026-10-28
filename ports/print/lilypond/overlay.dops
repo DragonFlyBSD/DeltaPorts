@@ -1,16 +1,13 @@
 port print/lilypond
 type port
 reason "DragonFly: gcc 8 rejects lilypond 2.26's nested symbol-caching lambdas"
-target @2026Q1,@2026Q2
-
-mk add CXXFLAGS "-Wno-sequence-point"
 
 # lily-guile-macros.hh caches symbols with a lambda inside set_property's
 # lambda; base gcc 8.3 deduces the inner lambda as void ("second operand to
 # the conditional operator is of type 'void'"), gcc 12 accepts it. All its
 # libraries are C, so the compiler can change freely. CXXFLAGS keeps
-# sys.mk's defaults (a plain "mk add" replaced them).
-target @2026Q3,@2026Q4,@main
+# sys.mk's defaults (a plain "mk add" would replace them).
+target @2026Q4,@main
 
 mk eval CXXFLAGS "${CXXFLAGS} -Wno-sequence-point"
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

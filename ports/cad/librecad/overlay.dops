@@ -134,15 +134,8 @@ text line-remove file pkg-plist exact "%%DATADIR%%/qm/plugins_zh_cn.qm"
 text line-remove file pkg-plist exact "%%DATADIR%%/qm/plugins_zh_tw.qm"
 
 # =======================================================================
-# @2026Q3: LibreCAD 2.2.1.3 spells the Indonesian catalogs id_ID.
-# =======================================================================
-target @2026Q3
-
-text line-remove file pkg-plist exact "%%DATADIR%%/qm/librecad_id_ID.qm"
-text line-remove file pkg-plist exact "%%DATADIR%%/qm/plugins_id_ID.qm"
-
-# =======================================================================
-# @main: LibreCAD 2.2.1.5 (freebsd-ports 2b1be435b553) renamed them id_id.
+# @main: LibreCAD 2.2.1.5 (freebsd-ports 2b1be435b553) spells the
+# Indonesian catalogs id_id.
 # =======================================================================
 target @main
 

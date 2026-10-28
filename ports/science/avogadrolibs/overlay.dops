@@ -7,6 +7,6 @@ reason "DragonFly: build with gmake; bmake misreads the template icon names"
 # "ligands/dmpe-1,2-bis(dimethylphosphino)ethane.svg", which bmake parses as
 # archive member syntax ("don't know how to make ethane.svg"). GNU make reads
 # them as plain names, as do ninja and FreeBSD's default build.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk eval USES "${USES} gmake"

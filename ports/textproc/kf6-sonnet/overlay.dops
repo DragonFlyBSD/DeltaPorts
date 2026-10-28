@@ -8,10 +8,10 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/metainfo.yaml
 MK1
 
-# From 2026Q3 KF6 builds with clang and libc++, but hunspell's C++ API
+# KF6 builds with clang and libc++, but hunspell's C++ API
 # (std::string) comes from libstdc++, so the hunspell plugin cannot link.
 # Build the aspell plugin only until hunspell moves to libc++ as well.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk remove LIB_DEPENDS "libhunspell-1.7.so:textproc/hunspell"
 mk add CMAKE_ON "CMAKE_DISABLE_FIND_PACKAGE_HUNSPELL"

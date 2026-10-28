@@ -6,5 +6,5 @@ target @any
 # FreeBSD's patches key two fixes on __FreeBSD__, which USES=alias used to
 # define for us: Top/csound.c defines PTHREAD_SPINLOCK_INITIALIZER (which
 # no BSD has; csound uses it once configure finds pthread_spin_lock), and
-# H/remote.h includes <net/if.h> for struct ifreq. dragonfly/@2026Q3,
-# @2026Q4, @main add __DragonFly__ to both.
+# H/remote.h includes <net/if.h> for struct ifreq. dragonfly/@2026Q4 and
+# @main add __DragonFly__ to both.

@@ -4,6 +4,6 @@ reason "DragonFly: C++20 with the ports GCC"
 
 # USES=compiler:c++20-lang resolves to base gcc 8.3, whose libstdc++ has no
 # C++20 file_clock::to_sys (src/web/FileUtils.C).
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

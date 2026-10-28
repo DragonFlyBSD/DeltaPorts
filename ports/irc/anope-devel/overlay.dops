@@ -2,5 +2,5 @@ port irc/anope-devel
 type port
 reason "DragonFly: anope 2.1 uses std::filesystem, which base gcc 8 keeps out of libstdc++; build with GCC_DEFAULT"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

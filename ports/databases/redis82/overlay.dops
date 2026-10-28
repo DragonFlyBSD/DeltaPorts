@@ -7,5 +7,5 @@ reason "DragonFly: point the build at the ports OpenSSL and take malloc_usable_s
 # dragonfly/@<line>/patch-src_zmalloc.h: DragonFly has no <malloc.h>; it
 # declares malloc_usable_size() in <malloc_np.h>, as FreeBSD does.
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk add TLS_MAKE_ENV "OPENSSL_PREFIX=${OPENSSLBASE}"

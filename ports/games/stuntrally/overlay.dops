@@ -1,8 +1,0 @@
-port games/stuntrally
-type port
-reason "package size guard"
-target @any
-
-mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
-MANUAL_PACKAGE_BUILD=   ~892MM package (too big for mirrors)
-MK

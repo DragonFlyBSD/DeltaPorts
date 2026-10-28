@@ -5,15 +5,8 @@ target @any
 
 mk add USES "localbase:ldflags"
 
-# 0.69 moved from the Makefile to CMake, which needs no OS rename, and
-# dropped the coverage and plugin conditionals: dragonfly/ holds the 0.69
-# cut, dragonfly/@2026Q1..Q3 the older one.
-target @2026Q1,@2026Q2,@2026Q3
-
-mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
-		${WRKSRC}/Makefile
-MK1
+# dragonfly/: take the FreeBSD branches in kernel/driver.cc, kernel/yosys.cc
+# and libs/minisat/System.cc.
 
 # 0.69 needs C++20 (<version>, a __cplusplus check in yosys_common.h).
 # compiler:c++20-lang resolves to base gcc 8.3 on DragonFly; build with the

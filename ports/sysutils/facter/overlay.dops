@@ -1,3 +1,0 @@
-port sysutils/facter
-type port
-reason "auto-converted from compat (fragment + diffs/)"

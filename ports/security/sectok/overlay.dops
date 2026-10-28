@@ -1,5 +1,0 @@
-port security/sectok
-type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
-

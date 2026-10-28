@@ -1,15 +1,10 @@
 port math/singular
 type port
-reason "add libexec entries for p_Procs shared libs to pkg-plist, comment on omalloc, materialize dragonfly patches"
+reason "DragonFly: dynamic modules, valloc() prototype, dlmalloc guard, BSD qsort_r order"
 
-# diffs/pkg-plist.diff lists libexec/singular/MOD/p_Procs_*.so.0* that
-# older releases installed; 4.4.1 (2026Q3 on) builds them as unversioned
-# modules only, so the extra entries failed the package phase.
-target @2026Q1,@2026Q2
+# dragonfly/: patch-m4_p-procs.m4 enables dynamic modules on DragonFly,
+# patch-omalloc_omMallocSystem.h includes <unistd.h> for valloc(), and
+# patch-ppcc_gclib_dlmalloc.c treats DragonFly like the other BSDs.
 
-patch apply diffs/pkg-plist.diff
-
-# dragonfly/@2026Q1, @2026Q2: the old patch-kernel_combinatorics_hilb.cc.
-# dragonfly/@2026Q3, @2026Q4, @main: the same change regenerated for 4.4.1
-# (the guards moved and gained __CYGWIN__): DragonFly's qsort_r has the BSD
-# argument order.
+# dragonfly/@2026Q4, @main: patch-kernel_combinatorics_hilb.cc. DragonFly's
+# qsort_r has the BSD argument order.

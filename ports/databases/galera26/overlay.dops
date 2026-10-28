@@ -18,15 +18,7 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/galerautils/src/gu_system.h
 MK1
 
-# clang 19 builds against libc++, but garbd links boost_program_options,
-# which is libstdc++: the link failed on std::__1 symbols (and base gold
-# crashed reading clang's DWARF 5 while reporting them). The old reason for
-# clang, 64-bit __atomic builtins, does not apply to gcc on x86_64.
-#
-# The struct tcp_info workaround: on 2026Q1/Q2 the header defines an empty
-# stats() and asio_tcp.cpp drops its own; from 2026Q3 asio_tcp.cpp keeps
-# stats() and only skips the tcp_info read, so the header patch would be a
-# second definition and lives in @2026Q1/@2026Q2 only.
-target @2026Q1,@2026Q2
-
-mk set USE_CLANG_FALLBACK "default"
+# No clang: clang 19 builds against libc++, but garbd links
+# boost_program_options, which is libstdc++, and the link fails on std::__1
+# symbols. The old reason for clang, 64-bit __atomic builtins, does not
+# apply to gcc on x86_64.

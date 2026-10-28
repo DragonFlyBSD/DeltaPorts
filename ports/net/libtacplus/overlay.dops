@@ -5,7 +5,7 @@ target @any
 
 # taclib.c uses OpenSSL's MD5_* functions, deprecated since OpenSSL 3.0, and
 # the library builds with -Werror (bsd.lib.mk WARNS). Keep them warnings.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add CFLAGS "-Wno-error=deprecated-declarations"
 

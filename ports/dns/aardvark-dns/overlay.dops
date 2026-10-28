@@ -7,8 +7,7 @@ reason "DragonFly: link libinotify; inotify FdGuard without kcmp"
 #
 # dragonfly/@<line>/patch-cargo-crates_inotify-0.11.4_src_fd__guard.rs: inotify
 # 0.11.4 refuses to build without kcmp(2), which DragonFly lacks; there only
-# identical descriptors compare equal (2026Q3's 0.11.2 is already patched so
-# by FreeBSD).
-target @2026Q3,@2026Q4,@main
+# identical descriptors compare equal.
+target @2026Q4,@main
 
 text replace-once file Makefile from ".if ${OPSYS} == FreeBSD && ${OSVERSION} < 1500050" to ".if (${OPSYS} == FreeBSD && ${OSVERSION} < 1500050) || ${OPSYS} == DragonFly"

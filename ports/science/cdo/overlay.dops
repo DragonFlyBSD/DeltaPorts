@@ -7,7 +7,7 @@ mk add MAKE_ENV "LDVER=ld.bfd"
 
 # 2.6 requires C++20 ("A compiler with support for C++20 language features
 # is required"); compiler:c++20-lang resolves to base gcc 8.3.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 

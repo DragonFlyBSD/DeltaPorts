@@ -4,6 +4,6 @@ reason "DragonFly: libsemigroups requires gcc >= 9"
 
 # include/libsemigroups/debug.hpp stops with "GCC version 9.0 or higher is
 # required"; compiler:c++17-lang gives base gcc 8.3.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

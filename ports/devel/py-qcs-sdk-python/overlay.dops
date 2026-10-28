@@ -2,7 +2,7 @@ port devel/py-qcs-sdk-python
 type port
 reason "DragonFly: no OpenSSL in base; point openssl-sys at the ports OpenSSL; webbrowser/unix backend (cargo:extra)"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk add USES "ssl"
 mk unset OPENSSLINC
 mk unset OPENSSLLIB
@@ -10,5 +10,5 @@ mk eval USES "${USES:S/cargo/cargo:extra/}"
 
 # dragonfly/@<line>/patch-cargo-crates_*: the vendored zeromq-src only
 # configures libzmq for Linux, Apple, Windows and (FreeBSD's patch) FreeBSD,
-# so zmq-sys fails on the missing platform.hpp; webbrowser 0.8 (Q3/Q4 only)
+# so zmq-sys fails on the missing platform.hpp; webbrowser 0.8 (2026Q4 only)
 # lists the BSDs without DragonFly and stops at compile_error!.

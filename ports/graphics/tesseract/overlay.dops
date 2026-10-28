@@ -1,18 +1,8 @@
 port graphics/tesseract
 type port
-reason "Q1-Q3: gcc 8 std::filesystem shim; Q4+: build with GCC_DEFAULT"
+reason "DragonFly: build with GCC_DEFAULT"
 
-# 5.5.2 builds with base gcc 8, whose std::filesystem lives in a separate
-# libstdc++fs (misc/cxxfs_gcc8).
-target @2026Q1,@2026Q2,@2026Q3
-
-mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
-mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
-mk eval LDFLAGS "${LDFLAGS} -L${LOCALBASE}/cxxfs_gcc8 -lpthread"
-mk add LIBS "-lstdc++fs"
-mk add OPTIONS_DEFAULT "TOOLS"
-
-# 5.5.3 (2026Q4 on) is C++20 code (constexpr functions with uninitialized
+# 5.5.3 is C++20 code (constexpr functions with uninitialized
 # locals in src/ccstruct/points.h, among others). compiler:c++20-lang
 # resolves to base gcc 8 on DragonFly, which builds it as C++17; use the
 # default ports GCC, whose libstdc++ also has std::filesystem.

@@ -2,7 +2,7 @@ port math/SoPlex
 type port
 reason "DragonFly: take zstr's XSI strerror_r() branch"
 
-# dragonfly/@2026Q3, @2026Q4, @main: the bundled zstr's strict_fstream.hpp
+# dragonfly/@2026Q4, @main: the bundled zstr's strict_fstream.hpp
 # picks the GNU char *strerror_r() whenever _GNU_SOURCE is defined, which
 # g++ always does; DragonFly's strerror_r() is the XSI int one. Take the
 # XSI branch on DragonFly as it does for musl.

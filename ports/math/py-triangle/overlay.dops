@@ -8,7 +8,7 @@ reason "DragonFly: bundled triangle.h is shadowed by math/triangle's"
 # dependency), where triangulate() returns void, instead of the bundled
 # c/triangle.h, where it returns int: "void value not ignored". Include the
 # bundled header by path.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's|^#include "triangle.h"$$|#include "../c/triangle.h"|' \

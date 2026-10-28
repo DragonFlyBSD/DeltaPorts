@@ -5,5 +5,5 @@ reason "DragonFly: build with clang19 and libc++ like the devel/llvm19 it links,
 # devel/llvm19 is built against libc++ on DragonFly, and zig's C++ glue
 # calls LLVM's C++ API, so built with base gcc and libstdc++ zig2 fails to
 # link: undefined llvm:: symbols with std::__cxx11 types.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk add USES "dfly-libcxx:19"

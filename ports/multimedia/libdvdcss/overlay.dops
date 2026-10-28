@@ -2,7 +2,7 @@ port multimedia/libdvdcss
 type port
 reason "DragonFly: no SCSI pass-through for the CPRM ioctls"
 
-# dragonfly/@2026Q3, @2026Q4 (1.5.0) and @main (1.6.0): ioctl_ReadCPRMMediaId
+# dragonfly/@2026Q4 (1.5.0) and @main (1.6.0): ioctl_ReadCPRMMediaId
 # and ioctl_ReadCPRMMKBPack are implemented with Linux SG, FreeBSD's
 # cam/scsi/scsi_sg.h (FreeBSD's patch on 1.5.0, upstream in 1.6.0), Windows,
 # macOS and others, and "#error DVD ioctls are unavailable" otherwise.

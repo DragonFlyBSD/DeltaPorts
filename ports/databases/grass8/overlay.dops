@@ -5,7 +5,7 @@ reason "DragonFly: configure only knows the FreeBSD shared-library setup"
 # configure picks the shared-library flags per host and stops on any other
 # ("Unknown platform: x86_64-portbld-dragonfly6.5"). DragonFly takes the
 # FreeBSD settings (ELF, cc -shared, -soname, -rpath).
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's/^	\*-freebsd\*)$$/	*-freebsd*|*-dragonfly*)/' \

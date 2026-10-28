@@ -1,7 +1,7 @@
 port x11-toolkits/fox17
 type port
-reason "DragonFly: BSD paths in fxdefs.h, xincs.h and FXThread.cpp; FXSystemTime patch kept for 1.7.89"
+reason "DragonFly: BSD paths in fxdefs.h, xincs.h and FXThread.cpp"
 
 # 1.7.91 (with FreeBSD's files/ patch) uses the plain timezone/daylight
-# globals off FreeBSD, which DragonFly's libc has, so the FXSystemTime.cpp
-# patch only stays on the lines still at 1.7.89.
+# globals off FreeBSD, which DragonFly's libc has, so FXSystemTime.cpp
+# needs no patch.

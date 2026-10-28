@@ -1,7 +1,0 @@
-port comms/minicom
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-
-# dragonfly/@2026Q1, @2026Q2: patch-src_minicom.c, patch-src_script.c drop
-# sigrelse(), which DragonFly lacks. 2.10 (2026Q3 on) unmasks SIGALRM with
-# sigprocmask() itself.

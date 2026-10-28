@@ -1,6 +1,6 @@
 port chinese/libime-jyutping
 type port
-reason "DragonFly: libc++ on 2026Q3 and later, like textproc/fcitx5"
+reason "DragonFly: libc++, like textproc/fcitx5"
 
 # textproc/fcitx5 builds with clang and libc++ (USE_CLANG_FALLBACK). Its
 # headers need C++20 (<concepts>, <source_location>) that base gcc 8.3 lacks,
@@ -8,6 +8,6 @@ reason "DragonFly: libc++ on 2026Q3 and later, like textproc/fcitx5"
 # same way.
 # Boost iostreams is used through header-only templates and libime's own
 # zstd filter. Needs chinese/fcitx5-chinese-addons (punctuation) to build.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add USES "dfly-libcxx"

@@ -12,7 +12,7 @@ reason "DragonFly: no CMake runtime dependency sets; take the FreeBSD code paths
 # application use std::filesystem throughout, which base gcc 8.3 cannot
 # link without libstdc++fs; build with GCC_DEFAULT (VTK and the other C++
 # dependencies are libstdc++ builds).
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 mk target set dfly-patch <<'MK'

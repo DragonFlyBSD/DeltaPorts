@@ -1,3 +1,0 @@
-port www/node18
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"

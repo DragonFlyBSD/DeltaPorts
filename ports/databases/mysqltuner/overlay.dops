@@ -3,4 +3,4 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
 # dragonfly/@<line>/patch-mysqltuner.pl: read hw.physmem on DragonFly as on
-# the other BSDs; re-cut for 2.9 on 2026Q4 and main.
+# the other BSDs.

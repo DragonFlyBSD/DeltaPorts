@@ -1,6 +1,0 @@
-port sysutils/screen49
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-mk add LDFLAGS "-lkvm"

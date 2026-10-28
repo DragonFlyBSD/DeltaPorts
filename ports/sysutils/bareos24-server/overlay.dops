@@ -10,7 +10,7 @@ reason "DragonFly: build without ACL and xattr support; link libintl for NLS"
 # link_libraries(intl), which the NLS build needs for gettext (bconsole:
 # undefined libintl_gettext). sysutils/bareos24-client builds from this
 # Makefile.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add CMAKE_ARGS "-Dacl=OFF -DHAVE_SYS_EXTATTR_H:BOOL=OFF"
 mk set NLS_LDFLAGS "-lintl"

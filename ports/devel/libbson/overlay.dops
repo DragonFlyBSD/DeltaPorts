@@ -5,18 +5,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 # dragonfly/@2026Q4, @main: patch-CMakeLists.txt gives DragonFly the
 # -D__BSD_VISIBLE=1 that 2.x passes FreeBSD; with only _XOPEN_SOURCE=700,
 # unistd.h hides usleep(), which mlib/time_point.h calls.
-
-# =======================================================================
-# @2026Q3: libbson 1.30.8 builds its HTML docs with Sphinx's dirhtml
-# builder, and build/sphinx/mongoc_common.py writes a <page>.html redirect
-# stub next to every <page>/index.html. The DragonFly build installed
-# neither the api.html stub nor the empty html/index directory, and
-# check-plist failed on both (eb48af420a4).
-# @main (2.3.3) builds with plain "-b html" and has no redirect hook, so
-# api.html there is the API Reference page itself, and upstream dropped
-# the @dir line in 98c9dd055078. Neither removal applies to @main.
-# =======================================================================
-target @2026Q3
-
-text line-remove file pkg-plist exact "%%PORTDOCS%%%%DOCSDIR%%/libbson/html/api.html"
-text line-remove file pkg-plist exact "%%PORTDOCS%%@dir %%DOCSDIR%%/libbson/html/index"

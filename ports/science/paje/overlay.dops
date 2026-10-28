@@ -6,6 +6,6 @@ reason "DragonFly: take FreeBSD's -Wno-error=incompatible-function-pointer-types
 # mismatched function types, which clang 16 and later reject. The Makefile
 # downgrades that error for OPSYS FreeBSD only; DragonFly's GNUstep uses
 # clang 19 as well.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 text replace-once file Makefile from ".if ${OPSYS} == FreeBSD" to ".if ${OPSYS} == FreeBSD || ${OPSYS} == DragonFly"

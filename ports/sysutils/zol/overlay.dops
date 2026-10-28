@@ -1,6 +1,0 @@
-port sysutils/zol
-type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
-
-mk set IGNORE "DragonFly has no ZFS support"

@@ -2,6 +2,6 @@ port math/py-ducc0
 type port
 reason "DragonFly: nufft_common.h uses memset without <cstring>"
 
-# dragonfly/@2026Q3, @2026Q4, @main: src/ducc0/nufft/nufft_common.h calls
+# dragonfly/@2026Q4, @main: src/ducc0/nufft/nufft_common.h calls
 # memset but includes nothing that declares it with base gcc 8.3's
 # libstdc++, and with -Wfatal-errors the build stops there.

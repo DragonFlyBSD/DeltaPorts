@@ -5,6 +5,6 @@ reason "DragonFly: never built; bundled mozjs and the SCons build know only Free
 # mozjs's gen-config.sh configures for --host=x86_64-freebsd and stops on
 # "target kernel (DragonFly) does not match --target kernel (FreeBSD)".
 # mk eval: upstream's only IGNORE sits inside the armv80a-flavor conditional.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk eval IGNORE "unmaintained, please request fixing to users mailing list"

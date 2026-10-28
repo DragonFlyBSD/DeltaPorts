@@ -2,11 +2,8 @@ port devel/ispc
 type port
 reason "DragonFly: target OS support, ncurses USES, filter GENX from OPTIONS_DEFAULT_x86_64, cmake args, ncurses path fix"
 
-target @2026Q1,@2026Q2
-mk set USE_CLANG_FALLBACK "15"
-
 # libLLVM 20 is built against libc++, so ispc's own C++ must be too.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk add USES "dfly-libcxx:20"
 
 target @any

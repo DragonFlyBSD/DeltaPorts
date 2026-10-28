@@ -2,5 +2,5 @@ port devel/libunicode-contour
 type port
 reason "DragonFly: libunicode's table generators use C++20 <format>, which neither base gcc 8 nor GCC_DEFAULT (12) provides; build with gcc 13"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk set USE_GCC_VERSION "13"

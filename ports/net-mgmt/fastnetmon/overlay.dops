@@ -5,7 +5,3 @@ target @any
 
 mk add USES "ncurses"
 mk add CMAKE_ARGS "-DENABLE_NETMAP_SUPPORT:BOOL=OFF"
-
-# dragonfly/@2026Q1, @2026Q2: patch-src_netmap__plugin_netmap__collector.cpp.
-# The netmap plugin is not built here (ENABLE_NETMAP_SUPPORT=OFF above), and
-# 1.2 reworked the file, so the patch is not needed on 2026Q3 and later.

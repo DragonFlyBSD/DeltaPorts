@@ -8,6 +8,6 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/-Werror[[:>:]]//g' ${WRKSRC}/configure.ac
 MK1
 
-# dragonfly/@2026Q1, @2026Q2: the old patch-tools_storage__mon.c.
-# dragonfly/@2026Q3, @2026Q4, @main: regenerated for 4.13.0, which added a
-# third FreeBSD-only ioctl (DIOCGSECTORSIZE, also in <sys/diskslice.h>).
+# dragonfly/@2026Q4, @main: patch-tools_storage__mon.c, regenerated for
+# 4.13.0, which added a third FreeBSD-only ioctl (DIOCGSECTORSIZE, also in
+# <sys/diskslice.h>).

@@ -1,7 +1,7 @@
 port security/sudo-rs
 type port
 reason "DragonFly: sudo-rs only supports Linux and FreeBSD"
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 # src/system/mod.rs stops with compile_error!("sudo-rs only works on Linux
 # and FreeBSD"), and the PAM sys bindings, close_range() and the process

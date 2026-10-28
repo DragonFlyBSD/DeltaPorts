@@ -5,6 +5,6 @@ reason "DragonFly: the AVX2 variants need a gcc that knows x86-64-v3"
 # 2.5.5 also builds the *-v256 binaries with -march=x86-64-v3
 # -mtune=znver3 (AVX2), which base gcc 8.3 does not know (gcc 11 added
 # both). Build with GCC_DEFAULT.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

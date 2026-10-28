@@ -5,10 +5,7 @@ target @any
 
 mk add CONFIGURE_ARGS "--enable-locks"
 
-# 2026Q3 on (3.19): patch-usr_lib_soft__stdll_soft__specific.c only covered
-# LibreSSL, which DragonFly no longer uses, and its context is gone;
-# patch-usr_sbin_pkcsslotd_log.c is re-cut (cast pthread_self() for %lu).
-# Both old patches stay for 2026Q1/Q2 in dragonfly/@2026Q1, @2026Q2.
+# dragonfly/patch-usr_sbin_pkcsslotd_log.c: cast pthread_self() for %lu.
 
 # dragonfly/@<line>/ (3.19): FreeBSD's patches key their BSD paths on
 # __FreeBSD__ (USES=alias used to cover DragonFly); add __DragonFly__ for

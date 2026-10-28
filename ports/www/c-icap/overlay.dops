@@ -1,14 +1,8 @@
 port www/c-icap
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/); Q1/Q2 keep the old printf patches"
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
-# 0.6.5 prints thread ids through PRIu64 casts and includes <stdio.h> in
-# test_base64.c itself, so the old patches (dragonfly/@2026Q1, @2026Q2) are
-# not needed from 2026Q3 on. Add the flag without replacing CFLAGS there.
-target @2026Q1,@2026Q2
-
-mk add CFLAGS "-Wno-int-conversion"
-
-target @2026Q3,@2026Q4,@main
+# Add -Wno-int-conversion without replacing CFLAGS.
+target @2026Q4,@main
 
 mk eval CFLAGS "${CFLAGS} -Wno-int-conversion"

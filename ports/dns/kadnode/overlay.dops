@@ -1,8 +1,0 @@
-port dns/kadnode
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-# dragonfly/@2026Q1, @2026Q2: patch-src_main.h (<sys/socket.h> before
-# <netinet/in.h>). 2.4 (2026Q3 on) dropped that include from main.h, and
-# DragonFly's <netinet/in.h> is self-contained anyway.

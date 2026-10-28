@@ -7,6 +7,6 @@ reason "DragonFly: build the llvm17 flavor with clang and libc++, like the LLVM 
 # is devel/spirv-llvm-translator@llvm17. Built with base gcc and libstdc++,
 # opencl-clang failed to link them (std::__cxx11 symbols). llvm17 is also
 # the default flavor, so key on ${FLAVOR} where USES is read.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add USES "${FLAVOR:Mllvm17:C/.+/dfly-libcxx/}"

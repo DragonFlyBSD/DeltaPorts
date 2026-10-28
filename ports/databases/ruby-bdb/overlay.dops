@@ -5,7 +5,7 @@ reason "Give bdb_append_internal()'s retval a type"
 # FreeBSD's files/patch-src-common.c converts bdb_append_internal() to a
 # prototype but leaves its last parameter without a type, which gcc
 # rejects ("unknown type name 'retval'"). Callers pass Qtrue/Qfalse.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 text replace-once file files/patch-src-common.c from "+bdb_append_internal(int argc, VALUE *argv, VALUE obj, int flag, retval)" to "+bdb_append_internal(int argc, VALUE *argv, VALUE obj, int flag, VALUE retval)"
 
@@ -13,7 +13,7 @@ text replace-once file files/patch-src-common.c from "+bdb_append_internal(int a
 # DragonFly's ports framework exports LANG=LC_ALL=C (base has no C.UTF-8),
 # so Ruby's default external encoding is US-ASCII and rdoc stops with
 # Encoding::InvalidByteSequenceError (the error is ignored, leaving docs/doc
-# incomplete). FreeBSD exports C.UTF-8. Q3 has rdoc 6.
+# incomplete). FreeBSD exports C.UTF-8.
 target @2026Q4,@main
 
 mk add MAKE_ENV "RUBYOPT=-EUTF-8"

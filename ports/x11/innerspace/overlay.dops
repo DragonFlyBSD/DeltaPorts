@@ -1,7 +1,7 @@
 port x11/innerspace
 type port
 reason "DragonFly: put LOCALBASE on the include and library paths"
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 # UtilFunctions.c includes <X11/Xlib.h>, but nothing in this GNUstep build
 # adds -I/usr/local/include on DragonFly (the GNUmakefile only names

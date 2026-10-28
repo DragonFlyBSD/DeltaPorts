@@ -6,6 +6,6 @@ reason "DragonFly: link the ports OpenSSL instead of the vendored openssl-src, w
 # BSD targets, which includes <crypto/cryptodev.h>; DragonFly has no
 # /dev/crypto. Turn vendoring off: openssl-sys then uses the ports OpenSSL
 # that cargo.mk points it at (OPENSSL_LIB_DIR/OPENSSL_INCLUDE_DIR).
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk add USES "ssl"
 mk add CARGO_ENV "OPENSSL_NO_VENDOR=1"

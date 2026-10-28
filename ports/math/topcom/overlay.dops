@@ -7,6 +7,6 @@ reason "DragonFly: base gcc 8.3's libstdc++ checks std::set comparators eagerly"
 # gcc 8's _Rb_tree static_asserts on the comparator when the class is
 # instantiated; newer libstdc++ checks only where comparisons are made, and
 # clang's libc++ not at all. Build with GCC_DEFAULT.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

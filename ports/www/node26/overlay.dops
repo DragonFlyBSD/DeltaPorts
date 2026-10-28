@@ -9,6 +9,6 @@ reason "build with GCC 13 like node24 and apply DragonFly V8 fixes"
 # dragonfly/: node24's DragonFly V8 patches, re-cut where node 26 moved the
 # context (trap handler, abseil config.h and time_zone_format.cc); the
 # large-pages patch is gone because node 26 removed src/large_pages.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "13"

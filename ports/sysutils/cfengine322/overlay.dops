@@ -1,6 +1,0 @@
-port sysutils/cfengine322
-type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
-
-mk add LIBS "-lutil"

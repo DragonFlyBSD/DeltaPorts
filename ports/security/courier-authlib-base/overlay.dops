@@ -2,11 +2,11 @@ port security/courier-authlib-base
 type port
 reason "DragonFly: 0.73's C++ code needs a newer compiler than base gcc 8"
 
-# 0.73 (2026Q3 on): the bundled rfc822/rfc2045 libraries are C++17 that
+# 0.73: the bundled rfc822/rfc2045 libraries are C++17 that
 # base gcc 8 rejects: std::filesystem lives in a separate libstdc++fs,
 # std::to_chars has no overload for char32_t (rfc6533.C), and
 # "entity() noexcept=default" on a redeclaration is refused (rfc2045cpp.C).
 # Build with GCC_DEFAULT, which accepts all three.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

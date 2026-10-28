@@ -5,6 +5,6 @@ reason "DragonFly: add -L${LOCALBASE}/lib for the Makefile's -lscalapack"
 # The Makefile puts -lscalapack in LDFLAGS without a -L, and DragonFly's
 # linker does not search ${LOCALBASE}/lib, so CMake's Fortran compiler
 # check already fails ("cannot find -lscalapack").
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add USES "localbase:ldflags"

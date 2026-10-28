@@ -13,5 +13,5 @@ MK
 
 # The build uses -Werror, and OpenSSL 3 deprecates the SHA1_* calls the
 # shim above maps to; ask for the 1.1.1 API level.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk add CPPFLAGS "-DOPENSSL_API_COMPAT=0x10101000L"

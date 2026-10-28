@@ -7,7 +7,7 @@ reason "DragonFly: build rquickjs with bindgen, as on FreeBSD; notify kqueue tar
 # crates/fresh-core and crates/fresh-plugin-runtime, outside WRKSRC). Take
 # the FreeBSD dependency there too, and point clang-sys (which has no
 # DragonFly search path) at the llvm the port already depends on.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add CARGO_ENV "LIBCLANG_PATH=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib"
 mk eval USES "${USES:S/cargo/cargo:extra/}"

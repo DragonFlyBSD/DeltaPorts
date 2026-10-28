@@ -2,6 +2,9 @@ port databases/cassandra-cpp-driver
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
-# dragonfly/@2026Q4, @main: the same patches in -p1 form. From Q4 on the
-# Makefile sets PATCH_ARGS=-p1 for its git-format patch, and DragonFly
-# patches are applied with the same arguments.
+# dragonfly/@2026Q4, @main: patch-src_random.cpp and
+# patch-src_third__party_minizip_ioapi.h take the FreeBSD branches (POSIX
+# strerror_r; fopen/ftello/fseeko for the *64 names) on DragonFly too.
+# They are in -p1 form: the Makefile sets PATCH_ARGS=-p1 for its
+# git-format patch, and DragonFly patches are applied with the same
+# arguments.

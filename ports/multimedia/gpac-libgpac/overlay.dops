@@ -1,3 +1,0 @@
-port multimedia/gpac-libgpac
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"

@@ -12,5 +12,4 @@ text line-remove file Makefile exact "BROKEN=\t\tFails to build, expand-elf: can
 
 # dragonfly/@<line>/patch-src_ChezScheme_zlib_contrib_minizip_ioapi.h:
 # DragonFly has no *64 stdio; use the plain calls as the other BSDs do.
-# Re-cut for 9.2 (2026Q3 on), which added HAIKU and MINIZIP_FOPEN_NO_64.
 # lang/racket-minimal applies this directory too (DFLY_PATCHDIR).

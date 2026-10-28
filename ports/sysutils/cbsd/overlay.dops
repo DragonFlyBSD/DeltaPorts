@@ -9,5 +9,5 @@ mk add MAKE_ENV "OSTYPE=DragonFly"
 # hardcodes -I/usr/include/ncursesw and links -lncursesw -ltinfo; FreeBSD
 # has those in base. On DragonFly they come from the ncurses port, whose
 # CFLAGS/LDFLAGS (-I${NCURSESINC}, -L${LOCALBASE}/lib) the GNUmakefiles take.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk add USES "ncurses"

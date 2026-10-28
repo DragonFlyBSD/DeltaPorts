@@ -11,7 +11,7 @@ text replace-once file pkg-plist from "lib/critcl_callback%%TCL_SUFFIX%%-1.1/fre
 text replace-once file pkg-plist from "lib/critcl_md5c%%TCL_SUFFIX%%-0.12/freebsd-%%ARCH%%/md5c.so" to "lib/critcl_md5c%%TCL_SUFFIX%%-0.12/dragonfly-%%ARCH%%/md5c.so"
 
 # 3.3.1 installs the callback package as critcl_callback_tcl<N>-1.1.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk target set dfly-install <<'MK'
 	${STRIP_CMD} --strip-debug ${STAGEDIR}${PREFIX}/lib/critcl_callback_tcl*-1.1/dragonfly-x86_64/callback.so
 MK

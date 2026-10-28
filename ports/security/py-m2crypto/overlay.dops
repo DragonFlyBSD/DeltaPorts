@@ -2,12 +2,8 @@ port security/py-m2crypto
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
-# dragonfly/@2026Q1, @2026Q2: LibreSSL compatibility patches. Ports build
-# against OpenSSL (SSL_DEFAULT=openssl), and src/SWIG/_lib11_compat.i no
-# longer exists (0.48 on), so the patch phase fails from 2026Q3 on.
-
 # setup.py runs "cc $CFLAGS -E -include openssl/x509_vfy.h" and links
 # -lssl -lcrypto; FreeBSD finds base OpenSSL there, DragonFly's comes from
 # ports, so add LOCALBASE to the include and library paths.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk add USES "localbase:ldflags"

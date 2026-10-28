@@ -14,7 +14,7 @@ reason "DragonFly: no glibc-style cpuset or GNU utmpx programs, as on FreeBSD"
 #
 # wall's ttymsg.c sizes its buffers with MAXNAMLEN, which DragonFly's
 # <dirent.h> does not define (dragonfly/patch-term-utils_ttymsg.c).
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add CONFIGURE_ENV "ac_cv_type_cpu_set_t=no ac_cv_func_updwtmpx=no"
 text line-remove file pkg-plist exact "bin/bits"

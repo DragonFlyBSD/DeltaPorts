@@ -8,7 +8,7 @@ reason "DragonFly: point CMake at openmpi's wrappers; C++20 needs GCC_DEFAULT"
 # compiler wrappers, as math/dune-grid, dune-uggrid and dune-spgrid do.
 # 2.11 also includes dune-common 2.11 headers, which need C++20
 # (<concepts>); base gcc 8's libstdc++ has none.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add CMAKE_ARGS "-DMPI_C_COMPILER=\"${LOCALBASE}/mpi/openmpi/bin/mpicc\" -DMPI_CXX_COMPILER=\"${LOCALBASE}/mpi/openmpi/bin/mpicxx\" -DMPI_Fortran_COMPILER=\"${LOCALBASE}/mpi/openmpi/bin/mpifort\""
 

@@ -8,9 +8,9 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/metainfo.yaml
 MK1
 
-# From 2026Q3 KF6 builds with clang and libc++, but OpenEXR's C++ API
+# KF6 builds with clang and libc++, but OpenEXR's C++ API
 # (std::string) comes from libstdc++, so the EXR plugin cannot link. Leave
 # it out until OpenEXR moves to libc++ as well.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set OPTIONS_EXCLUDE_DragonFly "OPENEXR"

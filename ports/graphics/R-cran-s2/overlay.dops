@@ -1,8 +1,0 @@
-port graphics/R-cran-s2
-type port
-reason "DragonFly: abseil config patch for the bundled copy, 2026Q1/Q2 only"
-
-# dragonfly/@2026Q1,@2026Q2: s2 used to bundle abseil in src/absl and its
-# config.h needed DragonFly for mmap and pthread_getschedparam. s2 1.1.11
-# and later link devel/abseil (or build tools/vendor/ with cmake), and
-# src/absl is gone, so the patch failed to apply on 2026Q3 and later.

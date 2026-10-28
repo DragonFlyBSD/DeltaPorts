@@ -20,5 +20,5 @@ MK
 
 # dragonfly/@<line>/patch-src_zabbix__agent_Makefile.am: link the agent's
 # per-OS sysinfo libraries through @ARCH@ (as the other Makefile.am patches
-# do); re-cut for 6.0.47+ (2026Q3 on), which added libfunclistsysinfo.a.
+# do), including 6.0.47's libfunclistsysinfo.a.
 # zabbix6-agent and zabbix6-proxy use this dragonfly/ directory too.

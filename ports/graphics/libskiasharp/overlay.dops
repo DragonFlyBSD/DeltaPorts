@@ -2,6 +2,6 @@ port graphics/libskiasharp
 type port
 reason "DragonFly: no <malloc.h>; malloc_usable_size() is in <malloc_np.h>"
 
-# dragonfly/@2026Q3, @2026Q4, @main: src/base/SkContainers.cpp includes
+# dragonfly/@2026Q4, @main: src/base/SkContainers.cpp includes
 # <malloc.h> for malloc_usable_size() on SK_BUILD_FOR_UNIX; DragonFly has
 # no <malloc.h> and declares it in <malloc_np.h>.

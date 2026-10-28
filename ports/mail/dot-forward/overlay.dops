@@ -1,7 +1,3 @@
 port mail/dot-forward
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-
-# dragonfly/@2026Q1, @2026Q2: patch-error.h. FreeBSD's own files/patch-error.h
-# (2024) includes <errno.h> for every platform, so the DragonFly one no
-# longer applies.

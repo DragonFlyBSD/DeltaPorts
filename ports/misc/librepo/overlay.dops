@@ -7,6 +7,6 @@ reason "DragonFly: xattr shim without the extattr *_fd calls libc lacks"
 # implement, so librepo.so fails to link. Use files-dragonfly/xattr.c,
 # which keeps getxattr() on extattr_get_file() and reports ENOTSUP for the
 # fd calls; librepo then just does not cache checksums in xattrs.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 file materialize files-dragonfly/xattr.c -> files/xattr.c

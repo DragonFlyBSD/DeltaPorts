@@ -1,13 +1,9 @@
 port devel/libepoll-shim
 type port
 reason "auto-converted from Makefile.DragonFly; drop the i386 (lib32) flavor"
-target @2026Q1,@2026Q2
 
-mk eval FLAVORS "${FLAVORS:Ni386}"
-
-# The :Ni386 eval lands after bsd.port.pre.mk has read FLAVORS, so the
-# i386 flavor stays and builds with -m32, which DragonFly cannot do (its
+# The i386 flavor builds with -m32, which DragonFly cannot do (its
 # amd64-only IGNORE tests ARCH, which is x86_64 here). Set FLAVORS where it
-# is defined instead.
-target @2026Q3,@2026Q4,@main
+# is defined: a :Ni386 eval would land after bsd.port.pre.mk has read it.
+target @2026Q4,@main
 mk set FLAVORS "default"

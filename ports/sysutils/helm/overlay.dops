@@ -1,9 +1,3 @@
 port sysutils/helm
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-
-# 3.22 (2026Q4 on) no longer depends on containerd, so the vendored
-# content/local/store_unix.go the build-tag patch edits is gone.
-target @2026Q4,@main
-
-file remove dragonfly/patch-vendor_github.com_containerd_containerd_content_local_store_unix.go

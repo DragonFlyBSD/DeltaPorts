@@ -8,7 +8,7 @@ reason "DragonFly: take the FreeBSD port's code paths"
 # pthread_tryjoin_np). Take those branches here too. DragonFly has no
 # pthread_peekjoin_np either; the only caller polls until the thread has
 # exited, so a blocking pthread_join() does the same.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} \

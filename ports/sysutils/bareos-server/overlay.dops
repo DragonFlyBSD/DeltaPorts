@@ -2,13 +2,6 @@ port sysutils/bareos-server
 type port
 reason "DragonFly: C++20 with the ports GCC; no ACL or xattr support; libintl for NLS"
 
-# 2026Q1 and 2026Q2 keep the 20.0.3-era Makefile.DragonFly and the patches
-# in dragonfly/@2026Q1 and @2026Q2 (LibreSSL workarounds, an ACL probe
-# rename, a xattr hack), which no longer apply to 24.x and later.
-target @2026Q1,@2026Q2
-
-file materialize Makefile.DragonFly -> Makefile.DragonFly
-
 # bareos 25 sets CMAKE_CXX_STANDARD 20; USES=compiler:c++20-lang resolves
 # to base gcc 8.3 on DragonFly.
 #
@@ -17,11 +10,11 @@ file materialize Makefile.DragonFly -> Makefile.DragonFly
 # supplies the os_*_streams functions there. Turn both off, as the last
 # DragonFly build did. The FreeBSD section also adds link_libraries(intl),
 # which the NLS build needs for gettext.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 mk add CMAKE_ARGS "-Dacl=OFF -DHAVE_SYS_EXTATTR_H:BOOL=OFF"
 mk set NLS_LDFLAGS "-lintl"
 
-# Kept from Makefile.DragonFly: no LTO AME crypto plugin.
+# From the former Makefile.DragonFly: no LTO AME crypto plugin.
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSCSICRYPTO}"

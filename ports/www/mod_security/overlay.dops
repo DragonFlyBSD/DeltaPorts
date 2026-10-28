@@ -2,6 +2,6 @@ port www/mod_security
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
-# dragonfly/@2026Q1, @2026Q2: patch-configure. From 2026Q3 the distfile ships
-# no configure (USES=autoreconf), so the platform case goes into configure.ac
-# (dragonfly/@<line>/patch-configure.ac); an unknown host makes configure exit.
+# The distfile ships no configure (USES=autoreconf), so the platform case
+# goes into configure.ac (dragonfly/@<line>/patch-configure.ac); an unknown
+# host makes configure exit.

@@ -2,7 +2,7 @@ port devel/py-cliapp
 type port
 reason "Python 3.12 removed imp; load plugins with importlib"
 
-# dragonfly/@2026Q3, @2026Q4, @main: cliapp/pluginmgr.py imports imp,
+# dragonfly/@2026Q4, @main: cliapp/pluginmgr.py imports imp,
 # which Python 3.12 removed, and setup.py imports cliapp, so configure
 # fails ("No module named 'imp'"; FreeBSD's port fails the same way).
 # Load plugin files with importlib.util instead.

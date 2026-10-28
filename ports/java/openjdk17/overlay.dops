@@ -10,17 +10,12 @@ mk add CONFIGURE_ARGS "--with-stdc++lib=dynamic"
 
 patch apply diffs/Makefile.diff
 
-# dragonfly/@2026Q1/patch-make_hotspot_lib_JvmOverrideFiles.gmk is the
-# 17.0.17 cut; 17.0.18 dropped the x86 -Wno-maybe-uninitialized lines it
-# anchored on, so the flat patch is re-cut for 2026Q2 onwards.
-
 # --- bootstrap JDK ------------------------------------------------------
-# From 2026Q2 upstream boots from a prebuilt FreeBSD JDK extracted into
+# Upstream boots from a prebuilt FreeBSD JDK extracted into
 # ${WRKDIR}/boot-jdk. That binary is FreeBSD-branded ELF and cannot exec
 # on DragonFly, so boot from the DragonFly-native java/bootstrap-openjdk17
-# (17 boots 17) the way java/openjdk11 does. 2026Q1 still searches
-# ${LOCALBASE}/bootstrap-openjdk17 itself.
-target @2026Q2,@2026Q3,@2026Q4,@main
+# (17 boots 17) the way java/openjdk11 does.
+target @2026Q4,@main
 
 mk set BOOTSTRAPJDKDIR "${LOCALBASE}/bootstrap-openjdk17"
 mk add BUILD_DEPENDS "${LOCALBASE}/bootstrap-openjdk17/bin/javac:java/bootstrap-openjdk17"

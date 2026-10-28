@@ -10,6 +10,6 @@ reason "DragonFly: build the llvm17/llvm18 flavors' host tool with clang and lib
 # devel/spirv-llvm-translator does; llvm19-22's clang already uses libc++.
 # The Makefile includes bsd.port.pre.mk, so an .if block would land after
 # USES is read: add the flavor-dependent word to USES itself.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add USES "${FLAVOR:Mllvm1[78]:C/.+/dfly-libcxx/}"

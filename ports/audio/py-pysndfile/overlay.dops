@@ -5,7 +5,7 @@ reason "DragonFly: setup.py knows only Linux/FreeBSD/Darwin/Windows"
 # setup.py picks the libsndfile library name by platform.system() and exits
 # with "unsupported platform DragonFly"; FreeBSD's patch-setup.py added
 # FreeBSD to the libsndfile.so case. Add DragonFly next to it.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's/platform.system() == "FreeBSD":/platform.system() in ("FreeBSD", "DragonFly"):/' \

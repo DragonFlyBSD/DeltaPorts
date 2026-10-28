@@ -1,8 +1,0 @@
-port devel/capnproto1
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-mk set USE_GCC_VERSION "${GCC_DEFAULT}"
-mk add CONFIGURE_ARGS "--without-fibers"
-mk add CXXFLAGS "-I${OPENSSLINC} -L${OPENSSLLIB}"

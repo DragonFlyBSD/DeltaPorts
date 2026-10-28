@@ -9,7 +9,7 @@ mk add CFLAGS "-Wno-deprecated-declarations"
 # freebsd qmake scope, which DragonFly's Qt5 also takes; DragonFly has
 # neither elf_aux_info() nor <sys/auxv.h>. Botan only reads the aux vector
 # for ARM/PPC CPU features, so leave the define out.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's/ BOTAN_TARGET_OS_HAS_ELF_AUX_INFO / /' \

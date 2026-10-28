@@ -2,7 +2,7 @@ port textproc/gitlab-zoekt-indexer
 type port
 reason "DragonFly: Statfs_t field types; mmap index files on DragonFly"
 
-# dragonfly/@2026Q3, @2026Q4, @main:
+# dragonfly/@2026Q4, @main:
 #  - internal/disk_stats: unix.Statfs_t's Blocks/Bfree are int64 on
 #    DragonFly; convert them before multiplying by Bsize.
 #  - vendor/github.com/sourcegraph/zoekt/index/indexfile.go: the mmap

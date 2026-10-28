@@ -2,5 +2,5 @@ port devel/aws-crt-ffi
 type port
 reason "DragonFly: libcrypto comes from the ports OpenSSL (USES=ssl), which conflicts with security/aws-lc; drop the aws-lc dependency"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk eval LIB_DEPENDS "${LIB_DEPENDS:N*security/aws-lc}"

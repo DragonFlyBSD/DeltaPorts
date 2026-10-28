@@ -2,7 +2,6 @@ port multimedia/sfml2
 type port
 reason "DragonFly: build as FreeBSD (CMake OS check, Config.hpp), DragonFly's usbhid.h path"
 
-# devel/sfml (2.6.2, 2026Q1-Q3) moved to multimedia/sfml2; same dfly-patch.
 # cmake/Config.cmake rejects any system it does not know ("Unsupported
 # operating system or environment").
 mk target set dfly-patch <<'MK1'

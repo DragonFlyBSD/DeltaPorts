@@ -3,25 +3,8 @@ type port
 reason "DragonFly: take the sources' FREEBSD code paths under FPC's DRAGONFLY define"
 
 # FPC defines DRAGONFLY, not FREEBSD, so the FreeBSD branches ({$IFDEF
-# FREEBSD}) are switched over by name. 11.x renamed unit_gwrap.pas and
-# dropped unit_pea.pas, unit3.pas and unit8.pas; the files carrying FREEBSD
-# branches differ per line.
-target @2026Q1,@2026Q2
-
-mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e 's@FREEBSD@DRAGONFLY@g' \
-		${WRKSRC}/dev/pea_utils.pas \
-		${WRKSRC}/dev/peach.pas \
-		${WRKSRC}/dev/list_utils.pas \
-		${WRKSRC}/dev/unit_gwrap.pas \
-		${WRKSRC}/dev/unit_pea.pas \
-		${WRKSRC}/dev/unit3.pas \
-		${WRKSRC}/dev/unit8.pas
-	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
-		${WRKSRC}/dev/list_utils.pas
-MK1
-
-target @2026Q3,@2026Q4,@main
+# FREEBSD}) are switched over by name.
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FREEBSD@DRAGONFLY@g' \

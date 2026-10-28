@@ -1,6 +1,0 @@
-port dns/samba-nsupdate
-type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
-
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSSAPI_BASE} GSSAPI_MIT"

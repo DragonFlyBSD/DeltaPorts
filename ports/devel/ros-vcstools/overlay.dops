@@ -2,8 +2,8 @@ port devel/ros-vcstools
 type port
 reason "Python 3.12 removed imp; read the version with importlib"
 
-# dragonfly/@2026Q3, @2026Q4: setup.py imports imp, which Python 3.12
+# dragonfly/@2026Q4: setup.py imports imp, which Python 3.12
 # removed, to load src/vcstools/__version__.py (FreeBSD's port fails the
 # same way there). Load it with importlib.util instead. FreeBSD's main
-# carries its own files/patch-setup.py for this; drop these patches if it
+# carries its own files/patch-setup.py for this; drop this patch if it
 # is merged to the quarterly branch.

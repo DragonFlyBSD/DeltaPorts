@@ -1,7 +1,0 @@
-port security/clamav-lts
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-
-# dragonfly/@2026Q1, @2026Q2: the autotools configure patches. 1.4 builds
-# with cmake and ships no configure; they are kept only so the retired lines
-# compose as before.

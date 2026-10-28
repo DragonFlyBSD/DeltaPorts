@@ -57,7 +57,7 @@ patch apply diffs/Makefile.diff
 # FreeBSD passes --enable-netmap for the emulator flavors; DragonFly has no
 # netmap, and the --disable-netmap above only dedupes against the tools
 # flavor's list, so meson setup stops on missing netmap headers.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 text replace-once file Makefile from "--enable-netmap" to "--disable-netmap"
 
@@ -71,6 +71,6 @@ mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 # tcg/debuginfo.c includes <elfutils/libdwfl.h>, whose gelf.h needs
 # Elf64_Lib from <elf.h>; DragonFly's <elf.h> has no such type (the same
 # reason devel/libabigail is BROKEN). libdw only feeds TCG debug info.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add CONFIGURE_ARGS "--disable-libdw"

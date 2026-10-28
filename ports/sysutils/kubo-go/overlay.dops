@@ -5,6 +5,6 @@ reason "DragonFly: build without FUSE mounting (nofuse tag)"
 # The vendored bazil.org/fuse supports only Linux, macOS and FreeBSD, so it
 # does not compile on DragonFly (undefined attr, mount, maxWrite...). kubo
 # drops its FUSE mount support with the nofuse build tag.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add GO_BUILDFLAGS "-tags nofuse"

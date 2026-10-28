@@ -1,6 +1,0 @@
-port net/haproxy25
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-mk eval MAKE_ARGS "${MAKE_ARGS:NUSE_CPU_AFF*}"

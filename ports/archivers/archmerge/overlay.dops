@@ -4,7 +4,7 @@ reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
 
 # codeberg regenerated the archive and every mirror serves the new one;
 # freebsd-ports main re-rolled distinfo for it.
-target @2026Q3,@2026Q4
+target @2026Q4
 text replace-once file distinfo from "TIMESTAMP = 1777528560" to "TIMESTAMP = 1791704062"
 text replace-once file distinfo from "SHA256 (archmerge-0.9.9.tar.gz) = f48b1c4c8ca3705bfd4860eab4a73b3e307cf1322c5858fb2fc43a608ae927b9" to "SHA256 (archmerge-0.9.9.tar.gz) = cd84481ef4c779f5b2718d2412f0cb0b339e2c7d3247d68cfc9f1abe5a9a177c"
 text replace-once file distinfo from "SIZE (archmerge-0.9.9.tar.gz) = 6184" to "SIZE (archmerge-0.9.9.tar.gz) = 6191"

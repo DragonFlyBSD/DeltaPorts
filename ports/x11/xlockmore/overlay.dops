@@ -4,8 +4,7 @@ reason "2026Q4: restore USES=tar:xz, lost from the branch's Makefile"
 
 # The 2026Q4 Makefile no longer has tar:xz while its distinfo lists
 # xlockmore-5.88.tar.xz, so fetch asks for a .tar.gz that distinfo does not
-# know. 2026Q3 and main both carry tar:xz. (FreeBSD-side; DragonFly is not
-# involved.)
+# know. main carries tar:xz. (FreeBSD-side; DragonFly is not involved.)
 target @2026Q4
 
 mk add USES "tar:xz"

@@ -2,7 +2,7 @@ port devel/py-ty
 type port
 reason "DragonFly: fix notify's kqueue dependency gate (dragonfly/@<line> cargo-crate patch); keep ty off tikv-jemallocator as on FreeBSD"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's|not(target_os = "freebsd"),|& not(target_os = "dragonfly"),|' \
 		${WRKSRC}/ruff/crates/ty/Cargo.toml \

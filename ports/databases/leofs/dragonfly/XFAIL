@@ -1,1 +1,0 @@
-XFAIL_DragonFly= erlang varargs.erl failure

@@ -1,48 +1,15 @@
 port mail/thunderbird
 type port
-reason "DragonFly: pre-158 setup on 2026Q1-Q3; Gecko 158 on 2026Q4/main built like www/firefox (clang + libc++ headers, per-line dragonfly/ patch sets)"
-
-# The pre-158 setup stays on the older lines.
-target @2026Q1,@2026Q2,@2026Q3
-
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NPROFILE}"
-mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NLTO}"
-mk add LDFLAGS "-R${PREFIX}/lib/thunderbird"
-mk add MAKE_ENV "AR=/usr/bin/ar"
-mk add MAKE_ENV "LD=/usr/bin/ld"
-mk add MOZ_OPTIONS "--host=${ARCH}-dports-${OPSYS:tl}${OSREL}"
-mk add MOZ_OPTIONS "--disable-webrtc"
-mk add MOZ_OPTIONS "--with-clang-path=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang"
-mk add MOZ_OPTIONS "--with-libclang-path=${LOCALBASE}/llvm${LLVM_VERSION}/lib"
-mk add CXXFLAGS -Wno-multistatement-macros
-mk add CXXFLAGS -Wno-class-memaccess
-mk add BINARY_ALIAS "clang=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang"
-mk add BINARY_ALIAS "clang++=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang++"
-mk add BINARY_ALIAS "wasm-ld=${LOCALBASE}/llvm${LLVM_VERSION}/bin/wasm-ld"
-mk target set dfly-patch <<'MK'
-	# disable SCTP
-	${REINPLACE_CMD} -e 's|MOZ_SCTP|MOZ_DISABLE_SCTP|' \
-		${WRKSRC}/netwerk/moz.build
-	(cd ${WRKSRC}/gfx/angle/checkout/src/compiler/translator && \
-		${REINPLACE_CMD} -e 's|<math.h>|<cmath>|' \
-		InfoSink.h IntermNode.cpp)
-	${REINPLACE_CMD} -e 's@_XOPEN_SOURCE@&___@g' \
-		${WRKSRC}/media/libcubeb/src/cubeb_alsa.c
-	${REINPLACE_CMD} -e 's@_POSIX_SOURCE@&___@g' \
-		${WRKSRC}/media/libcubeb/src/cubeb_jack.cpp
-	${REINPLACE_CMD} -e 's@gtk+-wayland@&z@g' \
-		${WRKSRC}/toolkit/moz.configure
-MK
-mk eval USES "${USES:Nelfctl}"
+reason "DragonFly: Gecko built like www/firefox (clang + libc++ headers, per-line dragonfly/ patch sets)"
 
 # 158.0.1 builds Gecko FIREFOX_158_0_1_BUILD1, the same tree as
 # www/firefox 158.0.1, so 2026Q4 and main take www/firefox's DragonFly setup
 # (see the notes there): clang with the llvm libc++ headers, XP_FREEBSD for
 # DragonFly, and the same dragonfly/@<line> patch set (all 33 apply to the
 # 158 tree with -F0), plus the system-headers malloc.h removal this port has
-# always carried. The old libwebrtc build_config.h patch is gone: 158 has no
-# such file (webrtc is disabled anyway), and the ANGLE sources moved from
-# gfx/angle/checkout to third_party/angle.
+# always carried. There is no libwebrtc build_config.h patch: 158 has no
+# such file (webrtc is disabled anyway), and the ANGLE sources are in
+# third_party/angle.
 target @2026Q4,@main
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NPROFILE}"

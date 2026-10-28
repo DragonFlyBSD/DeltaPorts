@@ -6,7 +6,7 @@ reason "DragonFly: no eventfd(2)"
 # configure stops when eventfd() is not found ("Entry HAVE_EVENTFD not in
 # configuration data"). DragonFly has no eventfd; libdex's semaphores
 # fall back to their non-eventfd path.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add MESON_ARGS "-Deventfd=disabled"
 

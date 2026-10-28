@@ -15,7 +15,7 @@ mk add MAVEN_ENV "OS=FreeBSD"
 # under GDK_WINDOWING_WAYLAND and otherwise makes GDK_IS_WAYLAND_DISPLAY()
 # false. CollectSources copies every file in the library folder, so the new
 # header reaches the natives build directory.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk target set dfly-patch <<'MK1'
 	@${PRINTF} '#ifdef GDK_WINDOWING_WAYLAND\n#if GTK_CHECK_VERSION(4,0,0)\n#include <gdk/wayland/gdkwayland.h>\n#else\n#include <gdk/gdkwayland.h>\n#endif\n#else\n#define GDK_IS_WAYLAND_DISPLAY(display) FALSE\n#endif\n' \
 		> "${WRKSRC}/eclipse.platform.swt/bundles/org.eclipse.swt/Eclipse SWT PI/gtk/library/dfly_wayland.h"

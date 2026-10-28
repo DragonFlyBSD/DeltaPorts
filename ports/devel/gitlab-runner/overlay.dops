@@ -2,7 +2,4 @@ port devel/gitlab-runner
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
-# dragonfly/@2026Q1, @2026Q2: build-tag patches for commands/config_unix.go,
-# helpers/archives/zip_extra_unix.go and the vendored docker client. 19.x
-# (2026Q3 on) lists dragonfly in the first two and uses moby/moby/client,
-# whose client_unix.go is !windows. The moby/term patches still apply.
+# dragonfly/: build-tag patches for the vendored moby/term.

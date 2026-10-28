@@ -4,5 +4,5 @@ reason "DragonFly: build the FreeBSD code paths with -D__FreeBSD__=9 (was USES=a
 target @any
 
 # CFLAGS+= by text op: "mk add" would write "CFLAGS=", poly-bhz2.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 text line-insert-after file Makefile anchor "ALL_TARGET=\trelease" line "CFLAGS+=\t-D__FreeBSD__=9"

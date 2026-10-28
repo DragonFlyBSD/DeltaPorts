@@ -8,7 +8,7 @@ reason "DragonFly: libcrypto is not in base, so the OpenSSL 1.1 API check fails"
 # LOCALBASE, so the check fails and PdfEncrypt.cpp uses the pre-1.1 API
 # (EVP_CIPHER_CTX by value). Record the result, and give the real link
 # -L${LOCALBASE}/lib.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add CMAKE_ARGS "-DPODOFO_HAVE_OPENSSL_1_1:BOOL=TRUE"
 mk add USES "localbase:ldflags"

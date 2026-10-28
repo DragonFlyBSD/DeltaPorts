@@ -2,5 +2,5 @@ port multimedia/xanim
 type port
 reason "DragonFly: no <malloc.h>"
 
-# dragonfly/@2026Q3, @2026Q4, @main: xanim.h includes <malloc.h> unless
+# dragonfly/@2026Q4, @main: xanim.h includes <malloc.h> unless
 # __FreeBSD__ (or BSDi/Cygwin); DragonFly has none.

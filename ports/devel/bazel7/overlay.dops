@@ -14,6 +14,6 @@ reason "DragonFly: map Java's os.name dragonflybsd to GOOS dragonfly in the bund
 # vdso_support.cc defines Elf64_auxv_t for FreeBSD only. The same
 # MODULE.bazel overrides add toolchain_local/grpc_dragonfly.patch (DragonFly
 # takes the FreeBSD block) and abseil_dragonfly.patch.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 text replace-once file files/toolchain_local-BUILD from "exports_files([\"rules_python_freebsd.patch\"])" to "exports_files([\"rules_python_freebsd.patch\", \"rules_go_dragonfly.patch\", \"grpc_dragonfly.patch\", \"abseil_dragonfly.patch\"])"

@@ -5,6 +5,6 @@ reason "DragonFly: let extensions.py build on DragonFly"
 # extensions.py raises "Unsupported os" for anything but Windows, Linux,
 # Darwin and (with FreeBSD's files/patch-extensions.py) FreeBSD. Add
 # DragonFly to the list FreeBSD's patch writes.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 text replace-once file files/patch-extensions.py from "\"Darwin\", \"FreeBSD\"):" to "\"Darwin\", \"FreeBSD\", \"DragonFly\"):"

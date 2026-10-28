@@ -13,10 +13,7 @@ text replace-once file pkg-plist \
      to   "lib/pcsc/drivers/ifd-ccid.bundle/Contents/DragonFly/libccid.so"
 
 # The static archive lands in the same directory. Upstream lists it since
-# 1.8.4 (849610b8c0cb, MESON_ARGS=--default-library=both); 1.8.2 on
-# @2026Q3 builds the shared library only and has no such line (checked
-# 2026-10-05), hence noop rather than a @main block: any line that carries
-# the entry needs the same rename.
+# 1.8.4 (849610b8c0cb, MESON_ARGS=--default-library=both).
 text replace-once file pkg-plist \
      from "lib/pcsc/drivers/ifd-ccid.bundle/Contents/FreeBSD/libccid.a" \
      to   "lib/pcsc/drivers/ifd-ccid.bundle/Contents/DragonFly/libccid.a" \

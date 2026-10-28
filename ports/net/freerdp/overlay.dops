@@ -7,12 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${RM} -fr ${WRKSRC}/channels/urbdrc
 
 MK1
-
-# 2.11.8 no longer has channels/rdpdr/client/mntent_compat.c (the sed
-# fails and stops configure), so keep it on the retired lines only.
-target @2026Q1,@2026Q2
-
-mk target set post-configure <<'MK2'
-	${REINPLACE_CMD} -e '/MNT_UNION/d' \
-		${WRKSRC}/channels/rdpdr/client/mntent_compat.c
-MK2

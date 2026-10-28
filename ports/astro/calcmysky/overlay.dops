@@ -7,7 +7,7 @@ reason "DragonFly: std::filesystem with base gcc 8 needs misc/cxxfs_gcc8"
 # std::filesystem::create_directories"). Use misc/cxxfs_gcc8's headers and
 # archive; CMAKE_CXX_STANDARD_LIBRARIES puts it after the objects. CXXFLAGS
 # is inserted as a top-level += so sys.mk's defaults stay.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
 text line-insert-after file Makefile \

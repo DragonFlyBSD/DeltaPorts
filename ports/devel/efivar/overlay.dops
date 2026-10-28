@@ -1,7 +1,0 @@
-port devel/efivar
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-
-# dragonfly/@2026Q1, @2026Q2: patch-src_Makefile (-fno-short-wchar for the
-# build tools) and patch-src_makeguids.c (calloc size). Version 39 (2026Q3 on)
-# sizes the buffer correctly and never passes -fshort-wchar.

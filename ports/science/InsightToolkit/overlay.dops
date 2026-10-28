@@ -26,7 +26,7 @@ MK1
 # archive order, but DragonFly's base ld does: liblpsolve55_itk.so came out
 # with ftime undefined and every RTK program failed to link. Name the
 # archive again after the objects.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add CMAKE_ARGS "-DCMAKE_C_STANDARD_LIBRARIES:STRING=${WRKSRC}/libftime.a"
 mk add CMAKE_ARGS "-DCMAKE_CXX_STANDARD_LIBRARIES:STRING=${WRKSRC}/libftime.a"

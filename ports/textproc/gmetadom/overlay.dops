@@ -1,3 +1,0 @@
-port textproc/gmetadom
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"

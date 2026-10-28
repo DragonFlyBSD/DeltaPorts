@@ -1,7 +1,7 @@
 port japanese/py-SudachiPy
 type port
 reason "DragonFly: let the sudachi crate's plugin loader build"
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 # WRKSRC is the python/ subdirectory, but the patched sudachi crate sits
 # next to it, so patches apply from the top of the tree. The port has no

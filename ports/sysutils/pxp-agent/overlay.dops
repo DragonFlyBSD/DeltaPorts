@@ -1,6 +1,0 @@
-port sysutils/pxp-agent
-type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
-
-mk eval LDFLAGS "${LDFLAGS:N-lthr}"

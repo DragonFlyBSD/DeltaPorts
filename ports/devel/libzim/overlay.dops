@@ -13,6 +13,6 @@ MK1
 # 9.x defaults to werror=true. The unit tests (built by default) compare
 # int with unsigned in gtest's EXPECT_EQ; gcc's -Wall includes
 # -Wsign-compare for C++ (clang's does not), so the build stopped there.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add MESON_ARGS "-Dwerror=false"

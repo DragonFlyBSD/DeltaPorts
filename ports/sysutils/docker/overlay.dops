@@ -1,6 +1,0 @@
-port sysutils/docker
-type port
-reason "auto-converted from compat (fragment + diffs/)"
-target @any
-
-file remove files/patch-components_cli_vendor_github.com_tonistiigi_fsutil_diskwriter__unix.go on-missing noop

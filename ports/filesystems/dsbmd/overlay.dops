@@ -2,5 +2,5 @@ port filesystems/dsbmd
 type port
 reason "DragonFly: FreeBSD media-mounting daemon built on CAM, libgeom and devd"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk set IGNORE "requires FreeBSD CAM, libgeom and devd"

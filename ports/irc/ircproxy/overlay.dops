@@ -4,7 +4,7 @@ reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
 
 # codeberg regenerated the archive and every mirror serves the new one;
 # freebsd-ports main re-rolled distinfo for it.
-target @2026Q3,@2026Q4
+target @2026Q4
 text replace-once file distinfo from "TIMESTAMP = 1709336064" to "TIMESTAMP = 1791703377"
 text replace-once file distinfo from "SHA256 (ircproxy-1.3.8.tar.gz) = dd1663139827d3cb2e52f3305a62d05a03ad09c5fef42853259c42998863a5f3" to "SHA256 (ircproxy-1.3.8.tar.gz) = 5576a860963bd98bd3e7d40f88239946311e4e6d5517f08c2be01d5d86ae40da"
 text replace-once file distinfo from "SIZE (ircproxy-1.3.8.tar.gz) = 326703" to "SIZE (ircproxy-1.3.8.tar.gz) = 326933"

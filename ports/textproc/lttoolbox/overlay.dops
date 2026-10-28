@@ -5,6 +5,6 @@ reason "Don't configure the test suite, which needs Python"
 # CMakeLists.txt defaults BUILD_TESTING to ON and then requires a Python
 # interpreter, which the port does not depend on ("Could NOT find
 # Python"). The port runs no tests; turn them off.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add CMAKE_OFF "BUILD_TESTING"

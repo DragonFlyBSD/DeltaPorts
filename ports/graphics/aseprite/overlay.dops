@@ -7,7 +7,7 @@ mk eval USES "${USES:Nninja}"
 
 # 1.3 links graphics/skia124's static libraries, which are built with
 # GCC_DEFAULT (base gcc 8.3 lacks __builtin_convertvector); link with the
-# same compiler and libstdc++. Q3 has 1.2.9, which does not use skia124.
+# same compiler and libstdc++.
 target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

@@ -8,7 +8,7 @@ reason "DragonFly: build without ACL and xattr support; link libintl for NLS"
 # functions, so those files do not compile. Turn both off, as the last
 # DragonFly bareos build did. The FreeBSD section also adds
 # link_libraries(intl), which the NLS build needs for gettext.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add CMAKE_ARGS "-Dacl=OFF -DHAVE_SYS_EXTATTR_H:BOOL=OFF"
 mk set NLS_LDFLAGS "-lintl"

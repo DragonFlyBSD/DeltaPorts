@@ -2,11 +2,11 @@ port textproc/toml-f
 type port
 reason "DragonFly: the bundled test-drive module dir is named after the gfortran version"
 
-# 0.5.2 (2026Q3 on) installs the bundled test-drive's Fortran modules in
+# 0.5.2 installs the bundled test-drive's Fortran modules in
 # include/test-drive/<compiler id>-<compiler version>. FreeBSD's plist
 # spells its own gfortran (GNU-14.2.0); DragonFly's GCC_DEFAULT gfortran
 # is 12.x. List whatever directory the build installed instead.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 text line-remove file pkg-plist exact "include/test-drive/GNU-14.2.0/testdrive.mod"
 text line-remove file pkg-plist exact "include/test-drive/GNU-14.2.0/testdrive_version.mod"

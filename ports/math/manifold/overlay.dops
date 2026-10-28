@@ -4,6 +4,6 @@ reason "DragonFly: C++17 parallel algorithms need GCC_DEFAULT"
 
 # src/parallel.h uses std::reduce, std::inclusive_scan and std::exclusive_scan,
 # which base gcc 8.3's libstdc++ lacks (gcc 9 added them).
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

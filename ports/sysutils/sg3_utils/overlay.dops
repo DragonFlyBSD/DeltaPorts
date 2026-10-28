@@ -10,19 +10,11 @@ MK1
 file remove files/patch-lib_sg__pt__freebsd.c on-missing noop
 file remove files/patch-include_freebsd__nvme__ioctl.h on-missing noop
 
-# --disable-scsistrings came from the pre-lock Makefile.DragonFly for 1.44+.
-# The locked 1.42 defines sg_lib_read_pos_arr only with the full strings,
-# but sg_lib.c always uses it, so libsgutils2 fails to link without them;
-# the last DragonFly build of 1.42 did not pass it.
-target @2026Q1,@2026Q2
-
-mk add CONFIGURE_ARGS "--disable-scsistrings"
-
 # The locked 1.42 plist lists its man pages under man/man8, where
 # bsd.port.mk used to point --mandir; it now defaults to share/man. Install
 # them there, and have compress-man look there too: it only walks MANDIRS
 # (share/man), so the plist's .8.gz files were missing.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set GNU_CONFIGURE_MANPREFIX "${PREFIX}"
 mk add MANDIRS "${PREFIX}/man"

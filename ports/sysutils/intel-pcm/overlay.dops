@@ -2,17 +2,10 @@ port sysutils/intel-pcm
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
-# 202405 (2026Q3 on) installs no examples, so the c_example plist entries
-# are kept for 2026Q1/Q2 only.
-target @2026Q1,@2026Q2
-
-mk add PLIST_FILES "sbin/c_example.x sbin/c_example_shlib.x"
-
-# dragonfly/patch-src_dashboard.cpp: dashboard.cpp moved to src/ and still
-# uses std::mutex without <mutex>. The old top-level patch is kept for
-# 2026Q1/Q2 in dragonfly/@2026Q1, @2026Q2.
+# dragonfly/patch-src_dashboard.cpp: dashboard.cpp uses std::mutex without
+# <mutex>.
 #
-# dragonfly/@2026Q3, @2026Q4, @main: patch-CMakeLists.txt. CMakeLists.txt
-# treats every non-FreeBSD UNIX as Linux, which builds with PCM_USE_PERF
+# dragonfly/@2026Q4, @main: patch-CMakeLists.txt. CMakeLists.txt treats
+# every non-FreeBSD UNIX as Linux, which builds with PCM_USE_PERF
 # (<linux/perf_event.h>) and the Linux daemon; the sources already handle
 # __DragonFly__ next to __FreeBSD__, so take the FreeBSD path.

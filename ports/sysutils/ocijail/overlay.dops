@@ -2,5 +2,5 @@ port sysutils/ocijail
 type port
 reason "DragonFly: OCI runtime built on FreeBSD's jail_set(2)/libjail, which DragonFly lacks"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk set IGNORE "requires FreeBSD jail_set(2) and libjail, which DragonFly lacks"

@@ -3,4 +3,4 @@ type port
 reason "DragonFly: use the POSIX reader; readchar/__init__.py lists platforms by name"
 
 # dragonfly/@<line>/patch-readchar___init__.py: add "dragonfly" to the
-# platforms that get _posix_read (4.2.1 on 2026Q1-Q3, 4.2.2 on 2026Q4/main).
+# platforms that get _posix_read.

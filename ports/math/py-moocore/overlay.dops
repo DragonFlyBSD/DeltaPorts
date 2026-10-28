@@ -4,6 +4,6 @@ reason "DragonFly: -march=x86-64-v2 needs GCC_DEFAULT"
 
 # src/moocore/_ffi_build.py compiles with -march=x86-64-v2 on x86_64, which
 # base gcc 8.3 does not know (gcc 11 added it). Build with GCC_DEFAULT.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

@@ -2,7 +2,7 @@ port devel/freebsd-gcc14
 type port
 reason "DragonFly: cross compiler for building FreeBSD; its target triple turns into *-dragonfly, which gcc does not support (same as freebsd-gcc12/13)"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk set BUILD_DEPENDS ""
 mk set RUN_DEPENDS ""
 mk set IGNORE "FreeBSD specific"

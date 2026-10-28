@@ -1,3 +1,0 @@
-port sysutils/logrotate
-type port
-reason "2026Q1/Q2 only: alloca.h patches (3.22 no longer uses alloca)"

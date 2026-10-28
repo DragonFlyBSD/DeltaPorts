@@ -3,9 +3,8 @@ type port
 reason "DragonFly: allow OPSYS, add the avalon bootstrap, and carry the dragonfly patch lane plus the shared cargo crate patches"
 
 # Each base builds the rust its own branch ships. The DragonFly source
-# patches track the rust version, so they cannot be shared between
-# targets: none of the fourteen patches common to both sets is identical
-# across 1.96.1 and 1.98.1. Nothing here rewrites PORTVERSION.
+# patches track the rust version, so each line has its own set in
+# dragonfly/@<line>/. Nothing here rewrites PORTVERSION.
 
 # =======================================================================
 # Independent of the rust version.
@@ -25,10 +24,10 @@ mk replace-if from "${OPSYS} != FreeBSD" \
 # The folder installs them, so a new crate patch needs no op.
 
 # =======================================================================
-# Wherever a DragonFly bootstrap is fetched. Same site and same build
-# environment for either version; only the version differs, below.
+# Where the DragonFly bootstrap is fetched from, and its build environment.
+# @2026Q4 repeats these in its own block below.
 # =======================================================================
-target @2026Q3,@main
+target @main
 
 # Bootstrap tarballs are self-hosted (no cross-build port exists for
 # DragonFly); avalon lays them out under <version>/ rather than the
@@ -43,44 +42,11 @@ mk add MAKE_ENV "LDVER=ld.bfd"
 mk add MAKE_ENV "LD_LIBRARY_PATH=${WRKDIR}/bootstrap/lib:/usr/lib/${DFLY_BASE_CCVER}"
 
 # =======================================================================
-# @2026Q3: rust 1.96.1, bootstrap 1.95.0.
-# =======================================================================
-target @2026Q3
-
-mk set BOOTSTRAPS_DATE "1.95.0"
-
-# Chained so each line anchors on the one inserted before it. The first
-# anchors on the branch's own source SIZE line, so this fails loudly if
-# the base moves off 1.96.1 rather than writing a wrong distinfo.
-text line-insert-after file distinfo \
-     anchor "SIZE (rust/rustc-1.96.1-src.tar.xz) = 241602032" \
-     line "SHA256 (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 03693380bf72e839ff5d7c2b0e9626c48baebca08667bef197a5c9ac1adf3595"
-text line-insert-after file distinfo \
-     anchor "SHA256 (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 03693380bf72e839ff5d7c2b0e9626c48baebca08667bef197a5c9ac1adf3595" \
-     line "SIZE (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 67955352"
-text line-insert-after file distinfo \
-     anchor "SIZE (rust/1.95.0/rustc-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 67955352" \
-     line "SHA256 (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 98d3e167dff45e14bf34529dee6bab0d551b1a6045299e029d164786bc1a3ea8"
-text line-insert-after file distinfo \
-     anchor "SHA256 (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 98d3e167dff45e14bf34529dee6bab0d551b1a6045299e029d164786bc1a3ea8" \
-     line "SIZE (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 24177544"
-text line-insert-after file distinfo \
-     anchor "SIZE (rust/1.95.0/rust-std-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 24177544" \
-     line "SHA256 (rust/1.95.0/cargo-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 96f567a18864c3bcb577984409134edce661c625a99dcd186e3388da8e6b4faa"
-text line-insert-after file distinfo \
-     anchor "SHA256 (rust/1.95.0/cargo-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 96f567a18864c3bcb577984409134edce661c625a99dcd186e3388da8e6b4faa" \
-     line "SIZE (rust/1.95.0/cargo-1.95.0-x86_64-unknown-dragonfly.tar.xz) = 11309856"
-
-# do-patch applies every dragonfly/patch-* via DFLY_PATCHDIR. This line's
-# own are in dragonfly/@2026Q3/, cut against the 1.96.1 source; the folder
-# installs them under the flat name.
-
-# =======================================================================
 # @main: rust 1.99.0, bootstrap 1.98.1.
 # =======================================================================
 target @main
 
-# rustc 1.98.1 needs LLVM 22. @2026Q3 keeps the 20/21 its own port pins.
+# rustc 1.98.1 needs LLVM 22.
 mk set LLVM_VERSION "22"
 mk set _LLVM_VERSION "22"
 
@@ -94,7 +60,9 @@ text replace-once file Makefile \
      from "${CARGO_VENDOR_DIR}/*/.cargo-checksum.json" \
      to "{} +"
 
-# Same chain as @2026Q3, against this branch's own source SIZE line.
+# Chained so each line anchors on the one inserted before it. The first
+# anchors on the branch's own source SIZE line, so this fails loudly if
+# the base moves rather than writing a wrong distinfo.
 text line-insert-after file distinfo \
      anchor "SIZE (rust/rustc-1.99.0-src.tar.xz) = 265258564" \
      line "SHA256 (rust/1.98.1/rustc-1.98.1-x86_64-unknown-dragonfly.tar.xz) = a1c6681de742ac9736d8b99e7c52033643eba64eb95c98b9527983dbc53b7ab1"
@@ -136,7 +104,7 @@ mk add MAKE_ENV "LDVER=ld.bfd"
 # of the build loads, or e.g. cmake fails on a missing GLIBCXX version).
 mk add MAKE_ENV "LD_LIBRARY_PATH=${WRKDIR}/bootstrap/lib:/usr/lib/${DFLY_BASE_CCVER}"
 
-# rustc 1.98.1 needs LLVM 22. @2026Q3 keeps the 20/21 its own port pins.
+# rustc 1.98.1 needs LLVM 22.
 mk set LLVM_VERSION "22"
 mk set _LLVM_VERSION "22"
 
@@ -150,7 +118,9 @@ text replace-once file Makefile \
      from "${CARGO_VENDOR_DIR}/*/.cargo-checksum.json" \
      to "{} +"
 
-# Same chain as @2026Q3, against this branch's own source SIZE line.
+# Chained so each line anchors on the one inserted before it. The first
+# anchors on the branch's own source SIZE line, so this fails loudly if
+# the base moves rather than writing a wrong distinfo.
 text line-insert-after file distinfo \
      anchor "SIZE (rust/rustc-1.98.1-src.tar.xz) = 244440824" \
      line "SHA256 (rust/1.97.1/rustc-1.97.1-x86_64-unknown-dragonfly.tar.xz) = 3ae8e16224118083cd089aa5318a00a0ca57f11d7a58aa4dd782a75394ad1db4"

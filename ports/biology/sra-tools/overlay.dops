@@ -2,31 +2,6 @@ port biology/sra-tools
 type port
 reason "DragonFly: take the FreeBSD paths in the CMake build (OS detection, BSD headers)"
 
-# The konfigure/make-era dfly-patch: 2026Q1/Q2 only. 3.4 (2026Q3 on) builds
-# with CMake and ncbi-vdb/build/Makefile.shell, tools/driver-tool and
-# tools/copycat/Makefile are gone, so it fails the patch phase there.
-target @2026Q1,@2026Q2
-
-mk add MAKE_ARGS "OS=bsd TOOLS=gcc"
-mk target set dfly-patch <<'MK1'
-	${RM} -f ${WRKSRC}/ncbi-vdb/interfaces/os/bsd/endian.h
-	${REINPLACE_CMD} -e 's@freebsd@dragonfly@g' \
-			 -e "/TOOLS =/s@'clang'@'gcc'@g" \
-		${WRKSRC}/setup/konfigure.perl \
-		${WRKSRC}/*/setup/konfigure.perl
-	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
-		${WRKSRC}/ncbi-vdb/build/Makefile.shell \
-		${WRKSRC}/ncbi-vdb/test/klib/printf-test.c
-	${REINPLACE_CMD} -e 's,AESNI_SUPPORTED=$$.*,AESNI_SUPPORTED=false \\,g' \
-		${WRKSRC}/ncbi-vdb/libs/krypto/Makefile
-	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
-		${WRKSRC}/tools/driver-tool/cmdline.cpp
-	${REINPLACE_CMD} -e "s@-lmagic@-lmagic -llzma@g" \
-		${WRKSRC}/ncbi-vdb/libs/kfs/Makefile
-	${REINPLACE_CMD} -e "s@-smagic@-smagic -slzma@g" \
-		${WRKSRC}/tools/copycat/Makefile
-MK1
-
 # CMake build: build/env.cmake (sra-tools and ncbi-vdb) stops with
 # "unknown OS" for anything but Darwin, FreeBSD, Linux, NetBSD and
 # Windows; tools/loaders leaves out sharq on FreeBSD (pkg-plist follows);
@@ -34,7 +9,7 @@ MK1
 # interfaces/os/bsd/{endian,byteswap}.h, hw.usermem in kapp, the mktime
 # fixes in systime.c, <xlocale.h> in the bundled fmt). Treat DragonFly as
 # FreeBSD in all of them.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@STREQUAL  "FreeBSD" )@MATCHES "^(FreeBSD|DragonFly)$$" )@' \

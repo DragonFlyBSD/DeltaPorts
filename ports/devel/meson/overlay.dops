@@ -4,8 +4,8 @@ reason "Enable coexisting Python flavors; only the default flavor owns the globa
 target @any
 
 mk add USE_PYTHON "allflavors concurrent"
-# Upstream @main already includes bsd.port.pre.mk and has this .if block
-# (2351a5ec9f5b); there the include is a no-op and the block replaces
+# Upstream already includes bsd.port.pre.mk and has this .if block
+# (2351a5ec9f5b); the include is a no-op and the block replaces
 # upstream's own PKGNAMESUFFIX-only body.
 mk ensure-include bsd.port.pre.mk
 mk block set condition "${PYTHON_VER} != ${PYTHON_DEFAULT}" <<'MK'
@@ -19,15 +19,3 @@ post-install:
 		${_PYTHONPKGLIST} \
 		${STAGEDIR}${PYTHONPREFIX_SITELIBDIR}/meson-${PORTVERSION}.dist-info/RECORD
 MK
-
-# =======================================================================
-# @2026Q3: meson 1.10.2 still sets PKGNAMESUFFIX through the deprecated
-# USE_PYTHON=optsuffix (974b64eb6d0d) and ends in bsd.port.mk. Drop
-# optsuffix, since the block above sets PKGNAMESUFFIX itself, and end in
-# bsd.port.post.mk to pair with the bsd.port.pre.mk included above.
-# @main's 1.12.0 update (2351a5ec9f5b) made both changes upstream.
-# =======================================================================
-target @2026Q3
-
-mk remove USE_PYTHON "optsuffix"
-text replace-once file Makefile from ".include <bsd.port.mk>" to ".include <bsd.port.post.mk>"

@@ -6,17 +6,9 @@ target @any
 mk add CMAKE_ARGS "BSD=1"
 mk add CFLAGS "-DBSD"
 
-target @2026Q1,@2026Q2
-
-mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
-		${WRKSRC}/CMakeLists.txt.c++20 \
-		${WRKSRC}/CMakeLists.txt
-MK1
-
-# 1.38 no longer ships CMakeLists.txt.c++20, and sed stopped the patch
-# phase on the missing file.
-target @2026Q3,@2026Q4,@main
+# Rename FreeBSD to DragonFly in CMakeLists.txt so its FreeBSD settings
+# apply.
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \

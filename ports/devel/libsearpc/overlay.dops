@@ -1,3 +1,0 @@
-port devel/libsearpc
-type port
-reason "2026Q1-Q3 only: BSD sed for the pkgconfig fixup (3.3 dropped the step)"

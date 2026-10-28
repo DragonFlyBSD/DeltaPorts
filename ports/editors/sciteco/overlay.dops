@@ -10,7 +10,7 @@ reason "DragonFly: keep <stdlib.h> from declaring malloc_usable_size(const void 
 #
 # The gtk flavor builds under files/xvfb-run.sh, which calls mktemp -p;
 # DragonFly's mktemp has no -p, so give it a template path.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add CFLAGS_x86_64 "-D_MALLOC_NP_H_"
 text replace-once file files/xvfb-run.sh from "AUTHFILE=$(mktemp -p \"$XVFB_RUN_TMPDIR\" Xauthority)" to "AUTHFILE=$(mktemp \"$XVFB_RUN_TMPDIR/Xauthority.XXXXXX\")"

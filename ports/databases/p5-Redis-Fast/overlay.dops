@@ -6,6 +6,6 @@ reason "DragonFly: build the bundled hiredis against the ports OpenSSL (FreeBSD 
 # OpenSSL in the base system on FreeBSD. Depend on the ports OpenSSL and
 # pass OPENSSL_PREFIX (deps/hiredis/Makefile adds -I/-L from it); the XS
 # link gets -L/usr/local/lib from perl's lddlflags.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk add USES "ssl"
 mk add CONFIGURE_ENV "OPENSSL_PREFIX=${OPENSSLBASE}"

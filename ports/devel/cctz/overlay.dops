@@ -2,7 +2,7 @@ port devel/cctz
 type port
 reason "DragonFly: don't define _XOPEN_SOURCE 500 in time_zone_format.cc"
 
-# dragonfly/@2026Q3, @2026Q4, @main: time_zone_format.cc defines
+# dragonfly/@2026Q4, @main: time_zone_format.cc defines
 # _XOPEN_SOURCE 500 for strptime() except on FreeBSD and OpenBSD; on
 # DragonFly that hides wcstof() and friends from <cwchar>. strptime() is
 # visible by default, as devel/abseil's copy of cctz already relies on.

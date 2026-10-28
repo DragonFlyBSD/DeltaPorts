@@ -4,5 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
 # dragonfly/@<line>/patch-CMakeLists.txt: accept DragonFly with FreeBSD (2.7.5
 # on 2026Q4 and main otherwise stops on "not supported (yet?)").
-# dragonfly/@2026Q1, @2026Q2: patch-src_subnetcalc.cc; 2.7 no longer uses
-# s6_addr16/s6_addr32.

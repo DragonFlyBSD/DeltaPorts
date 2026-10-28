@@ -2,11 +2,6 @@ port net-p2p/libtorrent
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
-# dragonfly/@2026Q1, @2026Q2: patch-src_net_socket__fd.cc, which made
-# sockets IPv4-only because DragonFly has no IPv4-mapped IPv6 sockets.
-# 0.16 (Q3 on) removed socket_fd.cc; sockets now come from torrent/net/fd.cc,
-# which only sets IPV6_V6ONLY when asked and falls back to PF_INET.
-
-# dragonfly/@2026Q3, @2026Q4, @main: errno_enum() in torrent/system/system.cc
+# dragonfly/@2026Q4, @main: errno_enum() in torrent/system/system.cc
 # names ENODATA, ENOSR, ENOSTR and ETIME, which DragonFly does not have;
 # guard them as upstream already does EMULTIHOP.

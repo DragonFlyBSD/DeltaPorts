@@ -8,8 +8,8 @@ reason "DragonFly: build the full flavor with clang and libc++, like math/octave
 # (<memory_resource> in Array-fwd.h). Build the full flavor the same way.
 # The flavor's other bindings use C APIs (Python, NumPy, Guile), and
 # libnlopt's own API is C, so nothing else crosses. The minimal flavor is
-# unchanged. Mk/Uses/dfly-libcxx.mk exists from 2026Q3 on.
-target @2026Q3,@2026Q4,@main
+# unchanged.
+target @2026Q4,@main
 
 mk block set condition "${FLAVOR:U:Mfull}" <<'MK'
 USES+=	dfly-libcxx

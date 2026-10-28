@@ -3,8 +3,7 @@ type port
 reason "DragonFly: C++20 (<numbers>) needs GCC_DEFAULT"
 
 # CMakeLists.txt requires C++20 and source/pi.h includes <numbers>, which
-# base gcc 8.3 (what compiler:c++11-lang gives) lacks. 0.11.0 on Q3 is the
-# same.
-target @2026Q3,@2026Q4,@main
+# base gcc 8.3 (what compiler:c++11-lang gives) lacks.
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

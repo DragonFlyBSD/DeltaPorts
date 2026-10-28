@@ -2,7 +2,7 @@ port databases/duckdb
 type port
 reason "DragonFly: no <features.h>"
 
-# dragonfly/@2026Q3, @2026Q4, @main: src/include/duckdb/common/platform.hpp
+# dragonfly/@2026Q4, @main: src/include/duckdb/common/platform.hpp
 # includes glibc's <features.h> (to tell glibc from musl) on everything but
 # Windows, Apple and FreeBSD. DragonFly has no <features.h>; skip it there
 # as on FreeBSD.

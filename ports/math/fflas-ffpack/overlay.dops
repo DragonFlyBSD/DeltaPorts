@@ -9,6 +9,6 @@ mk add CONFIGURE_ARGS "--with-blas-libs=\"-L${LOCALBASE}/lib -lopenblas\""
 # DOXYGEN option block, so the "mk add" above lands there and
 # --with-blas-libs is only passed with DOXYGEN on; by default configure
 # stops with "BLAS not found". Add it unconditionally instead.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 text line-insert-after file Makefile anchor ".include <bsd.port.options.mk>" line "CONFIGURE_ARGS+=	--with-blas-libs=\"-L${LOCALBASE}/lib -lopenblas\""

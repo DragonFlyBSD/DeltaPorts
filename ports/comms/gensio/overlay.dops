@@ -2,7 +2,7 @@ port comms/gensio
 type port
 reason "DragonFly: configure only marks pselect() as non-atomic for *bsd* hosts, but the kevent selector needs that workaround"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk add CONFIGURE_ARGS "--with-broken-pselect"
 
 # dragonfly/@<line>/patch-lib_gensio__pty.c: gensio_pty.c includes <errno.h>

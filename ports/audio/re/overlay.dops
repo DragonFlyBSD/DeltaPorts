@@ -3,9 +3,8 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
 # dragonfly/@<line>/patch-cmake_re-config.cmake: the resolver is in libc
-# on DragonFly too (there is no libresolv). 4.11 (2026Q3 on) already has a
-# FreeBSD case for that, so the patch now adds DragonFly to it; the old
-# patch, which deleted the -lresolv line, stays on 2026Q1/Q2.
+# on DragonFly too (there is no libresolv). re-config.cmake has a FreeBSD
+# case for that; the patch adds DragonFly to it.
 
 # dragonfly/@2026Q4, @main: patch-CMakeLists.txt. re-config.cmake defines
 # HAVE_ROUTE_LIST on every UNIX, but only Darwin, FreeBSD and OpenBSD build

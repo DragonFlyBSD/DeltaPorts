@@ -6,7 +6,7 @@ reason "DragonFly: fig2dev.h redeclares sys_nerr/sys_errlist"
 # BSDs and glibc it knows (FreeBSD's patch adds __FreeBSD__); DragonFly's
 # <stdio.h> declares them const, so the redeclarations conflict. Treat
 # DragonFly as FreeBSD there.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's/!defined(__FreeBSD__)/!defined(__FreeBSD__) \&\& !defined(__DragonFly__)/g' \

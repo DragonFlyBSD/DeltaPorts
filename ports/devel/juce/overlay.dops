@@ -2,11 +2,10 @@ port devel/juce
 type port
 reason "DragonFly: treat DragonFly as JUCE_BSD; per-line patch sets in dragonfly/@<line>"
 
-# The flat patches were cut for JUCE 6 (juce_linux_*.cpp) and stay on the
-# retired lines and 2026Q3. JUCE 9 keys its BSD code on JUCE_BSD, so
-# dragonfly/@2026Q4 and @main add __DragonFly__ there and in the VST3 SDK's
-# BSD section (FreeBSD's files/ patch), take <malloc_np.h> in QuickJS and
-# plain stat in Projucer's binary builder, and read kinfo_proc's kp_flags.
+# JUCE 9 keys its BSD code on JUCE_BSD, so dragonfly/@2026Q4 and @main add
+# __DragonFly__ there and in the VST3 SDK's BSD section (FreeBSD's files/
+# patch), take <malloc_np.h> in QuickJS and plain stat in Projucer's binary
+# builder, and read kinfo_proc's kp_flags.
 # Two of those files ship with CRLF line endings: convert them first, as the
 # port does for the files it patches.
 target @2026Q4,@main

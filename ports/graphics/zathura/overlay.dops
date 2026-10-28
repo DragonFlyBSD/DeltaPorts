@@ -10,7 +10,7 @@ mk add LDFLAGS "-lz"
 # Upstream's flags (-Werror=maybe-uninitialized) show it is built with GCC,
 # and its Linux users need GCC 14 for c23 as well. The plugins
 # (zathura-cb, -djvu, -pdf-mupdf, -pdf-poppler, -ps) do the same.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "14"
 

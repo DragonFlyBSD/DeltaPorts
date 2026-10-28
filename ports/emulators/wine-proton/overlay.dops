@@ -5,6 +5,6 @@ reason "DragonFly: block, as emulators/wine and wine-devel; ntdll has no DragonF
 # dlls/ntdll/unix/signal_x86_64.c has no DragonFly mcontext accessors
 # ("You must define the signal context functions for your platform"); the
 # port has never built here.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk eval IGNORE "has never built on DragonFly, block to avoid wasting CPU cycles"

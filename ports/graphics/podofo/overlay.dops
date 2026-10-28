@@ -2,37 +2,12 @@ port graphics/podofo
 type port
 reason "DragonFly: 0.10 needs a newer GCC than base gcc 8"
 
-# 2026Q1/Q2 (as left): base gcc 8 with misc/cxxfs_gcc8.
-# 0.10 uses std::filesystem in the library (PdfError.cpp, StreamDevice.cpp,
-# PdfFontManager.cpp...). Base gcc 8 has no libstdc++fs; misc/cxxfs_gcc8
-# carries it with its headers. The header use is private, so podofo's users
-# do not need it. CMAKE_CXX_STANDARD_LIBRARIES puts the archive after the
-# objects on every C++ link line.
-#
-# Text inserts at top level: `mk add` would land these inside the
-# MAINTAINER_MODE .else (it inserts before the first target), and `mk eval`
-# would expand ${LOCALBASE} before bsd.port.mk defines it.
-target @2026Q1,@2026Q2
-
-text line-insert-after file Makefile \
-     anchor "TIFF_LIB_DEPENDS=\tlibtiff.so:graphics/tiff" \
-     line   "\nBUILD_DEPENDS+=\tcxxfs_gcc8>0:misc/cxxfs_gcc8"
-text line-insert-after file Makefile \
-     anchor "BUILD_DEPENDS+=\tcxxfs_gcc8>0:misc/cxxfs_gcc8" \
-     line   "CXXFLAGS+=\t-isystem ${LOCALBASE}/cxxfs_gcc8"
-text line-insert-after file Makefile \
-     anchor "CXXFLAGS+=\t-isystem ${LOCALBASE}/cxxfs_gcc8" \
-     line   "LDFLAGS+=\t-L${LOCALBASE}/cxxfs_gcc8"
-text line-insert-after file Makefile \
-     anchor "LDFLAGS+=\t-L${LOCALBASE}/cxxfs_gcc8" \
-     line   "CMAKE_ARGS+=\t-DCMAKE_CXX_STANDARD_LIBRARIES:STRING=-lstdc++fs"
-
-# 2026Q3 on: the bundled chromium numerics (3rdparty/numerics, used by the
-# pdfium shims) call __builtin_is_constant_evaluated(), which gcc 9 added,
-# so gcc 8 cannot build the library even with cxxfs. Use the ports GCC,
-# whose libstdc++ has std::filesystem. Inserted at top level for the same
-# reason as above.
-target @2026Q3,@2026Q4,@main
+# The bundled chromium numerics (3rdparty/numerics, used by the pdfium
+# shims) call __builtin_is_constant_evaluated(), which gcc 9 added, and the
+# library uses std::filesystem, which base gcc 8 keeps out of libstdc++.
+# Use the ports GCC. Inserted at top level: `mk add` would land it inside
+# the MAINTAINER_MODE .else (it inserts before the first target).
+target @2026Q4,@main
 
 text line-insert-after file Makefile \
      anchor "TIFF_LIB_DEPENDS=\tlibtiff.so:graphics/tiff" \

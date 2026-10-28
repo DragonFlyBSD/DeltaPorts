@@ -2,5 +2,5 @@ port devel/delve
 type port
 reason "DragonFly: delve's native debugger backend has no DragonFly implementation"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk set IGNORE "delve's native backend does not support DragonFly"

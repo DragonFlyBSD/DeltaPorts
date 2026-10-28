@@ -39,12 +39,6 @@ text line-insert-after file pkg-plist anchor "@sample etc/pkg.conf.sample" line 
 file remove files/patch-src_Makefile.autosetup on-missing noop
 
 # =======================================================================
-# @2026Q3: pkg 2.7.5. autosetup, and the zstd knob lives in auto.def:
-# dragonfly/@2026Q3/patch-auto.def.c, which the folder installs on this
-# line only.
-# =======================================================================
-
-# =======================================================================
 # @main: pkg 2.8.4 renamed auto.def to configure.def and rewrote it from
 # autosetup's Tcl to shell, and libpkg/src/tests/Makefile.autosetup to
 # Makefile.in. The patch is a different file; the recipe below replaces the

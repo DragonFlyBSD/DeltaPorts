@@ -11,5 +11,5 @@ mk add LDLAGS "-L${OPENSSLLIB}"
 # block (the only CFLAGS line), so DragonFly never gets -I${OPENSSLINC}, and
 # mhttp/mhttp.h cannot find <openssl/crypto.h>. Add it unconditionally; it
 # reaches the mhttp sub-build through CCFLAGS="${CFLAGS}" (perl5.mk).
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 text line-insert-after file Makefile anchor "CONFIGURE_ENV=\tGOTSSL=yes" line "CFLAGS+=\t-I${OPENSSLINC}"

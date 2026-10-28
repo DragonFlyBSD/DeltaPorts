@@ -6,9 +6,7 @@ target @any
 mk add USES "pkgconfig"
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 
-# The old dragonfly/ patch hard-coded CXX = g++11, which no longer
-# matches USE_GCC_VERSION and is not installed; it stays for Q1/Q2 only.
 # The Makefile's own CXX = c++ assignment overrides the environment, so
-# pass the selected compiler on the make command line instead.
-target @2026Q3,@2026Q4,@main
+# pass the selected compiler on the make command line.
+target @2026Q4,@main
 mk add MAKE_ARGS "CXX=${CXX}"

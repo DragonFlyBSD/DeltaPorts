@@ -7,7 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@Wbad-function-cast@&__z@g' \
 		${WRKSRC}/configure
 MK1
-
-# dragonfly/@2026Q1, @2026Q2: patch-LibreSSL patches the bundled
-# vendor/ngx_mruby-source, which groonga no longer ships (gone by 16.0);
-# from 2026Q3 on the patch has nothing to apply to and fails the build.

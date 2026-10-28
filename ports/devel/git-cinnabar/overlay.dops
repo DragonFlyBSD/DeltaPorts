@@ -15,5 +15,5 @@ mk add BUILD_DEPENDS "gettext-tools>=0:devel/gettext-tools"
 # bundled git build gets CURL_CFLAGS=-I/usr/include and misses
 # <curl/curl.h>. Add ${LOCALBASE}/include to CFLAGS, which build.rs passes
 # to git's make. (CFLAGS+= by text op: "mk add" would write "CFLAGS=".)
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 text line-insert-after file Makefile anchor "USES=\t\tcargo gmake" line "CFLAGS+=\t-I${LOCALBASE}/include"

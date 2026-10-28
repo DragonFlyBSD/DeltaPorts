@@ -15,10 +15,10 @@ MK
 text line-remove file Makefile exact "BROKEN_SSL=	libressl" on-missing noop
 text line-remove file Makefile exact "BROKEN_SSL_REASON_libressl=	not supported by the upstream" on-missing noop
 
-# 2025.10 (2026Q2 on): FreeBSD dropped USES=ssl and takes OpenSSL from
+# 2025.10: FreeBSD dropped USES=ssl and takes OpenSSL from
 # base, which DragonFly lacks. Without it OPENSSLINC is empty, the
 # dfly-patch above turns "-I${OPENSSLINC}" into "-I -std=gnu11", and
 # include/image.h cannot find openssl/evp.h.
-target @2026Q2,@2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add USES ssl

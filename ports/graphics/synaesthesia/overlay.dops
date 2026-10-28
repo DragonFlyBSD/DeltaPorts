@@ -8,5 +8,5 @@ reason "DragonFly: compile with -D__FreeBSD__=9; the sources pick their BSD code
 # exactly -D__FreeBSD__=9; keep that define for DragonFly. (CFLAGS+= by
 # text op: "mk add" would write "CFLAGS=", poly-bhz2. CXXFLAGS derives
 # from CFLAGS.)
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 text line-insert-after file Makefile anchor "USE_SDL=\tsdl" line "CFLAGS+=\t-D__FreeBSD__=9"

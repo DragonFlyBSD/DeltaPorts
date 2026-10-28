@@ -1,6 +1,0 @@
-port security/openssl-quictls
-type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
-
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSCTP}"

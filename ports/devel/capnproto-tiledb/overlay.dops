@@ -11,7 +11,7 @@ reason "DragonFly: build libkj-async without fibers, as on FreeBSD"
 mk add CONFIGURE_ARGS "--without-fibers"
 
 # dragonfly/patch-src_kj_async-io-unix.c++, patch-src_kj_filesystem-disk-
-# unix.c++ (from devel/capnproto1): DragonFly has no SOL_LOCAL (upstream
+# unix.c++: DragonFly has no SOL_LOCAL (upstream
 # checks the misspelt __DragonflyBSD__) and no DTTOIF.
 
 # OpenSSL comes from ports here (FreeBSD finds base's): without the

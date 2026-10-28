@@ -1,6 +1,0 @@
-port textproc/htdig
-type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
-
-mk add CXXFLAGS "-Wno-error -Wno-narrowing -fpermissive"

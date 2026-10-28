@@ -7,7 +7,3 @@ mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
 mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
 mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
 patch apply diffs/pkg-message.diff
-
-# dragonfly/@2026Q1, @2026Q2: the http.h, posix/megafs.h and
-# megacmdshellcommunications.cpp guard patches. FreeBSD's files/ patches list
-# __DragonFly__ in those guards now.

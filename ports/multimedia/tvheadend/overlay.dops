@@ -11,5 +11,4 @@ mk target set dfly-patch <<'MK1'
 MK1
 
 # dragonfly/@<line>/patch-src_udp.c: struct ip_mreq and no source-specific
-# multicast on DragonFly; re-cut for the 4.3 snapshot on 2026Q4 and main
-# (IP_AS_V4 now takes a pointer).
+# multicast on DragonFly.

@@ -5,5 +5,5 @@ reason "DragonFly: use the ncurses port; DragonFly has no curses.h in base"
 # USES=ncurses:base expects <curses.h> in /usr/include, as on FreeBSD;
 # DragonFly's base ncurses is private (/usr/include/priv). Use the port,
 # whose CFLAGS/LDFLAGS (-I${NCURSESINC}, -L/rpath) the do-build line takes.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk eval USES "${USES:Nncurses*} ncurses"

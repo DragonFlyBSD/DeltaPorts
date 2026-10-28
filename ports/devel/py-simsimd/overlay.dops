@@ -2,5 +2,5 @@ port devel/py-simsimd
 type port
 reason "DragonFly: base gcc 8 has no _Float16/__bfloat16 on x86_64; use simsimd's integer-backed half types"
 
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 mk eval CFLAGS "${CFLAGS} -DSIMSIMD_NATIVE_F16=0 -DSIMSIMD_NATIVE_BF16=0"

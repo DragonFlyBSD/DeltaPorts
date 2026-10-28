@@ -4,5 +4,4 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
 # dragonfly/@2026Q4, @main: the vendored nsf/termbox-go v1.1.2 treats
 # DragonFly as non-BSD and wants Linux's TCGETS/TCSETS; add it to the BSD
-# (TIOCGETA/TIOCSETA) build tags. 2026Q3 (100.17.0) vendors v1.1.1, which
-# still has per-OS files including DragonFly.
+# (TIOCGETA/TIOCSETA) build tags.

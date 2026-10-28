@@ -9,6 +9,6 @@ reason "DragonFly: bundled aws-lc-sys 0.35.0 needs OPENSSL_DRAGONFLY and getentr
 # ruby-prism-sys runs bindgen, and clang-sys 1.8.1 only searches its
 # built-in libclang directories (/usr/local/llvm*/lib*) on Linux and
 # FreeBSD; on DragonFly it finds nothing. Point it at the port's llvm.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add MAKE_ENV "LIBCLANG_PATH=${LOCALBASE}/llvm${LLVM_DEFAULT}/lib"

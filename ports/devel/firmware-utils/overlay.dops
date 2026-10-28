@@ -1,6 +1,0 @@
-port devel/firmware-utils
-type port
-reason "files/Makefile LDFLAGS fix via patch apply; dragonfly patches for firmware tools"
-target @any
-
-patch apply diffs/files_Makefile.diff

@@ -1,19 +1,11 @@
 port x11-wm/wayfire
 type port
-reason "Q1-Q3: gcc 8 std::filesystem shim; Q4+: build with GCC_DEFAULT"
+reason "DragonFly: build with GCC_DEFAULT"
 
-# 0.10.1 builds with base gcc 8, whose std::filesystem lives in a separate
-# libstdc++fs (misc/cxxfs_gcc8).
-target @2026Q1,@2026Q2,@2026Q3
-
-mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
-mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
-mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
-
-# 0.11.0 (2026Q4 on): gcc 8 rejects plugins/protocols/session-lock.cpp (an
+# 0.11.0: gcc 8 rejects plugins/protocols/session-lock.cpp (an
 # empty pack forwarded through a pack of base-class initializers, a lambda
 # of local type passed to a template). Build with the default ports GCC,
-# whose libstdc++ carries std::filesystem itself.
+# whose libstdc++ has std::filesystem.
 target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

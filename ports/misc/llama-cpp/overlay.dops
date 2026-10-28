@@ -5,7 +5,7 @@ reason "DragonFly: no posix_spawn_file_actions_addchdir(_np)"
 # vendor/sheredom/subprocess.h uses posix_spawn_file_actions_addchdir_np for
 # the child's working directory, or falls back to fork()+exec() on systems
 # that have neither spelling (AIX, OpenBSD, old NetBSD). DragonFly has
-# neither; add it to the fork list. Q3's b9426 does not vendor subprocess.h.
+# neither; add it to the fork list.
 target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'

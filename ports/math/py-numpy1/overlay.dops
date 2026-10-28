@@ -4,6 +4,6 @@ reason "DragonFly: NumPy requires GCC >= 8.4; base gcc is 8.3"
 
 # meson.build rejects base gcc 8.3 ("NumPy requires GCC >= 8.4"). Use
 # GCC_DEFAULT, as math/py-numpy does.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"

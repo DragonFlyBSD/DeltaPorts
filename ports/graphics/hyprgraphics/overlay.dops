@@ -8,7 +8,7 @@ reason "DragonFly: libmagic.pc comes from sysutils/file; C++26 needs GCC 14 like
 # It is C++26 (CMAKE_CXX_STANDARD 26), which base gcc 8.3 (what
 # compiler:c++11-lib gives) cannot build, and it links devel/hyprutils,
 # which is built with GCC 14; use the same compiler and libstdc++.
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk add LIB_DEPENDS "libmagic.so:sysutils/file"
 mk set USE_GCC_VERSION "14"

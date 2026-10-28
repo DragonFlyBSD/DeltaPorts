@@ -1,8 +1,0 @@
-port net/netatalk3
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-mk add OPTIONS_EXCLUDE "KERBEROS"
-mk add CONFIGURE_ARGS "--with-lockfile=/var/spool/lock/netatalk"
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

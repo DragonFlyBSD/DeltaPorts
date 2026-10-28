@@ -2,6 +2,5 @@ port net/smcroute
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
-# dragonfly/@2026Q1, @2026Q2: patch-mclab.h. 2.5 (2026Q3 on) moved the
-# multicast routing includes to src/mroute.h (dragonfly/@<line>/
-# patch-src_mroute.h): DragonFly keeps ip_mroute.h in net/ip_mroute/.
+# dragonfly/@<line>/patch-src_mroute.h: DragonFly keeps ip_mroute.h in
+# net/ip_mroute/.

@@ -1,3 +1,0 @@
-port sysutils/ganglia-monitor-core
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"

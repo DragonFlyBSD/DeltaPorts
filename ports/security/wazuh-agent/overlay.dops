@@ -7,4 +7,4 @@ mk set OPTIONS_EXCLUDE "INOTIFY"
 
 # dragonfly/@<line>/patch-src_Makefile: build as FreeBSD (every uname_S
 # FreeBSD conditional, including the epoll-shim ones), with -z origin for
-# $ORIGIN rpaths; re-cut for 4.14.6+ (2026Q3 on). 2026Q1/Q2 keep the old one.
+# $ORIGIN rpaths.

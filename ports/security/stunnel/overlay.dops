@@ -1,7 +1,0 @@
-port security/stunnel
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-
-# dragonfly/@2026Q1, @2026Q2, @2026Q3: LibreSSL guards from the base-LibreSSL
-# era. 5.82 (Q4, main) has them upstream or reworked the code, and DragonFly
-# builds against ports OpenSSL, where they are no-ops, so they stop there.

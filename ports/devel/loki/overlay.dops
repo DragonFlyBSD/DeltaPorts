@@ -1,7 +1,0 @@
-port devel/loki
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-mk add CXXFLAGS "-fpermissive"
-mk add CXXFLAGS "-Wno-parentheses"

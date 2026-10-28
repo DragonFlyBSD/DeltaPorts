@@ -9,6 +9,6 @@ mk eval USES "${USES:S/cargo/cargo:extra/}"
 # (openssl-src) builds its devcrypto engine on BSD, which needs
 # <crypto/cryptodev.h>; DragonFly has none. Use the ports OpenSSL that
 # cargo.mk already points openssl-sys at. 2.11 (main) no longer vendors.
-target @2026Q3,@2026Q4
+target @2026Q4
 
 mk add CARGO_ENV "OPENSSL_NO_VENDOR=1"

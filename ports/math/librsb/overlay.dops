@@ -11,6 +11,6 @@ MK1
 # LDFLAGS+= -lthr: DragonFly has no libthr (its threads library is
 # libpthread), so configure's first link test already fails ("C compiler
 # cannot create executables").
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 text replace-once file Makefile from "LDFLAGS+=\t-lthr" to "LDFLAGS+=\t-lpthread"

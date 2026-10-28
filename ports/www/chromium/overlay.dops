@@ -172,24 +172,16 @@ mk set LTO_UNSAFE "yes" on-missing noop
 # The source patches in dragonfly/ were split out of the former
 # monolithic dragonfly/patch-all.
 
-# 156 (2026Q4 on): dragonfly/@2026Q4 and @main carry re-cut copies of ten
-# flat patches whose context moved (Python reindented to four spaces,
-# abseil and gn reworked, and udp_socket_posix.cc grew recvmmsg/UDP GRO
-# paths that DragonFly is kept off like the old ones). Two flat patches
-# have no target left: rollup is gone from the port and
-# build_inspector_overlay.py from devtools-frontend.
+# 156: dragonfly/@2026Q4 and @main carry the patches cut against 156's
+# sources (Python indented with four spaces, abseil, gn, and
+# udp_socket_posix.cc's recvmmsg/UDP GRO paths, which DragonFly is kept off).
 # 156 also picks the tsc binary by host OS (third_party/typescript and
 # devtools-frontend, in gn and in Python); FreeBSD maps its own name to
-# the linux-amd64 slot and the new @2026Q4/@main patches add DragonFly.
+# the linux-amd64 slot and the @2026Q4/@main patches add DragonFly.
 # ui/webui/webui_features.gni grew enable_webui_history beside
 # enable_webui_ntp; the @2026Q4/@main copy adds DragonFly to both, or
 # //chrome/browser/ui lists webui/history in allow_circular_includes_from
 # without the dep and gn gen stops ("Label not in deps").
-target @2026Q4,@main
-
-file remove dragonfly/patch-rollup_rust_Cargo.toml
-file remove dragonfly/patch-third__party_devtools-frontend_src_scripts_build_build__inspector__overlay.py
-
 # dragonfly/@2026Q4,@main/patch-v8_BUILD.gn-metagen: V8 156's metagen parses
 # with libclang using the flags `gn desc` reports; the libcxx dport include
 # dir arrives only via extra_cxxflags, so pass -nostdinc++ and -isystem it

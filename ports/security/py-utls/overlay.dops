@@ -1,7 +1,7 @@
 port security/py-utls
 type port
 reason "DragonFly: point bindgen at the llvm port's libclang"
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 # boring-sys runs bindgen, whose clang-sys looks for libclang.so in a fixed
 # directory list without DragonFly's llvm prefix ("Unable to find

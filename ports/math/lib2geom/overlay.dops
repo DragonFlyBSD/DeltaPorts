@@ -15,7 +15,7 @@ mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 # GCC_DEFAULT's (12) libstdc++ does not have, and the test programs fail to
 # link. The option defaults to ON for a standalone build, so turn it off
 # explicitly and build the tests only for "make test" (CMAKE_TESTING_ON).
-target @2026Q3,@2026Q4,@main
+target @2026Q4,@main
 
 mk eval CMAKE_ON "${CMAKE_ON:N2GEOM_TESTING}"
 mk add CMAKE_OFF "2GEOM_TESTING"
