@@ -1,0 +1,7 @@
+port textproc/bookokrat
+type port
+reason "opt into cargo:extra for the mupdf-sys gmake patch; gmake for the build"
+target @any
+
+mk add BUILD_DEPENDS "gmake:devel/gmake"
+mk eval USES "${USES:S/cargo/cargo:extra/}"
