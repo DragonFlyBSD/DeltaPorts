@@ -1,0 +1,4 @@
+port graphics/opennurbs
+type port
+reason "DragonFly: GCC-compatible __has_* checks, byte-order fallback, no malloc.h"
+target @any
