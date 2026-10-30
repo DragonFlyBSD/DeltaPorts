@@ -1,6 +1,13 @@
 port math/heyoka
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
+reason "DragonFly: need C++20 stdlib headers"
 
-mk set USE_CLANG_FALLBACK "12"
+# The old compat forced clang++12, which finds only base gcc 8's
+# libstdc++: no C++20 headers (<concepts>, <ranges>,
+# <source_location>). Build with ports GCC instead; its libstdc++
+# is new and forward-compatible with the gcc 12-built dependencies
+# (boost, fmt, ...). (The failures.tsv -Warray-parameter line is
+# YACMA flag probing, not the error.)
+target @2026Q4,@main
+
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
