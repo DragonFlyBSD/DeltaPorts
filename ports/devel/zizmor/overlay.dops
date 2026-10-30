@@ -1,6 +1,7 @@
 port devel/zizmor
 type port
-reason "opt into cargo:extra for the aws-lc-sys getentropy() patch"
+reason "opt into cargo:extra for the aws-lc-sys getentropy() patch; gmake for tikv-jemalloc-sys"
 target @any
 
 mk eval USES "${USES:S/cargo/cargo:extra/}"
+mk add BUILD_DEPENDS "gmake:devel/gmake"
