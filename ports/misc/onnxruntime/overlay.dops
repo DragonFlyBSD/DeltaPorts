@@ -29,3 +29,9 @@ file remove files/patch-onnxruntime_core_common_spin__pause.cc on-missing noop
 # onnxruntime target; gcc 12 stops on a -Wstringop-overread false positive in
 # model_package_variant_selector.cc (seen in misc/py-onnxruntime).
 mk add CMAKE_ARGS "--compile-no-warning-as-error"
+
+# The MLAS AVX-VNNI support test constant-folds the probed intrinsic away,
+# so it passes even though base as (2.34) cannot assemble the real VNNI
+# kernels. Preseed it off: the TU still compiles, with the VNNI paths
+# compiled out by upstream's own #if guards, falling back to pure AVX2.
+mk add CMAKE_ARGS "-DMLAS_COMPILER_SUPPORTS_AVXVNNI=OFF"
