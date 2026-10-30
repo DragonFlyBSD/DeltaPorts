@@ -1,0 +1,6 @@
+port databases/redisjson86
+type port
+reason "opt into cargo:extra for the linkme/rustix DragonFly patches"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
