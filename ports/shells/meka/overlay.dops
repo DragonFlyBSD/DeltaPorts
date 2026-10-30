@@ -1,0 +1,6 @@
+port shells/meka
+type port
+reason "opt into cargo:extra for the rustix DragonFly patch"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
