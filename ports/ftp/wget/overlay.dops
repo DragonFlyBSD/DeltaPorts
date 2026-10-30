@@ -1,0 +1,19 @@
+port ftp/wget
+type port
+reason "DragonFly: gnulib one-argument static_assert breaks under -std=c99"
+
+# The port forces -std=c99 via USE_CSTD. Strict ISO mode defines
+# __STRICT_ANSI__, which makes gnulib's bundled lib/cdefs.h define a
+# two-argument-only _Static_assert fallback. That fallback shadows the
+# working variadic _Static_assert from lib/verify.h, so every one-argument
+# static_assert in the replacement sources (mktime.c, malloca.c,
+# mbsinit.c, rawmemchr.c, mbrtoc32.c, mbsrtoc32s.c, ...) fails with
+# "macro _Static_assert requires 2 arguments". DragonFly always builds
+# the replacement mktime (configure: working mktime... no), so the
+# landmine -- latent everywhere strict pre-C11 std is used -- fires here.
+# Build as gnu99 instead: same C99 language, but without __STRICT_ANSI__
+# the cdefs.h fallback stays off and verify.h's macro handles both forms.
+target @2026Q4,@main
+
+mk set USE_CSTD "gnu99"
+mk bump PORTREVISION
