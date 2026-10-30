@@ -26,3 +26,9 @@ file remove files/patch-onnxruntime_core_common_spin__pause.cc on-missing noop
 # -Wstringop-overread false positive inside std::vector's initializer_list
 # assignment. build.py's --compile_no_warning_as_error turns the property off.
 text line-insert-after file Makefile anchor "\t\t--skip_tests \\" line "\t\t--compile_no_warning_as_error \\"
+
+# The MLAS AVX-VNNI support test constant-folds the probed intrinsic away,
+# so it passes even though base as (2.34) cannot assemble the real VNNI
+# kernels. Preseed it off: the TU still compiles, with the VNNI paths
+# compiled out by upstream's own #if guards, falling back to pure AVX2.
+text line-insert-after file Makefile anchor "\t\t--cmake_extra_defines onnxruntime_BUILD_UNIT_TESTS=OFF \\" line "\t\t--cmake_extra_defines MLAS_COMPILER_SUPPORTS_AVXVNNI=OFF \\"
