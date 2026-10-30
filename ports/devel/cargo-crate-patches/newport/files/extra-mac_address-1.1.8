@@ -19,3 +19,13 @@
  ))]
  #[path = "linux.rs"]
  mod internal;
+--- cargo-crates/mac_address-1.1.8/src/lib.rs.orig
++++ cargo-crates/mac_address-1.1.8/src/lib.rs
+@@ -42,6 +42,7 @@
+     target_os = "openbsd",
+     target_os = "android",
+     target_os = "illumos",
++    target_os = "dragonfly",
+ ))]
+ impl From<nix::Error> for MacAddressError {
+     fn from(_: nix::Error) -> MacAddressError {
