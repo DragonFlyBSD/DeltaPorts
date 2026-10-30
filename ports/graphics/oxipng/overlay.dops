@@ -1,0 +1,6 @@
+port graphics/oxipng
+type port
+reason "opt into cargo:extra for the libdeflate-sys assembler patch"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
