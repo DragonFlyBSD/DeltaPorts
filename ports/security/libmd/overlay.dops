@@ -2,3 +2,10 @@ port security/libmd
 type dport
 reason "DragonFly-only port; source in newport/"
 target @any
+
+# md5.h declares MD5Transform with array parameters while md5c.c defines
+# it with plain pointers. Same ABI, but gcc 12's -Warray-parameter fires
+# and the library builds with -Werror. Keep it a warning.
+target @2026Q4,@main
+
+mk add CFLAGS "-Wno-error=array-parameter"
