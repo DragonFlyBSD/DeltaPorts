@@ -1,0 +1,6 @@
+port multimedia/moonshine
+type port
+reason "opt into cargo:extra for the rustix/notify DragonFly patches"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
