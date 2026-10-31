@@ -1,9 +1,14 @@
 port databases/postgresql19-server
 type port
-reason "add freebsd template; patch Makefile.global for clang"
+reason "add freebsd template; patch Makefile.global for clang; LLVM off by default"
 target @any
 
 mk add CONFIGURE_ARGS "--with-template=freebsd"
+
+# Every postgresqlNN port includes this Makefile. The LLVM option sets CC
+# to llvm's clang, whose link finds gcc80's libstdc++, while devel/icu,
+# built by base gcc, needs GLIBCXX_3.4.30: postgres and initdb fail to link.
+text line-remove file Makefile exact "OPTIONS_DEFAULT+=\tLLVM"
 
 mk target set dfly-configure <<'MK'
 	${REINPLACE_CMD} -e 's@-Wimplicit-fallthrough=3@-Wno-implicit-fallthrough@g' \
