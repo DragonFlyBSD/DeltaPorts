@@ -1,14 +1,18 @@
 port net/udt
 type port
-reason "add ssl USES; set openssl flags; add libmd dep on newer DragonFly; fix post-build app compile"
+reason "add ssl USES; libmd and its header from ports on newer DragonFly; fix post-build app compile"
 target @any
 
 mk ensure-include bsd.port.options.mk
 mk add USES ssl
-mk add CFLAGS "-I${OPENSSLINC}"
-mk add LDFLAGS "-L${OPENSSLLIB}"
-mk add CXXFLAGS "-Wno-error=catch-value"
+
+# md5.h and libmd come from security/libmd in ${LOCALBASE}. The flags are
+# appended in the block: the port sets no CXXFLAGS/LDFLAGS, and a plain
+# assignment there would drop make.conf's (-O2, -isystem ${LOCALBASE}/include).
 mk block set condition "${DFLYVERSION} > 500700" <<'MK'
 LIB_DEPENDS+=	libmd.so:security/libmd
+CXXFLAGS+=	-I${LOCALBASE}/include -Wno-error=catch-value \
+		-Wno-error=deprecated-copy -Wno-error=terminate
+LDFLAGS+=	-L${LOCALBASE}/lib
 MK
 patch apply diffs/Makefile.diff
