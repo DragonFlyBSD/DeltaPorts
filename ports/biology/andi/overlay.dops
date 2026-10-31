@@ -1,0 +1,9 @@
+port biology/andi
+type port
+reason "<threads.h> from misc/libstdthreads"
+
+# pfasta.c includes <threads.h> for thread_local whenever the compiler
+# claims C11 threads; DragonFly has no threads.h in base.
+target @any
+
+mk add BUILD_DEPENDS "${LOCALBASE}/include/threads.h:misc/libstdthreads"
