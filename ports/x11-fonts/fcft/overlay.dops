@@ -5,3 +5,10 @@ target @any
 
 mk add USES "localbase:ldflags"
 mk add LIB_DEPENDS "libstdthreads.so:misc/libstdthreads"
+
+# codeberg regenerated the 3.3.3 archive and every mirror, distcache
+# included, serves the new one; FreeBSD's distinfo still has the old one.
+target @2026Q4,@main
+text replace-once file distinfo from "TIMESTAMP = 1766834878" to "TIMESTAMP = 1793475096"
+text replace-once file distinfo from "SHA256 (fcft-3.3.3.tar.gz) = c0d8d485b45b1af829f73101d6588f404a32bf3c7543236b1a4707d44be81b60" to "SHA256 (fcft-3.3.3.tar.gz) = b0c0f4a599f43723736c8565b8b84337c4195077f07f1bb8bb3252bb13a2306a"
+text replace-once file distinfo from "SIZE (fcft-3.3.3.tar.gz) = 735690" to "SIZE (fcft-3.3.3.tar.gz) = 741824"
