@@ -1,0 +1,10 @@
+port devel/libpafe-ruby
+type port
+reason "drop FreeBSD's extconf.rb patch: -fdeclspec is clang-only"
+
+# files/patch-extconf.rb only adds -fdeclspec to $CFLAGS. gcc rejects the
+# flag, so every mkmf check fails ("The compiler failed to generate an
+# executable file"), and nothing here uses __declspec.
+target @any
+
+file remove files/patch-extconf.rb
