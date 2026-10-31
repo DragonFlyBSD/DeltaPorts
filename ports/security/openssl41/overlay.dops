@@ -1,0 +1,9 @@
+port security/openssl41
+type port
+reason "no SCTP on DragonFly"
+
+# DragonFly has no SCTP (IPPROTO_SCTP), as in security/openssl's overlay.
+# The setting goes ahead of bsd.port.options.mk.
+target @any
+
+text line-insert-after file Makefile anchor "ZSTD_LIB_DEPENDS=\tlibzstd.so:archivers/zstd" line "OPTIONS_EXCLUDE=\tSCTP"

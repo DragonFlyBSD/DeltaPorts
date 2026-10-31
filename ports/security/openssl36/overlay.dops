@@ -1,0 +1,12 @@
+port security/openssl36
+type port
+reason "no SCTP and no /dev/crypto engine on DragonFly"
+
+# DragonFly has no SCTP (IPPROTO_SCTP) and no crypto/cryptodev.h, as in
+# security/openssl's overlay. The settings go ahead of
+# bsd.port.options.mk, after SHLIBS.
+target @any
+
+text line-insert-after file Makefile anchor "SHLIBS=\t\t\tlib/engines-${OPENSSL_SHLIBVER}/loader_attic.so" line "OPTIONS_EXCLUDE=\tSCTP\nCONFIGURE_ARGS+=\tno-devcryptoeng"
+text line-remove file Makefile exact "\t\t\t\tlib/engines-${OPENSSL_SHLIBVER}/devcrypto.so \\" on-missing error
+text line-remove file pkg-plist exact "%%SHARED%%lib/engines-%%SHLIBVER%%/devcrypto.so" on-missing error
