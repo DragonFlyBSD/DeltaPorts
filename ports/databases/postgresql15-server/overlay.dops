@@ -1,8 +1,6 @@
 port databases/postgresql15-server
 type port
-reason "remove LLVM and ICU from defaults"
+reason "PG_UID from the pgsql entry in GIDs"
 target @any
 
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLLVM}"
 mk shell PG_UID "grep -E '^pgsql:' ${PORTSDIR}/GIDs | awk -F ':' '{print $$3}'; echo"
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NICU}"
