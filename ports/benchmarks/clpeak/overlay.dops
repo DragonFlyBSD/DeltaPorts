@@ -1,3 +1,11 @@
 port benchmarks/clpeak
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: sys/types.h and OS name in common.h; ports binutils for AVX-VNNI"
+
+# The CPU backend builds AVX-VNNI kernels (vpdpbusd/vpdpwssd); base binutils
+# 2.34 predates them. gcc finds the base assembler first, so point it at
+# the ports binutils with -B.
+target @any
+
+mk set USE_BINUTILS "yes"
+mk set CXXFLAGS_x86_64 "-B${LOCALBASE}/bin"
