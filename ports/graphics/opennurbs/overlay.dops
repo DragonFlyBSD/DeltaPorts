@@ -1,4 +1,4 @@
 port graphics/opennurbs
 type port
-reason "DragonFly: GCC-compatible __has_* checks, byte-order fallback, no malloc.h"
+reason "DragonFly: GCC-compatible __has_* checks, byte-order fallback, no malloc.h, FreeBSD's non-Windows CRT branches"
 target @any
