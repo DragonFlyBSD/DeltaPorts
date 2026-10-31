@@ -1,6 +1,12 @@
 port x11/wmenu
 type port
-reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+reason "timerfd from libepoll-shim; take main's distinfo for the regenerated codeberg archive"
+
+# No timerfd in libc: dragonfly/patch-meson.build links epoll-shim, which
+# provides <sys/timerfd.h> and timerfd_create()/timerfd_settime().
+target @any
+
+mk add LIB_DEPENDS "libepoll-shim.so:devel/libepoll-shim"
 
 # codeberg regenerated the archive and every mirror serves the new one;
 # freebsd-ports main re-rolled distinfo for it.
