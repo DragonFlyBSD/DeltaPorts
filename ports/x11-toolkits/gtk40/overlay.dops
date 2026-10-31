@@ -4,3 +4,9 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NWAYLAND}"
+
+# The F16C fast paths in gsk/gl/fp16.c are ifuncs. gtk links with -z now,
+# which puts their GOT slots in RELRO, and DragonFly's rtld write-protects
+# RELRO before it resolves ifuncs, so anything linking libgtk-4 crashes
+# in ld-elf.so.2 at load. Use the plain C half-float conversions.
+mk add MESON_ARGS "-Df16c=disabled"
