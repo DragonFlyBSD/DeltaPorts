@@ -9,3 +9,7 @@ target @2026Q4,@main
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NUDEV}"
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# meson builds the battery module only on Linux and FreeBSD, so its man
+# page is not installed here.
+mk remove MANPAGES_PLIST_FILES "share/man/man5/${PORTNAME}-battery.5.gz"
