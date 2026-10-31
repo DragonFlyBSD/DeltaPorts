@@ -1,6 +1,12 @@
 port net-im/uTox
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "build as FreeBSD; ld emulation name for the embedded icon"
+
+# post-patch adds -m${_LLD_EMUL_${ARCH}} to the ld -b binary call that
+# embeds the icon; DragonFly's ld calls the emulation elf_x86_64.
 target @any
 
-mk add CFLAGS "-Wno-cast-function-type -Wno-implicit-fallthrough"
+mk set _LLD_EMUL_amd64 "elf_x86_64"
+mk set _LLD_EMUL_x86_64 "elf_x86_64"
+# Appended through CFLAGS_x86_64: the port sets no CFLAGS of its own.
+mk set CFLAGS_x86_64 "-Wno-cast-function-type -Wno-implicit-fallthrough"
