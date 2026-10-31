@@ -1,6 +1,6 @@
---- test/packages/EABase/include/Common/EABase/config/eaplatform.h.orig	2019-04-29 23:00:33 UTC
-+++ test/packages/EABase/include/Common/EABase/config/eaplatform.h
-@@ -411,7 +411,7 @@
+--- EABase/include/Common/EABase/config/eaplatform.h.orig
++++ EABase/include/Common/EABase/config/eaplatform.h
+@@ -430,7 +430,7 @@
  	#define EA_PLATFORM_DESKTOP 1
  
  
