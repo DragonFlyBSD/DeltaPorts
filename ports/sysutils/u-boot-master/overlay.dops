@@ -20,4 +20,10 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/tools/mkimage.c
 MK
 
+# FreeBSD passes HOSTCFLAGS="${CFLAGS} -I${OPENSSLINC}"; OPENSSLINC is
+# ${LOCALBASE}/include here, so host tools compiled ahead of the bundled
+# scripts/dtc/libfdt picked up sysutils/dtc's libfdt.h and dtc failed to
+# link (fdt_get_property_namelen_w). Search it after the -I directories.
+text replace-once file Makefile from "HOSTCFLAGS=\"${CFLAGS} -I${OPENSSLINC}\"" to "HOSTCFLAGS=\"${CFLAGS} -isystem ${OPENSSLINC}\""
+
 patch apply diffs/Makefile.diff
