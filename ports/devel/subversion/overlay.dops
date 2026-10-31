@@ -1,0 +1,10 @@
+port devel/subversion
+type port
+reason "gcc rejects the // comments in expat.h under -std=c90"
+target @any
+
+# configure forces C90 with -std=c90 in CMODEFLAGS, the first flag of
+# every C compile line. expat.h now has // comments, which clang lets
+# through in C90 mode and gcc does not. gnu90 is C90 plus GNU extensions,
+# // comments included.
+mk add MAKE_ARGS "CMODEFLAGS=-std=gnu90"
