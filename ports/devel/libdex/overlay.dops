@@ -16,3 +16,9 @@ mk add MESON_ARGS "-Deventfd=disabled"
 # does not ship. Build with gcc 13, whose libatomic is in the ports, and link
 # it as upstream already does on Linux (dragonfly/@<line>/patch-src_meson.build).
 mk set USE_GCC_VERSION "13"
+
+# dragonfly/@<line>/patch-meson.build drops -Wl,-z,now and -fno-plt.
+# libatomic's 16-byte atomics are ifuncs, and DragonFly's rtld
+# write-protects RELRO before it resolves ifuncs; with those flags their
+# GOT slots sit in RELRO and anything loading libdex crashes in
+# ld-elf.so.2 (first the build's introspection dumper).
