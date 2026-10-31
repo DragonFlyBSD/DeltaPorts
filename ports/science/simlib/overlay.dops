@@ -1,3 +1,11 @@
 port science/simlib
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "system/compiler names in simlib.h; build with the FreeBSD makefile"
+
+# src/Makefile includes Makefile.`uname -s`, which ships for Linux and
+# FreeBSD only; the FreeBSD one has nothing FreeBSD-specific.
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${CP} ${WRKSRC}/src/Makefile.FreeBSD ${WRKSRC}/src/Makefile.DragonFly
+MK1
