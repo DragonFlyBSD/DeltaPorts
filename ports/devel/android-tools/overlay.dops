@@ -5,3 +5,9 @@ target @any
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 mk add MAKE_ENV "CWARNFLAGS=-fcommon"
+
+# No ENODATA on DragonFly. libbase (short reads), libutils' Errors.h and
+# libselinux (after getxattr, which reports a missing attribute as ENOATTR
+# here) use it, so define it as ENOATTR for every C and C++ file.
+mk set CFLAGS_x86_64 "-DENODATA=ENOATTR"
+mk set CXXFLAGS_x86_64 "-DENODATA=ENOATTR"
