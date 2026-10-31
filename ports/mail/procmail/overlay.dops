@@ -1,0 +1,3 @@
+port mail/procmail
+type port
+reason "gcc never finishes autoconf's strstr() benchmark; skip it"
