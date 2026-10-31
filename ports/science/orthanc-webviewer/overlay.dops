@@ -1,6 +1,10 @@
 port science/orthanc-webviewer
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "treat DragonFly as FreeBSD in the bundled Orthanc framework"
+
+# The bundled framework's CMake files and C/C++ sources pick FreeBSD's
+# branches (signals, dlopen, endianness, fopen64) by name; the main
+# science/orthanc port patches the same places.
 target @any
 
 mk target set dfly-patch <<'MK1'
@@ -8,4 +12,9 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/ThirdPartyDownloads/Orthanc-*/OrthancFramework/Resources/CMake/*.cmake \
 		${WRKSRC}/Resources/Orthanc/CMake/Compiler.cmake \
 		${WRKSRC}/Resources/Orthanc/Plugins/OrthancPluginsExports.cmake
+	${REINPLACE_CMD} -e 's/defined(__FreeBSD__)/defined(__FreeBSD__) || defined(__DragonFly__)/g' \
+		${WRKSRC}/ThirdPartyDownloads/Orthanc-*/OrthancFramework/Sources/Endianness.h \
+		${WRKSRC}/ThirdPartyDownloads/Orthanc-*/OrthancFramework/Sources/SharedLibrary.cpp \
+		${WRKSRC}/ThirdPartyDownloads/Orthanc-*/OrthancFramework/Sources/SystemToolbox.cpp \
+		${WRKSRC}/ThirdPartyDownloads/Orthanc-*/OrthancFramework/Resources/ThirdParty/minizip/ioapi.h
 MK1
