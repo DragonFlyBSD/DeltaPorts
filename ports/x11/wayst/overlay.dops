@@ -5,3 +5,8 @@ reason "DragonFly: take the Makefile's FreeBSD branch (LOCALBASE freetype2/fontc
 # dragonfly/@<line>/patch-Makefile-dragonfly (after FreeBSD's patch-Makefile):
 # the Makefile uses /usr/local include and lib paths only when uname -s is
 # FreeBSD, and /usr/include/freetype2 otherwise; DragonFly needs the former.
+
+# colors.h includes <threads.h>; DragonFly has none in base.
+target @any
+
+mk add BUILD_DEPENDS "${LOCALBASE}/include/threads.h:misc/libstdthreads"
