@@ -1,0 +1,11 @@
+port x11/swayimg
+type port
+reason "C++20 <format> needs gcc 14's libstdc++"
+
+# log.hpp includes <format>, which base gcc 12's libstdc++ does not have.
+# With gcc, fsmonitor.cpp's path /= event->name does not take
+# libinotify's zero-length name array; dragonfly/ passes it as a
+# const char *.
+target @any
+
+mk set USE_GCC_VERSION "14"
