@@ -1,6 +1,11 @@
 port emulators/frodo
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "gcc 14 for C++20 <format>; allow narrowing conversions"
+
+# SAM.cpp includes <format>, which base gcc 12's libstdc++ does not have.
+# The narrowing warning goes in CXXFLAGS_x86_64 (C++ only; the port sets no
+# CXXFLAGS of its own).
 target @any
 
-mk add CFLAGS "-Wno-narrowing"
+mk set USE_GCC_VERSION "14"
+mk set CXXFLAGS_x86_64 "-Wno-narrowing"
