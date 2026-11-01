@@ -1,0 +1,13 @@
+port emulators/z80pack
+type port
+reason "link threads with -lpthread; DragonFly has no libthr"
+
+# The simulator makefiles link -lthr on every BSD.
+target @any
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's|-lthr|-lpthread|' \
+		${WRKSRC}/altairsim/srcsim/Makefile \
+		${WRKSRC}/cromemcosim/srcsim/Makefile \
+		${WRKSRC}/imsaisim/srcsim/Makefile
+MK
