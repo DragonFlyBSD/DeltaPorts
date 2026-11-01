@@ -1,0 +1,3 @@
+port sysutils/xstow
+type port
+reason "cppdir.cc: include <climits> for PATH_MAX"
