@@ -1,0 +1,12 @@
+port audio/toneshifteq-lv2
+type port
+reason "libxputty: build with its FreeBSD/Linux settings"
+
+# libxputty's Makefile.base sets TARGET (and with it PKGCONFIG and the
+# library flags) from uname -s for Linux, FreeBSD and "BSD" only; on
+# DragonFly PKGCONFIG stays empty and the cairo headers are not found.
+# xputty.h, xwidget-linux.c and xfilepicker.h likewise turn on _OS_UNIX_,
+# and with it the X11 backend, by OS name; dragonfly/ adds DragonFly there.
+target @any
+
+mk add MAKE_ARGS "TARGET=Linux"
