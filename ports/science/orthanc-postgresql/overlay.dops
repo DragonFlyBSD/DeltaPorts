@@ -1,6 +1,12 @@
 port science/orthanc-postgresql
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "treat DragonFly as FreeBSD in the bundled Orthanc framework"
+
+# The bundled framework's CMake files and C/C++ sources pick FreeBSD's
+# branches (signals, dlopen, endianness, fopen64) by name; the main
+# science/orthanc port patches the same places. In Endianness.h FreeBSD
+# gets htole64 and friends through <arpa/inet.h>; DragonFly needs
+# <endian.h> for them, as science/orthanc's patch adds.
 target @any
 
 mk target set dfly-patch <<'MK1'
@@ -9,4 +15,12 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/Resources/Orthanc/CMake/Compiler.cmake \
 		${WRKSRC}/Resources/CMake/PostgreSQLConfiguration.cmake \
 		${WRKSRC}/Resources/Orthanc/Plugins/OrthancPluginsExports.cmake
+	${REINPLACE_CMD} -e 's/defined(__FreeBSD__)/defined(__FreeBSD__) || defined(__DragonFly__)/g' \
+		${WRKSRC}/PostgreSQL/ThirdPartyDownloads/Orthanc-*/OrthancFramework/Sources/Endianness.h \
+		${WRKSRC}/PostgreSQL/ThirdPartyDownloads/Orthanc-*/OrthancFramework/Sources/SharedLibrary.cpp \
+		${WRKSRC}/PostgreSQL/ThirdPartyDownloads/Orthanc-*/OrthancFramework/Sources/SystemToolbox.cpp \
+		${WRKSRC}/PostgreSQL/ThirdPartyDownloads/Orthanc-*/OrthancFramework/Resources/ThirdParty/minizip/ioapi.h
+	@${PRINTF} '/^#  include <arpa\\/inet.h>$$/a\\\n#  include <endian.h>\n' > ${WRKDIR}/dfly-endian.sed
+	${REINPLACE_CMD} -f ${WRKDIR}/dfly-endian.sed \
+		${WRKSRC}/PostgreSQL/ThirdPartyDownloads/Orthanc-*/OrthancFramework/Sources/Endianness.h
 MK1
