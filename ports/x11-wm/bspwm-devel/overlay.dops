@@ -1,0 +1,10 @@
+port x11-wm/bspwm-devel
+type port
+reason "expose SA_RESTART: DragonFly declares it for XSI only"
+
+# The Makefile builds with -D_POSIX_C_SOURCE=200809L alone, and DragonFly's
+# <sys/signal.h> defines SA_RESTART only when XSI is visible. Add
+# _XOPEN_SOURCE through CFLAGS_x86_64 (the port sets no CFLAGS).
+target @any
+
+mk set CFLAGS_x86_64 "-D_XOPEN_SOURCE=700"
