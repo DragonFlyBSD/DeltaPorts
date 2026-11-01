@@ -1,5 +1,15 @@
 port x11/virglrenderer
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "no ETIME, O_DSYNC or signalfd on DragonFly: map the first two, drop Venus"
+
+# Mesa's util/libsync.h and virgl_fence.c return the STREAMS errno ETIME,
+# which DragonFly does not define. Map it to ETIMEDOUT for C and C++.
+# vtest_renderer.c opens its block file with O_DSYNC, which DragonFly
+# lacks too; O_SYNC syncs the data as well.
+# Venus (Vulkan) builds the render server, whose render_worker.c is built
+# on Linux's signalfd; leave it off by default.
 target @any
 
+mk set CFLAGS_x86_64 "-DETIME=ETIMEDOUT -DO_DSYNC=O_SYNC"
+mk set CXXFLAGS_x86_64 "-DETIME=ETIMEDOUT"
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NVENUS}"
