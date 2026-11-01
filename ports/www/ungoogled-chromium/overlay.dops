@@ -1,0 +1,138 @@
+port www/ungoogled-chromium
+type port
+reason "DragonFly ungoogled-chromium: chromium 151's libc++ toolchain, sandbox/ffmpeg/buildtools setup, GN arg overrides and source patches"
+target @any
+
+# The same 151 sources as www/chromium on 2026Q3 (151.0.7922.137), where
+# DragonFly built it; the ops and the dragonfly/ patches are that
+# chromium overlay's. ungoogled applies its own patch series and the
+# domain substitution in pre-patch, before files/ and dragonfly/. The
+# port has no rollup or cargo build, so chromium's rollup patch, cargo
+# LDFLAGS filter, stray-stage cleanup and LTO_UNSAFE are not carried over.
+
+# avoid PA for now
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
+
+# The GN bootstrap re-enters this Makefile with GN_ONLY set; these
+# only apply to the real build.
+mk block set condition "!defined(GN_ONLY)" <<'MK'
+# XXX - This is a hack to force llvm to use libc++ C++ includes instead of base's gcc
+CXXFLAGS+=	-nostdlib++ -stdlib=libc++ -I${LOCALBASE}/include
+CXXFLAGS+=	-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/include/c++/v1
+LDFLAGS+=	-L${LOCALBASE}/llvm${LLVM_DEFAULT}/lib -L /lib -L /usr/lib -lpthread
+LDFLAGS+=	-stdlib=libc++ -lc++ -lc++abi -Wl,-rpath,${LOCALBASE}/llvm${LLVM_DEFAULT}/lib
+
+# Since FreeBSD has libc++ in base we need to rely on DPorts' libcxx
+LIB_DIRS+=	${PREFIX}/llvm${LLVM_DEFAULT}/lib
+LIB_DEPENDS+=  	libc++.so.1:devel/libcxx${LLVM_DEFAULT}
+
+# we don't support libcuse so no audio/virtual_oss
+RUN_DEPENDS:=	${RUN_DEPENDS:Nvirtual_oss*}
+MK
+
+mk target set dfly-patch <<'MK'
+	# Sandbox stuff
+	@${MKDIR} ${WRKSRC}/sandbox/policy/dragonfly
+	@${CP} ${WRKSRC}/sandbox/policy/freebsd/sandbox_freebsd.h ${WRKSRC}/sandbox/policy/dragonfly/sandbox_dragonfly.h
+	@${CP} ${WRKSRC}/sandbox/policy/freebsd/sandbox_freebsd.cc ${WRKSRC}/sandbox/policy/dragonfly/sandbox_dragonfly.cc
+	${REINPLACE_CMD} -e "s|FreeBSD|DragonFly|g" \
+		-e "s|freebsd\/sandbox_freebsd.h|dragonfly\/sandbox_dragonfly.h|g" \
+		${WRKSRC}/sandbox/policy/dragonfly/sandbox_dragonfly.h \
+		${WRKSRC}/sandbox/policy/dragonfly/sandbox_dragonfly.cc \
+
+	# Chromium uses an unreleased version of FFmpeg, so configure it
+	${CP} -R \
+                ${WRKSRC}/third_party/ffmpeg/chromium/config/Chrome/linux/ \
+                ${WRKSRC}/third_party/ffmpeg/chromium/config/Chrome/dragonfly
+
+	# Setup buildtools/freebsd
+	@${MKDIR} ${WRKSRC}/buildtools/dragonfly
+	${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/dragonfly
+	${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/dragonfly
+
+	# XXX The correct solution is to pass variables to gn
+	# Use the current LLVM version by replacing the hardcoded one
+	${REINPLACE_CMD} -e "s|clang60|clang${LLVM_DEFAULT}|g" \
+		-e "s|clang\+\+60|clang++${LLVM_DEFAULT}|g" \
+		-e "s|llvm-ar|llvm-ar${LLVM_DEFAULT}|g" \
+		-e "s|llvm-nm|llvm-nm${LLVM_DEFAULT}|g" \
+		${WRKSRC}/build/toolchain/gcc_toolchain.gni
+MK
+
+# --- absorbed from the former diffs/Makefile.diff -----------------------
+# Six hunks, expressed as semantic ops so they survive an upstream bump
+# instead of drifting on line context.
+
+# DragonFly links the dport libc++ (devel/libcxx${LLVM_DEFAULT}) and base
+# libunwind, not chromium's bundled copies.
+# NB: GN_ARGS is assigned 3 times (lines 120/158/287 upstream), so
+# `mk remove` cannot tell which assignment to edit. The token values are
+# unique as text, so flip them in place.
+text replace-once file Makefile \
+     from "use_custom_libcxx=true" to "use_custom_libcxx=false"
+text replace-once file Makefile \
+     from "use_custom_libunwind=true" to "use_custom_libunwind=false"
+# Upstream passes extra_cxxflags/extra_ldflags into gn but not extra_cflags,
+# so the C half of the tree never saw the port's CFLAGS.
+mk add    GN_ARGS "extra_cflags=\"${CFLAGS}\""
+# V8's sandbox build asserts use_safe_libcxx, which requires
+# use_custom_libcxx=true. DragonFly links the dport libc++ directly instead
+# (see below), so disable the V8 sandbox here rather than tripping the assert.
+mk add    GN_ARGS "v8_enable_sandbox=false"
+
+# The ld alias resolves to a path DragonFly does not provide; alias clang
+# instead so gn's toolchain probe finds a driver.
+# BINARY_ALIAS is assigned twice (112/252), so `mk remove` is ambiguous here
+# too; the alias line itself is unique.
+text replace-once file Makefile \
+     from "ld=${LOCALBASE}/bin/ld.lld${LLVM_DEFAULT}" \
+     to   "clang=${LOCALBASE}/bin/clang${LLVM_DEFAULT}"
+
+# DragonFly spells the 64-bit arch x86_64, not amd64, so the upstream
+# branch never fired and FFMPEG_TARGET/nasm were left unset.
+mk replace-if from "${ARCH} == amd64" to "${ARCH} == x86_64"
+
+# ffmpeg build/config dirs are named after the OS; upstream hardcodes
+# freebsd.
+mk set FFMPEG_BDIR "${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.${OPSYS:tl}/${FFMPEG_BRAND}"
+mk set FFMPEG_CDIR "${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/${OPSYS:tl}/${FFMPEG_TARGET}"
+
+# ffmpeg's own configure takes the OS name as a positional argument.
+text replace-once file Makefile \
+     from "scripts/build_ffmpeg.py freebsd ${FFMPEG_TARGET}" \
+     to   "scripts/build_ffmpeg.py dragonfly ${FFMPEG_TARGET}"
+# The gn bootstrap runs its own compiler probes and does not inherit the
+# port's flags from CONFIGURE_ENV alone.
+text replace-once file Makefile \
+     from "\t\tREADELF=${READELF} AR=${AR} NM=${NM} ${PYTHON_CMD} \\" \
+     to   "\t\tREADELF=${READELF} AR=${AR} NM=${NM} \\\n\t\tCFLAGS=\"${CFLAGS:N-flto*}\" CXXFLAGS=\"${CXXFLAGS:N-flto*}\" LDFLAGS=\"${LDFLAGS:N-flto*}\" \\\n\t\t${PYTHON_CMD} \\"
+
+# node and buildtools live under an OS-named directory. Each anchor is a
+# whole line: `buildtools/freebsd` alone appears 5 times and
+# text replace-once refuses an ambiguous match.
+text replace-once file Makefile \
+     from "@${MKDIR} ${WRKSRC}/third_party/node/freebsd/node-freebsd/bin" \
+     to   "@${MKDIR} ${WRKSRC}/third_party/node/${OPSYS:tl}/node-${OPSYS:tl}/bin"
+text replace-once file Makefile \
+     from "${LN} -sf ${LOCALBASE}/bin/node ${WRKSRC}/third_party/node/freebsd/node-freebsd/bin/node" \
+     to   "${LN} -sf ${LOCALBASE}/bin/node ${WRKSRC}/third_party/node/${OPSYS:tl}/node-${OPSYS:tl}/bin/node"
+# (the `# Setup buildtools/freebsd` comment is deliberately left alone:
+# dfly-patch's recipe carries the same string, so no anchor is unique, and
+# it has no functional effect.)
+text replace-once file Makefile \
+     from "@${MKDIR} ${WRKSRC}/buildtools/freebsd" \
+     to   "@${MKDIR} ${WRKSRC}/buildtools/${OPSYS:tl}"
+text replace-once file Makefile \
+     from "${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/freebsd" \
+     to   "${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/${OPSYS:tl}"
+text replace-once file Makefile \
+     from "${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/freebsd" \
+     to   "${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/${OPSYS:tl}"
+text replace-once file Makefile \
+     from "${LN} -sf /usr/bin/strip ${WRKSRC}/buildtools/freebsd/strip" \
+     to   "${LN} -sf /usr/bin/strip ${WRKSRC}/buildtools/${OPSYS:tl}/strip"
+
+# security/krb5 does not build shared on DragonFly and the HEIMDAL_BASE
+# alternative wants /usr/lib/libkrb5.so, which base does not ship.
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NKERBEROS}"
+
