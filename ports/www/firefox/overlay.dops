@@ -21,7 +21,7 @@ mk add CXXFLAGS -Wno-multistatement-macros
 mk add CXXFLAGS -Wno-class-memaccess
 # clang++ here defaults to the base GCC 8 libstdc++ (no C++20 <version>
 # header); point the C++ frontend at the llvm libcxx headers (same headers
-# www/chromium and www/qt6-webengine use). Without the -cxx-isystem below,
+# www/chromium uses). Without the -cxx-isystem below,
 # -stdlib=libc++ leaves clang with no libc++ include dir on DragonFly, so
 # every TU fails in the generated stl_wrappers/system_wrappers on
 # `#include_next <new>` ('new' file not found). (Link with the
@@ -32,7 +32,7 @@ mk add CXXFLAGS "-cxx-isystem ${LLVM_PREFIX}/include/c++/v1"
 # Provide the libc++ headers above at build time (DragonFly-only dport).
 mk add BUILD_DEPENDS "${LOCALBASE}/llvm${LLVM_VERSION}/include/c++/v1/new:devel/libcxx${LLVM_VERSION}"
 # -stdlib=libc++ above makes every C++ link pass -lc++, so lld needs the
-# libcxx lib dir on its search path (same approach as www/qt6-webengine);
+# libcxx lib dir on its search path;
 # LIB_DEPENDS records the runtime dep (USE_LDCONFIG in devel/libcxx19 covers
 # loading). Target objects are compiled against libc++ headers, so they must
 # link libc++, not the default libstdc++.

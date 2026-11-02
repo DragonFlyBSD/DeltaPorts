@@ -1,31 +1,17 @@
 port www/qt6-webengine
 type port
-reason "DragonFly qt6-webengine: libc++ shim, BINARY_ALIAS, CXXFLAGS, LDFLAGS, dfly-patch target"
+reason "DragonFly qt6-webengine: CXXFLAGS, job limit, dfly-patch target"
 target @any
 
-mk set USE_CLANG_FALLBACK "default"
+# Built with gcc and libstdc++, like the rest of Qt6 (Uses/qt.mk). gcc's
+# cc1plus needs far more memory per job than clang on Chromium's sources:
+# 12 jobs thrashed a 32 GB builder, 6 fit. The port hands this number to
+# ninja through NINJAFLAGS.
+mk set MAKE_JOBS_NUMBER_LIMIT "6"
 
-mk add BINARY_ALIAS "cpp=${LOCALBASE}/bin/clang-cpp${LLVM_DEFAULT}"
-mk add BINARY_ALIAS "cc=${LOCALBASE}/bin/clang${LLVM_DEFAULT}"
-mk add BINARY_ALIAS "c++=${LOCALBASE}/bin/clang++${LLVM_DEFAULT}"
-mk add BINARY_ALIAS "ar=${LOCALBASE}/bin/llvm-ar${LLVM_DEFAULT}"
-mk add BINARY_ALIAS "nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT}"
-
-mk add CXXFLAGS -nostdinc++
-mk add CXXFLAGS -stdlib=libc++
 mk add CXXFLAGS "-I${LOCALBASE}/include"
-mk add CXXFLAGS "-I${LOCALBASE}/include/cxxrt"
-mk add CXXFLAGS "-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/include/c++/v1"
-mk add CXXFLAGS -Wno-error=unused-command-line-argument
-mk add CXXFLAGS -Wunused-command-line-argument
-
-mk set LDFLAGS "-L /usr/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/lib/c++ -L /lib"
 
 mk add CONFIGURE_ENV "CXXFLAGS=\"${CXXFLAGS}\" CFLAGS=\"${CFLAGS}\" LDFLAGS=\"${LDFLAGS}\""
-
-mk set LIB_DIRS "/lib /usr/lib ${LOCALBASE}/lib ${PREFIX}/llvm${LLVM_DEFAULT}/lib"
-
-mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_DEFAULT}"
 
 mk add LIB_DEPENDS "libgbm.so.1:graphics/mesa-libs"
 mk add LIB_DEPENDS "libva.so:multimedia/libva"
