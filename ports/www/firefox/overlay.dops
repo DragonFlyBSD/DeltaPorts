@@ -132,6 +132,23 @@ mk add CONFIGURE_ENV "BINDGEN_CFLAGS=\"-I${LOCALBASE}/include -stdlib=libc++ -cx
 # shared-libraries-linux.cc), otherwise hits #error "Unknown platform".
 # dragonfly/patch-tools_profiler_lul_platform-linux-lul.cpp
 
+# DragonFly has no CLOCK_BOOTTIME, so mozglue's ProcessUptimeMs() never has a
+# value and AudioSessionManager hits MOZ_RELEASE_ASSERT(isSome()) in the parent
+# as soon as a tab becomes audible. Use CLOCK_UPTIME, as www/chromium does.
+# dragonfly/patch-mozglue_misc_Now.cpp
+
+# /dev/fd is devfs with fixed entries 0..63 that don't follow the open
+# descriptors, so CloseSuperfluousFds() closes fds that aren't open (debug
+# builds log that in the forked child, which can deadlock) and never closes
+# fds from 64 up. Use closefrom(2) above the highest fd to keep instead.
+# dragonfly/patch-ipc_chromium_src_base_process__util__posix.cc
+
+# patch-bug1504834_comment5 is work in progress for big-endian targets. On
+# x86_64 it sets the BGRX alpha offset to 0, so debug builds report every
+# opaque surface as "RGBX pixel ... is not opaque"; its skcms hunks change
+# nothing on little-endian.
+file remove files/patch-bug1504834_comment5 on-missing noop
+
 mk set BINARY_ALIAS "clang=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang clang++=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang++ wasm-ld=${LOCALBASE}/llvm${LLVM_VERSION}/bin/wasm-ld"
 
 # bsd.gecko.mk only switches CC/CXX to clang when exists(/usr/lib/libc++.so),
