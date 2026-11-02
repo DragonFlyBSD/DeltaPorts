@@ -1,0 +1,3 @@
+port graphics/photoqt
+type port
+reason "no <sys/xattr.h>: use the files/ patch's extattr(2) emulation, as FreeBSD does"
