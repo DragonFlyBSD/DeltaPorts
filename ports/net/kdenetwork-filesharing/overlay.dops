@@ -1,0 +1,3 @@
+port net/kdenetwork-filesharing
+type port
+reason "authhelper: add users to groups with pw(8), as on FreeBSD"
