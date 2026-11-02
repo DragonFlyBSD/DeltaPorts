@@ -1,6 +1,10 @@
 port devel/libdispatch
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "clang and libc++, ship the bundled BlocksRuntime"
 target @any
 
-mk set USE_CLANG_FALLBACK "default"
+mk add USES "dfly-libcxx"
+
+# Base has no BlocksRuntime, so the bundled one is built: package it.
+text replace-once file pkg-plist from "@comment include/Block.h" to "include/Block.h"
+text replace-once file pkg-plist from "@comment lib/libBlocksRuntime.so" to "lib/libBlocksRuntime.so"
