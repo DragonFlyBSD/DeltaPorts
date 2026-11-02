@@ -2,15 +2,12 @@ port mail/thunderbird
 type port
 reason "DragonFly: Gecko built like www/firefox (clang + libc++ headers, per-line dragonfly/ patch sets)"
 
-# 158.0.1 builds Gecko FIREFOX_158_0_1_BUILD1, the same tree as
-# www/firefox 158.0.1, so 2026Q4 and main take www/firefox's DragonFly setup
-# (see the notes there): clang with the llvm libc++ headers, XP_FREEBSD for
-# DragonFly, and the same dragonfly/@<line> patch set (all 33 apply to the
-# 158 tree with -F0), plus the system-headers malloc.h removal this port has
-# always carried. There is no libwebrtc build_config.h patch: 158 has no
-# such file (webrtc is disabled anyway), and the ANGLE sources are in
-# third_party/angle.
+# Same Gecko as www/firefox 159.0: same setup and patches (see there), plus
+# malloc.h out of system-headers and the mtu patches for comm/'s own copy.
 target @2026Q4,@main
+
+# Big-endian WIP, wrong on x86_64.
+file remove files/patch-bug1504834_comment5 on-missing noop
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NPROFILE}"
 mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NLTO}"
