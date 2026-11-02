@@ -1,6 +1,6 @@
 --- Uses/gnustep.mk.orig	2022-07-12 00:26:01 UTC
 +++ Uses/gnustep.mk
-@@ -31,6 +31,12 @@ GNUSTEP_LOCAL_TOOLS=		${GNUSTEP_LOCAL_RO
+@@ -31,6 +31,16 @@
  LIB_DIRS+=	${GNUSTEP_SYSTEM_LIBRARIES} \
  		${GNUSTEP_LOCAL_LIBRARIES}
  
@@ -10,10 +10,14 @@
 +LLD_UNSAFE=yes
 +.endif
 +
++# clang links with -rpath /usr/lib/gcc80; let ld find the base compiler's
++# libstdc++ first, whose symbol versions libraries built with it need (icu).
++LDFLAGS+=	-Wl,-rpath-link,/usr/lib/${DFLY_BASE_CCVER}
++
  .  for a in CFLAGS CPPFLAGS CXXFLAGS OBJCCFLAGS OBJCFLAGS LDFLAGS
  MAKE_ENV+=	ADDITIONAL_${a}="${ADDITIONAL_${a}} ${${a}}"
  .  endfor
-@@ -38,6 +44,8 @@ MAKE_ENV+=	ADDITIONAL_${a}="${ADDITIONAL
+@@ -38,6 +48,8 @@
  MAKE_ENV+=	ADDITIONAL_${a}="${ADDITIONAL_${a}}"
  .  endfor
  MAKE_ARGS+=messages=yes
@@ -22,7 +26,7 @@
  # BFD ld can't link Objective-C programs for some reason.  Most things are fine
  # with LLD, but the things that don't (e.g. sope) need gold.
  .  if defined(LLD_UNSAFE)
-@@ -46,6 +54,7 @@ BUILD_DEPENDS+=         ${LOCALBASE}/bin
+@@ -46,6 +58,7 @@
  .  else
  MAKE_ARGS+=LDFLAGS='-fuse-ld=${OBJC_LLD}'
  .  endif
