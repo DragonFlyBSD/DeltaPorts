@@ -1,0 +1,6 @@
+port games/ldmud
+type port
+reason "LICENSE_FILE misspells WRKSRC; COPYRIGHT is above src/"
+target @any
+
+mk set LICENSE_FILE "${WRKDIR}/${PORTNAME}-${PORTVERSION}/COPYRIGHT"
