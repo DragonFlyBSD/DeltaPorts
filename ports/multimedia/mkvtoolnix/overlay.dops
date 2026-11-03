@@ -1,0 +1,6 @@
+port multimedia/mkvtoolnix
+type port
+reason "gcc 12 builds C++20: don't force c++17 for non-clang compilers"
+target @any
+
+text replace-once file Makefile from "USE_CXXSTD=\tc++17" to "USE_CXXSTD=\tc++20"
