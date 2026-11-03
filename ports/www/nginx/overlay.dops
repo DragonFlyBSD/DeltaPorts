@@ -4,12 +4,6 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add USES "gmake"
-mk add NJS_LIB_DEPENDS "libpcre.so:devel/pcre"
-mk target set post-patch-NJS-on <<'MK1'
-	(cd ${WRKSRC_njs} && ${PATCH} ${PATCH_ARGS} < ${DFLY_PATCHDIR}/extra-auto_openssl.diff)
-	(cd ${WRKSRC_njs} && ${PATCH} ${PATCH_ARGS} < ${DFLY_PATCHDIR}/extra-njs-cli.diff)
-
-MK1
 mk target set pre-patch-MODSECURITY-on <<'MK2'
 	-${REINPLACE_CMD} -e 's|\*-\*-freebsd\*|*-*-dragonfly*|' \
 		${WRKSRC_MODSECURITY}/configure
