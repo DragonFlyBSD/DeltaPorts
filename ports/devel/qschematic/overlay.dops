@@ -1,0 +1,4 @@
+port devel/qschematic
+type port
+reason "base gcc 12's libstdc++ has no std::ranges::contains (C++23, GCC 13): use any_of"
+target @any
