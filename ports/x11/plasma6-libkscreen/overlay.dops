@@ -1,0 +1,6 @@
+port x11/plasma6-libkscreen
+type port
+reason "DragonFly: std::ranges::to and <print> need libstdc++ 14+; build with gcc 14 (dp-y0f)"
+target @any
+
+mk set USE_GCC_VERSION "14"
