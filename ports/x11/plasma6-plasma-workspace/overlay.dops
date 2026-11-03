@@ -1,0 +1,18 @@
+port x11/plasma6-plasma-workspace
+type port
+reason "DragonFly: std::ranges::to needs libstdc++ 14+, build with gcc 14 (dp-y0f); no timerfd, use libclock's POSIX timer"
+target @any
+
+mk set USE_GCC_VERSION "14"
+
+# libclock's alignedtimer.cpp needs timerfd; OpenBSD already takes the
+# QTimer-based alignedtimer_posix.cpp (and its m_timer member). The
+# solidautoeject kded module is FreeBSD-only in CMake but in the plist.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/CMAKE_SYSTEM_NAME STREQUAL "OpenBSD"/CMAKE_SYSTEM_NAME MATCHES "OpenBSD|DragonFly"/' \
+		${WRKSRC}/libclock/CMakeLists.txt
+	${REINPLACE_CMD} -e 's/^#if defined(Q_OS_OPENBSD)$$/#if defined(Q_OS_OPENBSD) || defined(Q_OS_DRAGONFLY)/' \
+		${WRKSRC}/libclock/alignedtimer.h
+	${REINPLACE_CMD} -e 's/^if(CMAKE_SYSTEM_NAME MATCHES FreeBSD)$$/if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD|DragonFly")/' \
+		${WRKSRC}/CMakeLists.txt
+MK
