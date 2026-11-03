@@ -4,3 +4,9 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# gcc rejects __attribute__ after [[deprecated]] in a class head.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/class \[\[deprecated(\("[^"]*"\))\]\] QUOTIENT_API/class __attribute__((deprecated(\1))) QUOTIENT_API/' \
+		${WRKSRC}/Quotient/csapi/*.h
+MK
