@@ -4,11 +4,10 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 
 # FreeBSD's files/ patch thread.cc and the gsm headers themselves:
 # dragonfly/@2026Q4 and @main extend those FreeBSD guards to DragonFly.
-# The flat high_res_timer.h patch applies everywhere.
+# The flat high_res_timer.h patch applies everywhere; its pybind file
+# carries the patched header's hash, which cmake checks.
 target @any
 
-mk eval BUILD_DEPENDS "${BUILD_DEPENDS:Ndoxygen*}"
-mk eval RUN_DEPENDS "${RUN_DEPENDS:Ndoxygen*}"
 mk add LDFLAGS "-L${LOCALBASE}/lib"
 mk set CPP "cpp"
 mk set CC "cc"
