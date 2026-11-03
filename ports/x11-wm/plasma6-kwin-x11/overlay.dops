@@ -1,0 +1,12 @@
+port x11-wm/plasma6-kwin-x11
+type port
+reason "DragonFly: kwin's sysctl executable-path and patches (dragonfly/); std::ranges::to needs libstdc++ 14+, build with gcc 14 (dp-y0f)"
+target @any
+
+mk set USE_GCC_VERSION "14"
+
+# Same code base as x11-wm/plasma6-kwin: take its FreeBSD branch.
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|g' \
+		${WRKSRC}/src/utils/CMakeLists.txt
+MK1
