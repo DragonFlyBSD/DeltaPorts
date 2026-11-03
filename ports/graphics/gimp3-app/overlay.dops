@@ -1,0 +1,4 @@
+port graphics/gimp3-app
+type port
+reason "DragonFly: count as platform_linux like the BSDs, for the desktop-link plug-in"
+target @any
