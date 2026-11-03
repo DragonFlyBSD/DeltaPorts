@@ -1,0 +1,6 @@
+port audio/fooyin
+type port
+reason "gcc rejects clang's -fexperimental-library"
+target @any
+
+mk remove CXXFLAGS "-fexperimental-library"
