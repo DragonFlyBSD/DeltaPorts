@@ -1,10 +1,10 @@
 port devel/wxformbuilder
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "CMake supports RUNTIME_DEPENDENCY_SET on Windows, Linux, macOS and FreeBSD only"
 target @any
 
-mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e "s@\(defined(__FreeBSD__)\)@(\1||defined(__DragonFly__))@g"	\
-		${WRKSRC}/sdk/premake/src/os.c	\
-		${WRKSRC}/sdk/premake/src/os.h
-MK1
+# The set only feeds the Windows bundling installs; don't register it.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/^ *RUNTIME_DEPENDENCY_SET wxFormBuilder_dependencies$$/d' \
+		${WRKSRC}/src/CMakeLists.txt ${WRKSRC}/cmake/functions.cmake
+MK
