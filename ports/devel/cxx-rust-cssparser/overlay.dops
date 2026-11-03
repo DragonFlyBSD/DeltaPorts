@@ -1,0 +1,20 @@
+port devel/cxx-rust-cssparser
+type port
+reason "DragonFly: base gcc 12 has no <format>; use header-only {fmt}"
+target @any
+
+# Keeps the port on base gcc, whose libgcc_pic Rust links (dp-shs.66).
+# std::format is only used for toString(); Value.h includes <format>
+# without using it.
+mk add BUILD_DEPENDS "${LOCALBASE}/include/fmt/format.h:devel/libfmt"
+mk add CXXFLAGS "-DFMT_HEADER_ONLY -I${LOCALBASE}/include"
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/^#include <format>$$/d' ${WRKSRC}/cpp/Value.h
+	${REINPLACE_CMD} -e 's|^#include <format>$$|#include <fmt/format.h>|' \
+		-e 's|std::format(|fmt::format(|g' \
+		-e 's|std::vformat(|fmt::vformat(|g' \
+		-e 's|std::make_format_args(|fmt::make_format_args(|g' \
+		${WRKSRC}/cpp/Color.cpp ${WRKSRC}/cpp/Selector.cpp ${WRKSRC}/cpp/Value.cpp
+	${REINPLACE_CMD} -e 's|CMAKE_SYSTEM_NAME MATCHES "FreeBSD"|CMAKE_SYSTEM_NAME MATCHES "FreeBSD\|DragonFly"|' \
+		${WRKSRC}/cpp/CMakeLists.txt
+MK
