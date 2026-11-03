@@ -3,6 +3,3 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk target set dfly-patch <<'MK1'
-	${CHMOD} ${BINMODE} ${WRKSRC}/post_install.py
-MK1
