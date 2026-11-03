@@ -1,6 +1,9 @@
 port deskutils/xdg-desktop-portal
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly: the bundled libglnx needs O_PATH and AT_EMPTY_PATH, which DragonFly lacks"
 target @any
 
-mk set IGNORE "FreeBSD specific"
+# libglnx's glnx-chase.c and glnx-fdio.c resolve paths through O_PATH fds
+# and AT_EMPTY_PATH (FreeBSD has both); its missing-syscall fallbacks
+# would also call Linux syscall numbers here. Retested 1.22.1, 2026-11-03.
+mk set IGNORE "needs O_PATH and AT_EMPTY_PATH (bundled libglnx)"
