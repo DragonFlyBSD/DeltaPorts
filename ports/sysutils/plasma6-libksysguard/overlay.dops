@@ -1,0 +1,3 @@
+port sysutils/plasma6-libksysguard
+type port
+reason "DragonFly: bring upstream's processes_dragonfly_p.cpp up to the current Process memory API (dragonfly/)"
