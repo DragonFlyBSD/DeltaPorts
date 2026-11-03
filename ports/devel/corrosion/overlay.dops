@@ -1,6 +1,6 @@
 port devel/corrosion
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly: CMake's Makefiles need GNU make here; base make stops on a path ending in a dot"
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
+mk add USES "gmake"
