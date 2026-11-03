@@ -1,3 +1,7 @@
 port devel/qbs
 type port
 reason "DragonFly: read kinfo_proc's kp_pid/kp_comm in processNameByPid (dragonfly/@<line>)"
+
+# The HTML docs need qdoc, which devel/qt6-tools does not build here.
+target @any
+mk add OPTIONS_EXCLUDE "DOCS"
