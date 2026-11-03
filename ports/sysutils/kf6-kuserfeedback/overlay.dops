@@ -1,0 +1,6 @@
+port sysutils/kf6-kuserfeedback
+type port
+reason "DragonFly: no qdoc (dp-shs.52), so the .qch user manual is not built"
+target @any
+
+text line-remove file pkg-plist exact "share/KDE/UserFeedbackConsole/user-feedback-manual.qch"
