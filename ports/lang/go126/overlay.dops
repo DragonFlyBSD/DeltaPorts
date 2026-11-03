@@ -1,6 +1,6 @@
 port lang/go126
 type port
-reason "DragonFly: GOARCH for ARCH=x86_64 and the dragonfly bootstrap distfile"
+reason "DragonFly: GOARCH for ARCH=x86_64, the dragonfly bootstrap distfile, interface message layout"
 target @any
 
 # bsd.go.mk keys GOARCH off ${ARCH}; DragonFly reports x86_64, which it
@@ -18,3 +18,7 @@ text line-insert-after file distinfo \
 text line-insert-after file distinfo \
      anchor "SHA256 (go1.25.14.dragonfly-amd64.tar.gz) = 5c8a33b21b05998a7cb05d1aafbbcadc31bd5e64527da11056a363001d997d41" \
      line   "SIZE (go1.25.14.dragonfly-amd64.tar.gz) = 60336476"
+
+# dragonfly/: DragonFly puts the index before flags and addrs in
+# if_msghdr/ifa_msghdr, so net.Interfaces() found none (golang/go#81503).
+mk set PORTREVISION "1"
