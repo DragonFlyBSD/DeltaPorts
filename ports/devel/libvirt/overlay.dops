@@ -1,19 +1,13 @@
 port devel/libvirt
 type port
-reason "DragonFly: filter ZFS/add QEMU in OPTIONS_DEFAULT, shebang files, plist additions, fdatasync->fsync, meson.build patches"
+reason "DragonFly: QEMU driver on, no ZFS; NVMM accelerator, BSD network driver"
 target @any
 
-mk add SHEBANG_FILES "tools/virt-qemu-sev-validate tools/virt-qemu-qmp-proxy"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NZFS} QEMU"
-mk add PLIST_FILES "bin/virt-qemu-qmp-proxy"
-mk add PLIST_FILES "bin/virt-qemu-sev-validate"
-mk add PLIST_FILES "lib/sysusers.d/libvirt-qemu.conf"
-mk add PLIST_FILES "share/man/man1/virt-qemu-qmp-proxy.1.gz"
-mk add PLIST_FILES "share/man/man1/virt-qemu-sev-validate.1.gz"
-mk add PLIST_FILES "@dir /var/run/libvirt/qemu/passt"
+
+# -Wl,-no_warn_duplicate_libraries is macOS ld's; GNU ld reads it as
+# -n -o _warn_duplicate_libraries, so meson's probe passes.
 mk target set dfly-patch <<'MK'
-	${REINPLACE_CMD} -e 's|fdatasync|fsync|' \
-		${WRKSRC}/src/util/virfile.c
 	${REINPLACE_CMD} -e '/libvirt_no_warn_duplicate_libraries/d' \
 		${WRKSRC}/src/meson.build \
 		${WRKSRC}/tests/meson.build \
