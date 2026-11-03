@@ -1,0 +1,8 @@
+port x11-themes/plasma6-union
+type port
+reason "DragonFly: base gcc 12 has no <format>; skip the std::formatter specializations"
+target @any
+
+# dragonfly/ guards the std::formatter specializations (used only by the
+# tests) with __has_include(<format>), keeping union on base gcc
+# (dp-shs.66).
