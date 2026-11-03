@@ -1,9 +1,11 @@
 port deskutils/xdg-desktop-portal
 type port
-reason "DragonFly: the bundled libglnx needs O_PATH and AT_EMPTY_PATH, which DragonFly lacks"
+reason "DragonFly: no O_PATH, memfd seals or Linux syscalls; no FUSE document portal"
 target @any
 
-# libglnx's glnx-chase.c and glnx-fdio.c resolve paths through O_PATH fds
-# and AT_EMPTY_PATH (FreeBSD has both); its missing-syscall fallbacks
-# would also call Linux syscall numbers here. Retested 1.22.1, 2026-11-03.
-mk set IGNORE "needs O_PATH and AT_EMPTY_PATH (bundled libglnx)"
+# dragonfly/ patches libglnx and the portal for the missing O_PATH,
+# AT_EMPTY_PATH, statx and memfd seals. The FUSE document portal is not
+# built (dp-hlu).
+mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibfuse3.so*}"
+text line-remove file pkg-plist exact "libexec/xdg-document-portal"
+text line-remove file pkg-plist exact "share/dbus-1/services/org.freedesktop.portal.Documents.service"
