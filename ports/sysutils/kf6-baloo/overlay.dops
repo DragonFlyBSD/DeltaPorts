@@ -4,7 +4,10 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "gmake"
+# DragonFly has SYS_ioprio_set, but not Linux's <linux/ioprio.h> API.
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
 		${WRKSRC}/metainfo.yaml
+	${REINPLACE_CMD} -e 's/^#ifdef SYS_ioprio_set$$/#if defined(SYS_ioprio_set) \&\& !defined(__DragonFly__)/' \
+		${WRKSRC}/src/file/priority.cpp
 MK1
