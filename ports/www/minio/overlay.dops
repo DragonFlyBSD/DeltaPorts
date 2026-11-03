@@ -1,3 +1,12 @@
 port www/minio
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: dirent and statfs layout; vendored mc uses FreeBSD's disk-stat and fs-event code"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${SED} -e 's/Atimespec/Atim/g; s/Mtimespec/Mtim/g' \
+		${WRKSRC}/vendor/github.com/minio/mc/pkg/disk/stat_freebsd.go > \
+		${WRKSRC}/vendor/github.com/minio/mc/pkg/disk/stat_dragonfly.go
+	${CP} ${WRKSRC}/vendor/github.com/minio/mc/cmd/client-fs_freebsd.go \
+		${WRKSRC}/vendor/github.com/minio/mc/cmd/client-fs_dragonfly.go
+MK
