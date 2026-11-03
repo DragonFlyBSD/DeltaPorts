@@ -1,0 +1,6 @@
+port security/plasma6-kscreenlocker
+type port
+reason "DragonFly: views::zip needs libstdc++ 13+; build with gcc 14 (dp-y0f)"
+target @any
+
+mk set USE_GCC_VERSION "14"
