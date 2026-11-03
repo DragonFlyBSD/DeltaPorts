@@ -1,0 +1,6 @@
+port sysutils/bacnet-stack-apps
+type port
+reason "the per-app Makefiles compile the shared src/ objects in parallel and race"
+target @any
+
+mk set MAKE_JOBS_UNSAFE "yes"
