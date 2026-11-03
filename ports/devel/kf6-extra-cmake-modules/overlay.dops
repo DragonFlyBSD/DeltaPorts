@@ -3,6 +3,10 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
+# dragonfly/patch-modules_ECMGenerateExportHeader.cmake changes generated
+# export headers (dp-y0f); the bump gets it into the package.
+mk bump PORTREVISION
+
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/^.*\- name: FreeBSD/&\n    - name: DragonFly/g' \
 		${WRKSRC}/metainfo.yaml
