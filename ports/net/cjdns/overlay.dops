@@ -3,6 +3,13 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
+# The vendored pnet_datalink has its BPF backend for the other BSDs only;
+# boringtun's device (tun) module is Linux/macOS only: leave it out, as FreeBSD does.
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e "/'-Werror',/d" ${WRKSRC}/node_build/make.js
+	cd ${WRKSRC}/cargo-crates/pnet_datalink-*/src && \
+	${REINPLACE_CMD} -e 's/target_os = "freebsd",/target_os = "freebsd", target_os = "dragonfly",/' \
+		lib.rs bpf.rs bindings/bpf.rs bindings/mod.rs unix_interfaces.rs
+	${REINPLACE_CMD} -e '/^#\[cfg(not(any(target_os = "windows"/s/)))\]$$/, target_os = "dragonfly")))]/' \
+		${BORINGTUN_WRKSRC}/src/lib.rs
 MK1
