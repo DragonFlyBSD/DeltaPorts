@@ -1,6 +1,7 @@
 port x11-toolkits/wxgtk32
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "rebuild with gcc and libstdc++, like its consumers (dp-wzw)"
 target @any
 
-mk set USE_CLANG_FALLBACK "default"
+# Earlier builds used clang, which now defaults to libc++ (dp-shs.53).
+mk bump PORTREVISION
