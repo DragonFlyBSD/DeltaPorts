@@ -4,4 +4,17 @@ reason "disable IDE option and fix pkg-plist to gate lang files on %%IDE%% token
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NIDE}"
+# Without targets dune install wants every package's .install, coqide's too.
+mk set DUNE_INSTALL_TARGETS "${OCAML_PACKAGES}"
 patch apply diffs/pkg-plist.diff
+# coqide's other files are not under %%IDE%% in FreeBSD's plist.
+text replace-once file pkg-plist from "bin/coqidetop.byte" to "%%IDE%%bin/coqidetop.byte"
+text replace-once file pkg-plist from "bin/coqidetop.opt" to "%%IDE%%bin/coqidetop.opt"
+text replace-once file pkg-plist from "%%DATADIR%%/default.bindings" to "%%IDE%%%%DATADIR%%/default.bindings"
+text replace-once file pkg-plist from "share/doc/ocaml/coqide-server/LICENSE" to "%%IDE%%share/doc/ocaml/coqide-server/LICENSE"
+text replace-once file pkg-plist from "share/doc/ocaml/coqide-server/README.md" to "%%IDE%%share/doc/ocaml/coqide-server/README.md"
+text replace-once file pkg-plist from "share/doc/ocaml/coqide/FAQ" to "%%IDE%%share/doc/ocaml/coqide/FAQ"
+text replace-once file pkg-plist from "share/doc/ocaml/coqide/LICENSE" to "%%IDE%%share/doc/ocaml/coqide/LICENSE"
+text replace-once file pkg-plist from "share/doc/ocaml/coqide/README.md" to "%%IDE%%share/doc/ocaml/coqide/README.md"
+text replace-once file pkg-plist from "share/doc/ocaml/coqide/odoc-pages/index.mld" to "%%IDE%%share/doc/ocaml/coqide/odoc-pages/index.mld"
+text replace-once file pkg-plist from "share/man/man1/coqide.1.gz" to "%%IDE%%share/man/man1/coqide.1.gz"
