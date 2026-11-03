@@ -3,7 +3,14 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
+# std::ranges::to and <print> need libstdc++ 14 or later; base gcc 12 has none (dp-y0f).
+mk set USE_GCC_VERSION "14"
+
+# The Xwayland libei hack opens the socket with O_PATH and passes
+# /proc/self/fd/N; DragonFly has neither, so build it only with O_PATH.
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's|FreeBSD|DragonFly|g' \
 		${WRKSRC}/src/utils/CMakeLists.txt
+	${REINPLACE_CMD} -e 's/^#if KWIN_BUILD_X11$$/#if KWIN_BUILD_X11 \&\& defined(O_PATH)/' \
+		${WRKSRC}/src/plugins/eis/eisbackend.cpp
 MK1
