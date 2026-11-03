@@ -7,3 +7,9 @@ mk eval CONFIGURE_ARGS "--enable-strict-locations"
 
 text replace-once file pkg-plist from "@dir /etc/X11/xrdp" to "@dir etc/X11/xrdp"
 text replace-once file pkg-plist from "/etc/X11/xrdp/xorg.conf" to "etc/X11/xrdp/xorg.conf"
+
+# Strict locations also pin moduledir to ${libdir}/xorg/modules; the
+# xlibre flavor's modules belong in xlibre's own module directory.
+mk block set condition "${FLAVOR:U} == xlibre" <<'MK'
+MAKE_ARGS+=	moduledir=${PREFIX}/${_XMODDIR}
+MK
