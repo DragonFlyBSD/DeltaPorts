@@ -3,3 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
+# <format> needs libstdc++ 13 or later; base gcc 12 has none (dp-y0f).
+mk set USE_GCC_VERSION "14"
