@@ -1,0 +1,6 @@
+port games/OpenLoco
+type port
+reason "gcc rejects clang's -fexperimental-library; exe path via KERN_PROC_PATHNAME as on FreeBSD"
+target @any
+
+mk remove CXXFLAGS "-fexperimental-library"
