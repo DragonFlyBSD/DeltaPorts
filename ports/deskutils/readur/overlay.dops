@@ -1,0 +1,6 @@
+port deskutils/readur
+type port
+reason "opt into cargo:extra for aws-lc-sys 0.37.0's entropy source and leptonica-sys/tesseract-sys's pkg-config lookup"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
