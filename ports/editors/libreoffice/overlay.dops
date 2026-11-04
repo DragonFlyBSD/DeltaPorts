@@ -1,11 +1,12 @@
 port editors/libreoffice
 type port
-reason "USE_GCC=13; filter elfctl; disable JAVA/Firebird; CONFIGURE_ARGS; dfly-patch with .for loops; dragonfly patches"
+reason "USE_GCC=13; no ELF_FEATURES (no elfctl); disable JAVA/Firebird; CONFIGURE_ARGS; dfly-patch with .for loops; dragonfly patches"
 target @any
 
 mk set USE_GCC_VERSION "13"
 
-mk eval USES "${USES:Nelfctl}"
+# No elfctl here; elfctl.mk adds its hook only for a non-empty ELF_FEATURES.
+mk unset ELF_FEATURES
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NJAVA}"
 
@@ -18,7 +19,11 @@ patch apply diffs/Makefile.diff
 
 file remove files/patch-bridges_source_cpp__uno_gcc3__linux__x86-64_except.cxx on-missing noop
 
+# configure honours --with-gnu-patch only on SunOS, Darwin and FreeBSD;
+# base patch(1) fails on the bundled skia patches.
 mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/test "$$_os" = "SunOS" -o "$$_os" = "Darwin" -o "$$_os" = "FreeBSD"; then/test "$$_os" = "SunOS" -o "$$_os" = "Darwin" -o "$$_os" = "FreeBSD" -o "$$_os" = "DragonFly"; then/' \
+		${WRKSRC}/configure
 	${CP} -v ${DFLY_FILESDIR}/pdfium-build__config.patch ${WRKSRC}/external/pdfium
 	${REINPLACE_CMD} -e 's,pdfium_patches += pdfium-bsd.patch,& pdfium-build__config.patch ,g' \
 		${WRKSRC}/external/pdfium/UnpackedTarball_pdfium.mk
@@ -45,7 +50,7 @@ MK
 # and PERCENT_BSD_LIST came from Makefile.DragonFly and were lost in the
 # dops conversion; without them dfly-patch runs sed -i on no files.
 target @2026Q4,@main
-mk set REPLACE_LIST "external/curl/ExternalProject_curl.mk external/liblangtag/ExternalProject_liblangtag.mk external/libxslt/ExternalProject_libxslt.mk external/nss/ExternalProject_nss.mk external/openssl/ExternalProject_openssl.mk external/redland/ExternalProject_raptor.mk external/redland/ExternalProject_rasqal.mk external/redland/ExternalProject_redland.mk external/xmlsec/ExternalProject_xmlsec.mk external/pdfium/freebsd.patch include/osl/endian.h solenv/bin/modules/installer/parameter.pm soltools/mkdepend/main.c vcl/qa/cppunit/BitmapTest.cxx vcl/unx/generic/app/saldata.cxx vcl/unx/generic/dtrans/X11_selection.cxx vcl/unx/generic/printer/printerinfomanager.cxx desktop/unx/source/start.c sal/osl/unx/process_impl.cxx sal/osl/unx/sockimpl.hxx sal/osl/unx/pipe.cxx vcl/unx/gtk3/gtkdata.cxx"
+mk set REPLACE_LIST "external/curl/ExternalProject_curl.mk external/liblangtag/ExternalProject_liblangtag.mk external/libxslt/ExternalProject_libxslt.mk external/nss/ExternalProject_nss.mk external/openssl/ExternalProject_openssl.mk external/redland/ExternalProject_raptor.mk external/redland/ExternalProject_rasqal.mk external/redland/ExternalProject_redland.mk external/xmlsec/ExternalProject_xmlsec.mk external/pdfium/freebsd.patch include/osl/endian.h solenv/bin/modules/installer/parameter.pm soltools/mkdepend/main.c vcl/qa/cppunit/BitmapTest.cxx vcl/unx/generic/app/saldata.cxx vcl/unx/generic/dtrans/X11_selection.cxx vcl/unx/generic/printer/printerinfomanager.cxx desktop/unx/source/start.c sal/osl/unx/process_impl.cxx sal/osl/unx/sockimpl.hxx sal/osl/unx/socket.cxx sal/osl/unx/pipe.cxx vcl/unx/gtk3/gtkdata.cxx"
 mk set PERCENT_BSD_LIST "Repository.mk desktop/Library_crashreport.mk libreofficekit/Module_libreofficekit.mk libreofficekit/Executable_gtktiledviewer.mk libreofficekit/Library_libreofficekitgtk.mk svl/Library_svl.mk vcl/Module_vcl.mk vcl/Library_vcl.mk"
 text replace-once file Makefile from "s,pdfium_patches += pdfium-bsd.patch,& pdfium-build__config.patch ,g" to "s,pdfium_patches += freebsd.patch,& pdfium-build__config.patch ,g"
 
