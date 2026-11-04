@@ -10,10 +10,28 @@ reason "DragonFly: map Java's os.name dragonflybsd to GOOS dragonfly in the bund
 # Bazel's OS enum knows no "DragonFlyBSD" either: the dragonfly/ OS.java patch
 # maps it to FREEBSD, as CommandBuilder refuses to run commands on UNKNOWN.
 # The external C++ repos key their platform code on __FreeBSD__: grpc's
-# port_platform.h stops at "Could not auto-detect platform", and abseil's
-# vdso_support.cc defines Elf64_auxv_t for FreeBSD only. The same
+# port_platform.h stops at "Could not auto-detect platform", and abseil
+# enables mmap (config.h, else LowLevelAlloc is left out) and Elf64_auxv_t
+# (vdso_support.cc) for FreeBSD only; its status.cc also uses errno names
+# that only libc++ supplies on FreeBSD. The same
 # MODULE.bazel overrides add toolchain_local/grpc_dragonfly.patch (DragonFly
-# takes the FreeBSD block) and abseil_dragonfly.patch.
+# takes the FreeBSD block) and abseil_dragonfly.patch. platforms_dragonfly.patch
+# gives @platforms//host the FreeBSD OS constraint; without one, Bazel's own
+# select()s pick the Linux sources.
 target @2026Q4,@main
 
-text replace-once file files/toolchain_local-BUILD from "exports_files([\"rules_python_freebsd.patch\"])" to "exports_files([\"rules_python_freebsd.patch\", \"rules_go_dragonfly.patch\", \"grpc_dragonfly.patch\", \"abseil_dragonfly.patch\"])"
+text replace-once file files/toolchain_local-BUILD from "exports_files([\"rules_python_freebsd.patch\"])" to "exports_files([\"rules_python_freebsd.patch\", \"rules_go_dragonfly.patch\", \"grpc_dragonfly.patch\", \"abseil_dragonfly.patch\", \"platforms_dragonfly.patch\"])"
+
+# The client, its JNI library and singlejar key their platform code on
+# __FreeBSD__ (or stop with "Unknown platform"): DragonFly takes the FreeBSD
+# branches, except GetSelfPath (dragonfly/), which has no libprocstat here;
+# the client's freebsd linkopts drop -lprocstat.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/defined(__FreeBSD__)/defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/src/tools/singlejar/diag.h \
+		${WRKSRC}/src/tools/singlejar/mapped_file_posix.inc \
+		${WRKSRC}/src/tools/singlejar/zip_headers.h \
+		${WRKSRC}/src/main/native/unix_jni.h \
+		${WRKSRC}/src/main/native/unix_jni_bsd.cc
+	${REINPLACE_CMD} -e '/"-lprocstat",/d' ${WRKSRC}/src/main/cpp/BUILD
+MK
