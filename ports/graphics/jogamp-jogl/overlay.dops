@@ -3,6 +3,10 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
+# ant-contrib's cpptasks (a prebuilt jar) knows no DragonFlyBSD os.name;
+# build as FreeBSD, which the runtime patch maps DragonFly to as well.
+mk add MAKE_ENV "ANT_OPTS=-Dos.name=FreeBSD"
+
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@BITS=32@BITS=64@g'	\
 			 -e "s@-fno-rtti@-isystem ${LOCALBASE}/include@g"	\
