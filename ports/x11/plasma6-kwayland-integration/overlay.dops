@@ -1,0 +1,4 @@
+port x11/plasma6-kwayland-integration
+type port
+reason "DragonFly: no memfd; declare shm.cpp's fd outside the memfd branch (dragonfly/)"
+target @any
