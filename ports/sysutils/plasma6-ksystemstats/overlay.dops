@@ -1,0 +1,16 @@
+port sysutils/plasma6-ksystemstats
+type port
+reason "DragonFly: build the memory plugin with its FreeBSD backend"
+target @any
+
+# The FreeBSD memory backend works here, but vm.stats.vm page counts are
+# u_long on DragonFly, not u_int: read them as unsigned long long.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/CMAKE_SYSTEM_NAME STREQUAL "FreeBSD"/CMAKE_SYSTEM_NAME MATCHES "FreeBSD|DragonFly"/' \
+		${WRKSRC}/plugins/memory/CMakeLists.txt
+	${REINPLACE_CMD} -e 's/SysctlSensor<uint32_t>/SysctlSensor<unsigned long long>/' \
+		-e 's/uint32_t activePages/unsigned long long activePages/' \
+		-e 's/uint32_t inactivePages/unsigned long long inactivePages/' \
+		-e 's/pagesToBytes(uint32_t pages)/pagesToBytes(unsigned long long pages)/' \
+		${WRKSRC}/plugins/memory/freebsdbackend.cpp ${WRKSRC}/plugins/memory/freebsdbackend.h
+MK
