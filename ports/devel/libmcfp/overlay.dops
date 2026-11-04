@@ -1,0 +1,9 @@
+port devel/libmcfp
+type port
+reason "DragonFly: build libmcfp.a with base gcc and libstdc++, like devel/mrc"
+target @any
+
+# USES=llvm exports clang, which defaults to libc++ here, so the static
+# library carried std::__1 symbols the gcc-built devel/mrc cannot link.
+mk eval USES "${USES:Nllvm*}"
+mk bump PORTREVISION
