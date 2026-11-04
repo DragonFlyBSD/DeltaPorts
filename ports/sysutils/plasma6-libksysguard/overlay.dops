@@ -1,3 +1,11 @@
 port sysutils/plasma6-libksysguard
 type port
 reason "DragonFly: bring upstream's processes_dragonfly_p.cpp up to the current Process memory API (dragonfly/)"
+
+# SysctlSensor.h has its includes and template bodies under Q_OS_FREEBSD
+# only; Qt 6 defines Q_OS_DRAGONFLY here (ksystemstats' memory plugin).
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^#ifdef Q_OS_FREEBSD$$/#if defined(Q_OS_FREEBSD) || defined(Q_OS_DRAGONFLY)/' \
+		${WRKSRC}/systemstats/SysctlSensor.h
+MK
+mk bump PORTREVISION
