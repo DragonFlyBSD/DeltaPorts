@@ -1,0 +1,6 @@
+port deskutils/gitte
+type port
+reason "opt into cargo:extra for rustix 1.1.4's DragonFly IP_*_SOURCE_MEMBERSHIP fix"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
