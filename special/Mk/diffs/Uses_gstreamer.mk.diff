@@ -9,13 +9,22 @@
  			sndfile sndio soundtouch speex taglib twolame vorbis \
  			wavpack webrtcdsp
  _GST1_PLUGINS_comms=	spandsp
-@@ -180,9 +180,6 @@
- 
+@@ -181,9 +181,6 @@
  gst-opus_PORT=		audio/gstreamer${_GST_VER}-plugins-opus
  gst-opus_IMPL=		#
--
+ 
 -gst-pulse_PORT=		audio/gstreamer${_GST_VER}-plugins-pulse
 -gst-pulse_IMPL=		good
- 
+-
  gst-shout2_PORT=	audio/gstreamer${_GST_VER}-plugins-shout2
  gst-shout2_IMPL=	good
+ 
+@@ -446,6 +443,8 @@
+ .    if ${PORTDIRNAME} != gstreamer${_GST_VER}-plugins
+ USE_GSTREAMER+=		plugins
+ .    endif
++# pulseaudio is broken on DragonFly: build without its plugin
++USE_GSTREAMER:=		${USE_GSTREAMER:Npulse}
+ 
+ # Gather all Impl values
+ _GST_IMPL_LIST:=	${USE_GSTREAMER:S/^/\${gst-/:S/$/_IMPL}/}
