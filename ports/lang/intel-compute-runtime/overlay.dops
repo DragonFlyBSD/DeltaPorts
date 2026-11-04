@@ -1,6 +1,9 @@
 port lang/intel-compute-runtime
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly: unmaintained; no llvm11 flavor"
 target @any
 
 mk set DFLY_UNMAINTAINED "yes"
+
+# devel/intel-graphics-compiler dropped its llvm11 flavor with devel/llvm11.
+mk set FLAVORS "llvm14 llvm13 llvm12"
