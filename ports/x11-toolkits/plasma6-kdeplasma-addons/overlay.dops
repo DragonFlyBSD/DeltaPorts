@@ -1,0 +1,12 @@
+port x11-toolkits/plasma6-kdeplasma-addons
+type port
+reason "DragonFly: build with gmake (bmake cannot make the KAppTemplate's %APPNAMELC.cpp); skip the qmk helper as FreeBSD does"
+target @any
+
+mk add USES "gmake"
+
+# kameleon's qmk helper is a cargo build that fetches crates; FreeBSD skips it.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/MATCHES FreeBSD)/MATCHES "FreeBSD|DragonFly")/' \
+		${WRKSRC}/kdeds/kameleon/CMakeLists.txt
+MK
