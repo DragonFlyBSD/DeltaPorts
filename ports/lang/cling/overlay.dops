@@ -1,8 +1,4 @@
 port lang/cling
 type port
-reason "DragonFly: mark broken on LLVM 5.0.0, materialize cmake patch"
+reason "DragonFly: HandleLLVMOptions.cmake patch (dragonfly/)"
 target @any
-
-mk block set condition "${LLVM_RELEASE:M5.0.0}" <<'MK'
-BROKEN= pending update
-MK
