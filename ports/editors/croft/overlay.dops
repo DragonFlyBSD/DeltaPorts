@@ -1,6 +1,11 @@
 port editors/croft
 type port
-reason "DragonFly: take main's distinfo for the regenerated codeberg archive"
+reason "DragonFly: cargo:extra for notify 8.2.0 and waitpid-any 0.3.0; take main's distinfo for the regenerated codeberg archive"
+
+target @any
+# devel/cargo-crate-patches adds DragonFly to the kqueue cfgs of notify 8.2.0
+# and waitpid-any 0.3.0.
+mk eval USES "${USES:S/cargo/cargo:extra/}"
 
 # codeberg regenerated the archive and every mirror serves the new one;
 # freebsd-ports main re-rolled distinfo for it.
