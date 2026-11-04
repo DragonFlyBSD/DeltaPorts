@@ -1,0 +1,12 @@
+port net/rustconn
+type port
+reason "DragonFly: notify kqueue cfg (cargo:extra); no wayland-native (gtk40 has no Wayland here)"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
+
+# gtk40 is built without Wayland here, so gtk4-wayland.pc is missing: drop
+# the wayland-native default feature (gdk4-wayland).
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/^    "wayland-native",$$/d' ${WRKSRC}/rustconn/Cargo.toml
+MK
