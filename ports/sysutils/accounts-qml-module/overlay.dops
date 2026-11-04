@@ -1,0 +1,9 @@
+port sysutils/accounts-qml-module
+type port
+reason "DragonFly: no qdoc; build without the HTML docs"
+target @any
+
+# qdoc is not built here (dp-shs.52): skip doc.pri, whose install runs
+# it, and its 21 plist lines.
+mk add QMAKE_ARGS "CONFIG+=no_docs"
+file materialize dragonfly/pkg-plist -> pkg-plist

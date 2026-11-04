@@ -1,0 +1,4 @@
+bin/tst_plugin
+%%QT_QMLDIR%%/SSO/OnlineAccounts/libAccounts.so
+%%QT_QMLDIR%%/SSO/OnlineAccounts/plugin.qmltypes
+%%QT_QMLDIR%%/SSO/OnlineAccounts/qmldir
