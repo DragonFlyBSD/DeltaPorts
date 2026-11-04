@@ -1,0 +1,11 @@
+port math/octave-forge-geometry
+type port
+reason "DragonFly: octave is gcc/libstdc++ here; undo FreeBSD's libc++-only __binary_function"
+target @any
+
+# FreeBSD's patches swap std::binary_function (gone from libc++) for libc++'s
+# internal __binary_function; libstdc++ still has binary_function.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/public __binary_function</public binary_function</' \
+		${WRKSRC}/martinez.h ${WRKSRC}/polygon.cpp
+MK
