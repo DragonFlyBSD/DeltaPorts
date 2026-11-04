@@ -1,0 +1,6 @@
+port net/rustdesk-server
+type port
+reason "opt into cargo:extra for the mac_address 1.1.8 and dns-lookup 1.0.8 DragonFly patches"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
