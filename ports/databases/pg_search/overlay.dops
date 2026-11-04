@@ -1,0 +1,12 @@
+port databases/pg_search
+type port
+reason "DragonFly: aws-lc-sys 0.38.0 entropy source (cargo:extra); libclang for pgrx-pg-sys's bindgen"
+target @any
+
+# bsd.port.pre.mk loads USES before a late eval: edit the line itself.
+mk remove USES "cargo"
+mk add USES "cargo:extra"
+
+# bindgen needs libclang; FreeBSD gets llvm through postgresql's LLVM
+# option, which is off here.
+mk add BUILD_DEPENDS "${LOCALBASE}/llvm${LLVM_DEFAULT}/lib/libclang.so:devel/llvm${LLVM_DEFAULT}@default"
