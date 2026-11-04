@@ -32,3 +32,6 @@ MK1
 # (MAVEN_PARAMS is assigned after bsd.port.pre.mk, so mk add would land
 # before it and be overwritten; edit the assignment itself.)
 text replace-once file Makefile from "-Dnative=gtk.freebsd.${MAVEN_ARCH}" to "-Dnative=gtk.freebsd.${MAVEN_ARCH} -Dosgi.os=freebsd"
+# p2.tests resolves in the running environment only, where the OSGi
+# framework takes osgi.native.osname from os.name: make that FreeBSD too.
+text replace-once file Makefile from "MAVEN_OPTS=-Xmx2048m " to "MAVEN_OPTS=\"-Xmx2048m -Dos.name=FreeBSD\" "
