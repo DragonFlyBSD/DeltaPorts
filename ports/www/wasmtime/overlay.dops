@@ -1,6 +1,9 @@
 port www/wasmtime
 type port
-reason "opt into cargo:extra for the rustix/cap-primitives DragonFly patches"
+reason "DragonFly: trap handler mcontext and wasi sync flags (dragonfly/), rustix/cap-primitives (cargo:extra)"
 target @any
 
+# dragonfly/ reads and sets the trap registers in DragonFly's mcontext,
+# laid out as FreeBSD's, and has wasi approximate O_DSYNC with O_SYNC and
+# skip O_RSYNC, which DragonFly lacks (as cap-primitives does for FreeBSD).
 mk eval USES "${USES:S/cargo/cargo:extra/}"
