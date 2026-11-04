@@ -3,4 +3,6 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk eval USES "${USES:S/cargo/cargo:extra/}"
+# bsd.port.pre.mk loads USES before a late eval: edit the line itself.
+mk remove USES "cargo"
+mk add USES "cargo:extra"
