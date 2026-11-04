@@ -1,0 +1,17 @@
+port devel/tauri-cli
+type port
+reason "DragonFly: notify kqueue cfg (cargo:extra); cargo-mobile2 as on FreeBSD"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
+
+# FreeBSD's files/ point cargo-mobile2 at its Linux os module on FreeBSD:
+# extend those cfgs to DragonFly.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/#\[cfg(target_os = "freebsd")\]/#[cfg(any(target_os = "freebsd", target_os = "dragonfly"))]/' \
+		${WRKSRC}/cargo-crates/cargo-mobile2-0.22.4/src/os/mod.rs \
+		${WRKSRC}/cargo-crates/cargo-mobile2-0.22.4/src/android/ndk.rs
+	${REINPLACE_CMD} -e 's/any(target_os = "linux", target_os = "freebsd")/any(target_os = "linux", target_os = "freebsd", target_os = "dragonfly")/' \
+		${WRKSRC}/cargo-crates/cargo-mobile2-0.22.4/src/os/linux/mod.rs \
+		${WRKSRC}/cargo-crates/cargo-mobile2-0.22.4/Cargo.toml
+MK
