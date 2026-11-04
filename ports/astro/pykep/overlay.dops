@@ -1,0 +1,6 @@
+port astro/pykep
+type port
+reason "DragonFly: build with gcc 14 like math/heyoka, whose headers use std::ranges::to"
+target @any
+
+mk set USE_GCC_VERSION "14"
