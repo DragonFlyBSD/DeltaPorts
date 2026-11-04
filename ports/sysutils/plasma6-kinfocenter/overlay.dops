@@ -1,0 +1,18 @@
+port sysutils/plasma6-kinfocenter
+type port
+reason "drop pactl from AUX_UTILS (audio/pulseaudio is BROKEN here); dmidecode on x86_64; FreeBSD memory, interrupts and PCI backends"
+target @any
+
+mk eval AUX_UTILS_RUN_DEPENDS "${AUX_UTILS_RUN_DEPENDS:Npactl*}"
+# The dmidecode list names amd64; ARCH is x86_64 here.
+text replace-once file Makefile from ".for s in aarch64 amd64 armv6" to ".for s in aarch64 amd64 x86_64 armv6"
+
+# Qt has Q_OS_DRAGONFLY here, not Q_OS_FREEBSD: take FreeBSD's hw.physmem,
+# vmstat -i and pciconf backends. usbdevices.cpp: dragonfly/.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/defined(Q_OS_FREEBSD)/& || defined(Q_OS_DRAGONFLY)/' \
+		${WRKSRC}/kcms/about-distro/src/MemoryEntry.cpp \
+		${WRKSRC}/kcms/interrupts/main.cpp
+	${REINPLACE_CMD} -e 's/CMAKE_SYSTEM_NAME STREQUAL "FreeBSD"/CMAKE_SYSTEM_NAME MATCHES "FreeBSD|DragonFly"/' \
+		${WRKSRC}/kcms/pci/CMakeLists.txt
+MK
