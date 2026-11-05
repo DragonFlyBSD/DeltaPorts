@@ -1,0 +1,381 @@
+--- /dev/null	2019-11-20 10:10:47.526418344 -0800
++++ /build/home/dkgroot/dports/Mk/Uses/dlang.mk	2019-11-20 13:49:52.912115000 -0800
+@@ -0,0 +1,378 @@
++# $FreeBSD: head/Mk/Uses/dlang.mk 499862 2019-04-24 16:25:57Z jlaffaye $
++#
++# This file contains logic to ease porting of D binaries using the
++# ldc|gdc|dmd (ldmd2|gdmd) commands.
++#
++# Feature:	d compiler
++# Usage:	USES=dlang
++# Valid args:	bootstrap	use bootstrap compiler when no valid d-compiler could be found
++#
++# Additional variables that can be provided:
++# for any:
++# - DLANG_USES=
++#		additional features enabled in dlang module
++#		- dub
++#		- rdmd
++#		#- (reggae)
++#		#- (cmake-d / cmake)
++#		#- (COOK)
++#		#- (BAZEL)
++#		#- (BUTTON)
++#		#- (MESON)
++# - DCOMPILERS
++#		List of d-compilers to search for through (in order)(default: ldc gdc dmd)
++# - USE_LDC=yes | USE_GDC=yes | USE_DMD=yes
++# 		Overwrite auto selection
++# - DRT_MINVER
++#		Minimal required d-runtime version (inclusive) (default:20791)
++# - DRT_MAXVER
++#		Maximum allowed d-runtime version (inclusive) (default:20999)
++# - DLANG_DEBUG
++#		Print extra debug output for USES=dlang
++#
++# for ldc:
++# - D_REQ_LLVM 	LLVM version to require (60 70 80)
++#
++# for gdc:
++# - D_REQ_GCC	GCC version to require (8 9 10)
++#
++# Variables provided by dlang.mk
++# for any:
++# - CHOSEN_DCOMPILER_TYPE
++#	D compiler selected
++# - DCOMPILER
++#	Full path to D-compiler selected.
++# - DCOMPILER_DMD
++#	Full path to DMD interface compatible compiler selected.
++# - DRUNTIME_VERSION
++#	D runtime version of selected D-compiler.
++# - DFLAGS
++#	Addional DFLAGS variables to be passed to the D-compiler.
++# for ldc:
++# - LLVM_CONFIG
++#	Full path to llvm-config being used
++# - LLVM_VER
++# 	Major version of llvm being used
++# for gdc:
++# - GCC_VER
++# 	Major version of gcc being used
++#
++# MAINTAINER: ddegroot@talon.nl
++
++.if !defined(_INCLUDE_USES_DLANG_MK) || ${_INCLUDE_USES_DLANG_MK} == recheck
++
++# locally defined variables
++CHOSEN_DCOMPILER_TYPE=
++D_INCLUDE_DIR?=	${LOCALBASE}/include/d
++D_INCLUDE_DIRS?=${D_INCLUDE_DIR}
++D_LIB_DIR?=	${LOCALBASE}/lib
++D_LIB_DIRS?=	${D_LIB_DIR}
++
++# tmp variables
++_DFLAGS_LDC?=
++_DFLAGS_GDC?=
++_DFLAGS_DMD?=-I${D_INCLUDE_DIR} -L${D_LIB_DIR}
++
++_USES_POST+=	dlang
++VALID_ARGS=	ldc gdc dmd bootstrap
++
++# Binary Lookup
++ldc_BINARY!=	${WHICH} ldc2 || true
++gdc_BINARY!=	${WHICH} gdc || true
++dmd_BINARY!=	${WHICH} dmd || true
++
++# Defaults
++DRT_MINVER?=	20791
++DRT_MAXVER?=	20999
++
++#
++# Check USE_XXX
++#
++.if defined(USE_LDC)
++DCOMPILERS=ldc
++.endif
++.if defined(USE_GDC)
++DCOMPILERS=gdc
++.endif
++.if defined(USE_DMD)
++DCOMPILERS=dmd
++.endif
++
++DCOMPILERS?=ldc gdc dmd
++
++#
++# Check compiler availability
++#
++.for i in ${DCOMPILERS}
++.	if empty(CHOSEN_DCOMPILER_TYPE)
++.		if !empty(${i}_BINARY)
++_D_VERSION!=${${i}_BINARY} --version | ${SED} -En 's|.*DMD.* v([0-9]).([0-9]+).([0-9]).*|\1\2\3|p'
++.			if !empty(_D_VERSION) && (${_D_VERSION} >= ${DRT_MINVER}) && (${_D_VERSION} <= ${DRT_MAXVER})
++CHOSEN_DCOMPILER_TYPE=${i}
++DRUNTIME_VERSION=${_D_VERSION}
++.			endif
++.		endif
++.	endif
++.endfor
++
++#
++# bootstrap requested or required
++# if none were found, use the first one in the DCOMPILERS list as the
++# fallback
++# if bootstrapping, we have recheck d-compiler availability on next run (so
++# undo the include guard at the top)
++#
++.if empty(CHOSEN_DCOMPILER_TYPE)
++.	if ${dlang_ARGS} == bootstrap
++.		if ${PORTNAME} == ldc
++BUILD_DEPENDS+=	${LOCALBASE}/ldc-ltsmaster/bin/ldmd2:lang/ldc-bootstrap
++DCOMPILER=		${LOCALBASE}/ldc-ltsmaster/bin/ldc2
++DCOMPILER_DMD=		${LOCALBASE}/ldc-ltsmaster/bin/ldmd2
++_INCLUDE_USES_DLANG_MK=	recheck
++.		elif ${PORTNAME} == gdc
++USE_GCC?=		8+
++OPTIONS_DEFAULT+=	FORCE_BOOTSTRAP
++_INCLUDE_USES_DLANG_MK=	recheck
++.		else
++BUILD_DEPENDS+= ${LOCALBASE}/bin/ldc2:lang/ldc${LLVM_FLAVOR:D@${LLVM_FLAVOR}}
++DCOMPILER=		${LOCALBASE}/bin/ldc2
++DCOMPILER_DMD=		${LOCALBASE}/bin/ldmd2
++.		endif
++.	else
++CHOSEN_DCOMPILER_TYPE:=	${DCOMPILERS:[1]}
++.	endif
++.endif
++
++.if !empty(CHOSEN_DCOMPILER_TYPE)
++#
++# Handle ldc compiler settings
++#
++.if ${CHOSEN_DCOMPILER_TYPE} == ldc
++DC_DIR=	${LOCALBASE}
++.	if defined(D_REQ_LLVM)
++.		if exists(${LOCALBASE}/llvm${D_REQ_LLVM}-ldc/bin/ldc2)
++DC_DIR:=		${LOCALBASE}/llvm${D_REQ_LLVM}-ldc
++DCOMPILER:=		${DC_DIR}/bin/ldc2
++DCOMPILER_DMD:=		${DC_DIR}/bin/ldmd2
++BUILD_DEPENDS+=		${DCOMPILER}:lang/ldc@${D_REQ_LLVM}
++.		elif !defined(DCOMPILER)
++DC_DIR:=		${LOCALBASE}/ldc-ltsmaster
++DCOMPILER:=		${DC_DIR}/bin/ldc2
++DCOMPILER_DMD:=		${DC_DIR}/bin/ldmd2
++BUILD_DEPENDS+=		${DCOMPILER_DMD}:lang/ldc-bootstrap
++.		endif
++LLVM_CONFIG:=	`which llvm-config${D_REQ_LLVM}`
++.	else
++DCOMPILER_LINK=${${CHOSEN_DCOMPILER_TYPE}_BINARY}
++.		if !empty(DCOMPILER_LINK)
++DC_DIR!=		dirname `dirname ${DCOMPILER_LINK:tA}`
++.		endif
++DCOMPILER:=	${DC_DIR}/bin/ldc2
++DCOMPILER_DMD:=	${DC_DIR}/bin/ldmd2
++BUILD_DEPENDS+=${DCOMPILER}:lang/ldc
++.		if exists(DCOMPILER_DMD)
++LLVM_VER!=		${DCOMPILER_DMD} -version |sed -En 's|.* LLVM ([0-9])\.([0-9]).*|\1\2|p' || true
++.		endif
++#LLVM_CONFIG!=	${WHICH} llvm-config${LLVM_VER} || true
++LLVM_CONFIG:=	`which llvm-config${LLVM_VER}`
++.	endif
++.	if !defined(USE_GCC) && !empty(LLVM_CONFIG)
++_LLVM_BINDIR:=	`${LLVM_CONFIG} --bindir`
++CC?=		${_LLVM_BINDIR}/clang
++CXX?=		${_LLVM_BINDIR}/clang++
++CPP?=		${_LLVM_BINDIR}/cpp
++LD?=		${_LLVM_BINDIR}/ld
++NM?=		${_LLVM_BINDIR}/nm
++AR?=		${_LLVM_BINDIR}/ar
++.	endif
++DFLAGS+=	${_DFLAGS_LDC}
++D_INCLUDE_DIRS+= ${DC_DIR}/include/d
++D_LIB_DIRS+=	${DC_DIR}/lib
++.endif
++
++#
++# Handle gdc compiler settings
++# TODO: gdc not fully implemented yet
++#
++.if ${CHOSEN_DCOMPILER_TYPE} == gdc || defined(D_REQ_GCC)
++DCOMPILER_LINK:=${gdc_BINARY}
++.	if !empty(DCOMPILER_LINK)
++DC_DIR!=	dirname `dirname ${DCOMPILER_LINK:tA}`
++DFLAGS+=	${_DFLAGS_GDC}
++DCOMPILER=	${DC_DIR}/bin/gdc
++DCOMPILER_DMD=	${DC_DIR}/bin/gdmd
++D_INCLUDE_DIRS+= ${DC_DIR}/include/d/druntime/import
++D_INCLUDE_DIRS+= ${DC_DIR}/include/d/phobos
++D_LIB_DIRS+= 	${DC_DIR}/lib
++BUILD_DEPENDS+=${DCOMPILER}:lang/dmd2
++.	endif
++.endif
++
++#
++# Handle dmd compiler settings
++#
++.if ${CHOSEN_DCOMPILER_TYPE} == dmd
++DCOMPILER_LINK:=${dmd_BINARY}
++.	if !empty(DCOMPILER_LINK)
++DC_DIR!=	dirname `dirname ${DCOMPILER_LINK:tA}`
++DFLAGS+=	${_DFLAGS_DMD}
++DCOMPILER=	${DC_DIR}/bin/dmd
++DCOMPILER_DMD=	${DC_DIR}/bin/dmd
++D_INCLUDE_DIRS+= ${DC_DIR}/include/d/druntime/import
++D_INCLUDE_DIRS+= ${DC_DIR}/include/d/phobos
++D_LIB_DIRS+= 	${DC_DIR}/lib
++BUILD_DEPENDS+=${DCOMPILER}:lang/dmd2
++.	endif
++.endif
++
++#
++# temporary (until sorted upstream)
++# all Meson-built D programs need SSP_UNSAFE=yes because Meson currently likes to shove
++# C flags into D compiler args. See https://github.com/mesonbuild/meson/issues/5369
++#
++.if defined(_INCLUDE_USES_MESON_MK)
++SSP_UNSAFE=yes
++.endif
++
++.endif # !empty(CHOSEN_DCOMPILER_TYPE)
++
++#
++# Handle DLANG_USES
++#
++# This part could also be handled in seperate /usr/ports/Mk/Uses/dub.mk etc
++# files, if wanted/requested
++#
++
++.if defined(DLANG_USES)
++.for f in ${DLANG_USES}
++_f:=${f:C/\:.*//}
++
++.	if ${_f}=="rdmd"
++BUILD_DEPENDS+=	rdmd:lang/dlang-tools
++BUILD_ENV+=     RDMD=${LOCALBASE}/bin/rdmd
++#BUILD_TOOL?=	${LOCALBASE}/bin/rdmd
++#BUILD_CMD?=
++_DLANG_USES_RDMD=	yes
++
++.      elif ${_f}=="dub"
++BUILD_DEPENDS+=	dub:devel/dub
++BUILD_ENV+=	DMD=${DCOMPILER} DFLAGS="${DFLAGS:M*}"
++BUILD_TOOL?=	${LOCALBASE}/bin/dub
++BUILD_CMD?=	build
++BUILD_ARGS+=	--compiler=${DCOMPILER} --yes --non-interactive --verbose
++.		if !defined(MAKE_JOBS_NUMBER) || ${MAKE_JOBS_NUMBER} != 1
++BUILD_ARGS+=		--parallel --build-mode=allAtOnce
++.		endif
++_DLANG_USES_DUB=yes
++
++.	elif ${_f}=="reggae"
++BUILD_ENV+=	DMD=${DCOMPILER}
++_DLANG_USES_REGGAE=	yes
++
++.	elif ${_f}=="cmake" || ${_f}=="cmake-d"
++USES+=			cmake
++_DLANG_USES_CMAKE=	yes
++BUILD_DEPENDS+= cmake:devel/cmake
++#todo : CMAKE_ARGS+= something cmake-d ...
++.	else
++.  		error Unknown DLANG_USES value.
++.	endif
++.endfor
++
++.if defined(WITH_DEBUG)
++DFLAGS+=${${CHOSEN_DCOMPILER_TYPE} == ldc:?-gc:}
++DFLAGS+=${${CHOSEN_DCOMPILER_TYPE} == gdc:?-g:}
++DFLAGS+=${${CHOSEN_DCOMPILER_TYPE} == dmd:?-O -debug:}
++.else
++DFLAGS+=${${CHOSEN_DCOMPILER_TYPE} == ldc:?-O5:}
++DFLAGS+=${${CHOSEN_DCOMPILER_TYPE} == gdc:?-O5:}
++DFLAGS+=${${CHOSEN_DCOMPILER_TYPE} == dmd:?-O -release:}
++.endif
++
++.if !target(do-build) && defined(BUILD_TOOL)
++do-build:
++	@${ECHO_MSG} "===>  using ${BUILD_TOOL}"
++	(cd ${BUILD_WRKSRC} && ${SETENV} ${BUILD_ENV} ${BUILD_TOOL} ${BUILD_CMD} ${BUILD_ARGS:C,^${DESTDIRNAME}=.*,,g})
++.endif
++
++.endif	# DLANG_USES
++
++_D_INCLUDES=
++.for x in ${D_INCLUDE_DIRS}
++.if !${_D_INCLUDES:M-I${x}}
++_D_INCLUDES+=-I${x}
++.endif
++.endfor
++D_INCLUDES:=${_D_INCLUDES:M*}
++
++_D_LIBS=
++.for x in ${D_LIB_DIRS}
++.if !${_D_LIBS:M-L${x}}
++_D_LIBS+=-L${x}
++.endif
++.endfor
++D_LIBS:=${_D_LIBS:M*}
++
++PLIST_SUB+=	D_LIB_DIRS=${D_LIB_DIRS:Q} \
++		D_INCLUDE_DIRS=${D_INCLUDE_DIRS:Q} \
++PLIST_SUB+=	D_LIB_DIR=${D_LIB_DIR:Q} \
++		D_INCLUDE_DIR=${D_INCLUDE_DIR:Q} \
++PLIST_SUB+=	D_LIBS=${D_LIBS:Q} \
++		D_INCLUDES=${D_INCLUDES:Q}
++
++#
++# USES=dlang debug info
++#
++.if !target(pre-everything) && defined(DLANG_DEBUG)
++uses_dlang_debug:
++	@${ECHO_MSG} "=begin==================== USES=dlang ="
++	@${ECHO_MSG} "===>  DEBUG:"
++	@${ECHO_MSG} "DCOMPILERS=${DCOMPILERS}"
++	@${ECHO_MSG} "CHOSEN_DCOMPILER_TYPE=${CHOSEN_DCOMPILER_TYPE}"
++	@${ECHO_MSG} "DC_DIR=${DC_DIR}"
++	@${ECHO_MSG} "DCOMPILER=${DCOMPILER}"
++	@${ECHO_MSG} "DCOMPILER_DMD=${DCOMPILER_DMD}"
++	@${ECHO_MSG} "DFLAGS=${DFLAGS}"
++	@${ECHO_MSG} "DRUNTIME_VERSION=${DRUNTIME_VERSION}"
++.if ${CHOSEN_DCOMPILER_TYPE} == ldc
++	@${ECHO_MSG} "============================ LLVM/ldc ="
++	@${ECHO_MSG} "D_REQ_LLVM=${D_REQ_LLVM}"
++	@${ECHO_MSG} "LLVM_VER=${LLVM_VER}"
++	@${ECHO_MSG} "LLVM_CONFIG=${LLVM_CONFIG}"
++	@${ECHO_MSG} "CC=@${CC}"
++	@${ECHO_MSG} "CXX=@${CXX}"
++	@${ECHO_MSG} "CPP=@${CPP}"
++.endif"
++	@${ECHO_MSG} "OPTIONS=${PORT_OPTIONS:M*}"
++	@${ECHO_MSG} "FLAVOR=${FLAVOR}"
++	@${ECHO_MSG} "============================ DEPENDS ="
++.if !empty(BUILD_DEPENDS)
++	@${ECHO_MSG} "- NEW BUILD_DEPENDS=${BUILD_DEPENDS}"
++.endif"
++.if !empty(LIB_DEPENDS)
++	@${ECHO_MSG} "- NEW LIB_DEPENDS=${LIB_DEPENDS}"
++.endif"
++.if !empty(RUN_DEPENDS)
++	@${ECHO_MSG} "- NEW RUN_DEPENDS=${RUN_DEPENDS}"
++.endif"
++	@${ECHO_MSG} "========================== DLANG_USES ="
++.if defined(DLANG_USES)
++	@${ECHO_MSG} "DLANG_USES=${DLANG_USES}"
++	@${ECHO_MSG} "BUILD_ENV=${BUILD_ENV}"
++	@${ECHO_MSG} "BUILD_TOOL=${BUILD_TOOL}"
++	@${ECHO_MSG} "BUILD_CMD=${BUILD_CMD}"
++	@${ECHO_MSG} "BUILD_ARGS=${BUILD_ARGS}"
++.endif"
++	@${ECHO_MSG} "D_LIB_DIRS=${D_LIB_DIRS}"
++	@${ECHO_MSG} "D_LIB_DIR=${D_LIB_DIR}"
++	@${ECHO_MSG} "D_LIBS=${D_LIBS}"
++	@${ECHO_MSG} "D_INCLUDE_DIRS=${D_INCLUDE_DIRS}"
++	@${ECHO_MSG} "D_INCLUDE_DIR=${D_INCLUDE_DIR}"
++	@${ECHO_MSG} "D_INCLUDES=${D_INCLUDES}"
++	@${ECHO_MSG} "=end====================== USES=dlang ="
++
++pre-everything: uses_dlang_debug
++.endif # !target(pre-build) && defined(DLANG_DEBUG)
++
++_INCLUDE_USES_DLANG_MK=yes
++.endif # !defined(_INCLUDE_USES_DLANG_MK)
