@@ -12,10 +12,8 @@ mk add CONFIGURE_ARGS "ac_cv_IFNET_NEEDS_KERNEL=no"
 mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpkg.so*}"
 mk add CONFIGURE_ARGS "ac_cv_header_pkg_h=no"
 mk add CONFIGURE_ARGS "netsnmp_cv_func_pkg_init_LIBS=no"
-mk eval CONFIGURE_ARGS "${CONFIGURE_ARGS:N--without-kmem-usage}"
-# Upstream uses undefined ${PKG_PREFIX} in CFLAGS/LDFLAGS; expands to
-# empty (-I/include) at compile and leaks literal {PKG_PREFIX}/lib via
-# --with-ldflags into libtool link. Drop those tokens; LOCALBASE covers it.
+text replace-once file Makefile from "--without-kmem-usage" to ""
+# Drop undefined PKG_PREFIX paths; LOCALBASE supplies both directories.
 text replace-once file Makefile from " -I${PKG_PREFIX}/include" to ""
 text replace-once file Makefile from "-L${PKG_PREFIX}/lib" to ""
 patch apply diffs/Makefile.diff
