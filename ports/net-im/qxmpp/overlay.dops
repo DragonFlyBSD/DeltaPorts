@@ -1,6 +1,6 @@
 port net-im/qxmpp
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "base gcc 12.5 ICEs in build_special_member_call on QXmppPubSubManager.h"
 target @any
 
-mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk set USE_GCC_VERSION "14"
