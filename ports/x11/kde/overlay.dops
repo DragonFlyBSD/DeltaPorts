@@ -1,0 +1,6 @@
+port x11/kde
+type port
+reason "drop plasma-pa: audio/pulseaudio is BROKEN here"
+target @any
+
+mk set USE_KDE "${_USE_PLASMA_ALL:Nplasma-pa:Nbreeze-gtk:Nkde-gtk-config:Noxygen:Noxygen-sounds:Nspectacle}"
