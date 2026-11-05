@@ -1,0 +1,9 @@
+port graphics/embree3
+type port
+reason "DragonFly platform support, as in graphics/embree"
+target @any
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1||defined(__DragonFly__))@g'	\
+		${WRKSRC}/common/math/math.h
+MK1
