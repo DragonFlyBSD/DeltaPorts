@@ -1,0 +1,10 @@
+port net/smb4k
+type port
+reason "Qt6 here defines Q_OS_DRAGONFLY, not Q_OS_FREEBSD"
+target @any
+
+# CMake already picks the BSD mount settings for DragonFly.
+mk target set dfly-patch <<'MK1'
+	${GREP} -rl 'Q_OS_FREEBSD' ${WRKSRC}/core ${WRKSRC}/helpers ${WRKSRC}/smb4k | \
+		${XARGS} ${REINPLACE_CMD} -e 's/defined(Q_OS_FREEBSD)/(defined(Q_OS_FREEBSD) || defined(Q_OS_DRAGONFLY))/g'
+MK1
