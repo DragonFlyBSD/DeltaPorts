@@ -1,0 +1,7 @@
+port multimedia/kamoso
+type port
+reason "base gcc, not ports clang: Qt and KDE use libstdc++ here"
+target @any
+
+# The llvm fallback is for FreeBSD without clang-scan-deps.
+text line-remove file Makefile exact "USES+=\t\tllvm"
