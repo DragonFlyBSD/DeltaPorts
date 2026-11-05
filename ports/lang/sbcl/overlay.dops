@@ -1,0 +1,13 @@
+port lang/sbcl
+type port
+reason "bootstrap from the 1.2.9 DragonFly binary; misc/compat14x is FreeBSD-only"
+target @any
+
+# ARCH is x86_64 here, and only the 1.2.9 DragonFly boot binary is mirrored.
+text replace-once file Makefile from "1.2.7-x86-64-dragonfly" to "1.2.9-x86-64-dragonfly"
+mk set ARCHOS_PATTERN "*-${ARCH:S/amd64/x86-64/:S/i386/x86/:S/x86_64/x86-64/}-${OPSYS:tl}*"
+text replace-once file distinfo from "SHA256 (sbcl-1.2.7-x86-64-dragonfly-binary.tar.bz2) = 4d8d589909d1b003afc5d58276affe2202f4a75d3760737f2ac6ce046a1f905c" to "SHA256 (sbcl-1.2.9-x86-64-dragonfly-binary.tar.bz2) = 788d3f51ead4422158357dcdd7591265bbfb3c36b1856122d60636bd43637874"
+text replace-once file distinfo from "SIZE (sbcl-1.2.7-x86-64-dragonfly-binary.tar.bz2) = 10586301" to "SIZE (sbcl-1.2.9-x86-64-dragonfly-binary.tar.bz2) = 7603704"
+
+# The libutil.so.9 compat dep is for FreeBSD's 1.2.7 boot binary on 15+.
+mk replace-if from "${OSVERSION} >= 1500000" to "${OPSYS} == FreeBSD && ${OSVERSION} >= 1500000"
