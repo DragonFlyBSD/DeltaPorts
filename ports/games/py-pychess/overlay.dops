@@ -1,0 +1,11 @@
+port games/py-pychess
+type port
+reason "one Xvfb, for configure: per-phase restarts race under load"
+target @any
+
+# 1.0.4's setup.py imports Gtk only on win32. Restarting Xvfb for each
+# phase lets the new one find :0 still taken, then stop-display fails.
+text line-remove file Makefile exact "# DISPLAY must be set at all steps:"
+text line-remove file Makefile exact ".for t in build install stage"
+text line-remove file Makefile exact "_USES_$t+=\t${_USES_configure}"
+text line-remove file Makefile exact ".endfor"
