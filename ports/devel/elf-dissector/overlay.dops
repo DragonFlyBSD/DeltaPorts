@@ -4,13 +4,12 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add USES "localbase:ldflags"
+# dragonfly/ patches include bsdelf's elfdefinitions.h. Its libdwarf
+# fails FindDwarf's 0.10 API check, so no DWARF, as on FreeBSD.
 mk add BUILD_DEPENDS "bsdelf>0:devel/bsdelf"
-mk add CMAKE_ARGS "-DDwarf_INCLUDE_DIR=${LOCALBASE}/bsdelf/include"
-mk add CMAKE_ARGS "-DDwarf_LIBRARY=${LOCALBASE}/bsdelf/lib/libdwarf.a"
-mk add CMAKE_ARGS "-DElf_LIBRARY=${LOCALBASE}/bsdelf/lib/libelf.a"
+mk add CMAKE_ARGS "-DCMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES=${LOCALBASE}/bsdelf/include"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
-			 -e "s@Dwarf::Dwarf@& ${LOCALBASE}/bsdelf/lib/libelf.a@g" \
 			 -e "s@Binutils::Iberty Binutils::Opcodes@Binutils::Opcodes Binutils::Iberty@g" \
 		${WRKSRC}/src/lib/CMakeLists.txt \
 		${WRKSRC}/src/ui/CMakeLists.txt \
