@@ -1,0 +1,26 @@
+gcc/ChangeLog:
+
+2019-04-24  Iain Buclaw  <ibuclaw@gdcproject.org>
+
+        * config.gcc (*-*-dragonfly*): Add dragonfly-d.o
+        * config/dragonfly-d.c: New file.
+        * config/t-dragonfly: New file.
+
+libphobos/ChangeLog:
+
+2019-04-24  Iain Buclaw  <ibuclaw@gdcproject.org>
+
+        * configure.tgt: Add *-*-dragonfly* as a supported target.
+
+--- libphobos/configure.tgt	2019-06-28 18:28:59.000000000 -0700
++++ libphobos/configure.tgt	2019-06-28 18:31:08.645273000 -0700
+@@ -23,6 +23,9 @@
+ # broken systems.  More targets shall be added after testing.
+ LIBPHOBOS_SUPPORTED=no
+ case "${target}" in
++  x86_64-*-dragonfly*)
++	LIBPHOBOS_SUPPORTED=yes
++	;;
+   aarch64*-*-linux*)
+ 	LIBPHOBOS_SUPPORTED=yes
+ 	;;
