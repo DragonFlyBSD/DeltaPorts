@@ -1,0 +1,49 @@
+port lang/ghc
+type port
+reason "DragonFly boot compilers and plists for ghc and its slaves; misc/compat14x is FreeBSD-only"
+target @any
+
+# misc/compat14x carries libutil.so.9 for FreeBSD's boot binaries on 15+.
+mk replace-if from "${OSVERSION} >= 1500000" to "${OPSYS} == FreeBSD && ${OSVERSION} >= 1500000"
+
+# Boot compilers are ghc-<ver>-boot-x86_64-dragonfly.tar.xz on the backup site.
+text replace-once file Makefile from "ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-freebsd${EXTRACT_SUFX}:boot" to "ghc-${BOOT_GHC_VERSION}-boot-${ARCH}-${OPSYS:tl}${EXTRACT_SUFX}:boot"
+text line-insert-after file distinfo \
+     anchor "SIZE (ghc-9.2.8-boot-aarch64-freebsd.tar.xz) = 124830556" \
+     line   "SHA256 (ghc-9.2.8-boot-x86_64-dragonfly.tar.xz) = d24c26aa9a4ff5130f5fe62beba84fe5ac2922a1c70412dea8d6d0b402b3e6e2"
+text line-insert-after file distinfo \
+     anchor "SHA256 (ghc-9.2.8-boot-x86_64-dragonfly.tar.xz) = d24c26aa9a4ff5130f5fe62beba84fe5ac2922a1c70412dea8d6d0b402b3e6e2" \
+     line   "SIZE (ghc-9.2.8-boot-x86_64-dragonfly.tar.xz) = 137990860"
+text line-insert-after file distinfo \
+     anchor "SIZE (ghc-9.2.8-boot-x86_64-dragonfly.tar.xz) = 137990860" \
+     line   "SHA256 (ghc-9.6.7-boot-x86_64-dragonfly.tar.xz) = ff0e4298c37284b355f6f647a26064d8172b1803fdc75857ce29740c17a2fe2d"
+text line-insert-after file distinfo \
+     anchor "SHA256 (ghc-9.6.7-boot-x86_64-dragonfly.tar.xz) = ff0e4298c37284b355f6f647a26064d8172b1803fdc75857ce29740c17a2fe2d" \
+     line   "SIZE (ghc-9.6.7-boot-x86_64-dragonfly.tar.xz) = 95176748"
+
+# create-bootstrap names its tarball after the OS.
+text replace-once file Makefile from "/tmp/ghc-${GHC_VERSION}-boot-${ARCH}-freebsd.tar.xz" to "/tmp/ghc-${GHC_VERSION}-boot-${ARCH}-${OPSYS:tl}.tar.xz"
+text replace-once file Makefile from "sha256 ghc-${GHC_VERSION}-boot-${ARCH}-freebsd.tar.xz" to "sha256 ghc-${GHC_VERSION}-boot-${ARCH}-${OPSYS:tl}.tar.xz"
+text replace-once file Makefile from "SIZE (ghc-${GHC_VERSION}-boot-${ARCH}-freebsd.tar.xz)" to "SIZE (ghc-${GHC_VERSION}-boot-${ARCH}-${OPSYS:tl}.tar.xz)"
+text replace-once file Makefile from "%z ghc-${GHC_VERSION}-boot-${ARCH}-freebsd.tar.xz" to "%z ghc-${GHC_VERSION}-boot-${ARCH}-${OPSYS:tl}.tar.xz"
+
+mk block set condition "${OPSYS} == DragonFly" <<'MK'
+# The 9.2.8 boot compiler links ports ncurses and libffi; 9.6.7 is static.
+.if ${BOOT_GHC_VERSION} == 9.2.8
+BUILD_DEPENDS+=	${LOCALBASE}/lib/libtinfo.so.6:devel/ncurses \
+		${LOCALBASE}/lib/libffi.so:devel/libffi
+.endif
+MAKE_ENV+=	LDVER=ld.bfd
+# No C.UTF-8 in base; hadrian reads UTF-8 sources in the locale encoding.
+WRK_ENV+=	LC_ALL=en_US.UTF-8
+# The plists name the FreeBSD library directory.
+GHC_PLIST_SRC:=	${PLIST:U${PKGDIR}/pkg-plist}
+PLIST=		${WRKDIR}/pkg-plist
+
+dfly-patch:
+	${SED} -e 's|-freebsd-ghc-|-${OPSYS:tl}-ghc-|' ${GHC_PLIST_SRC} > ${PLIST}
+	${MKDIR} ${WRKSRC}/_build
+	${ECHO_CMD} "*.*.ghc.hs.opts += -I${NCURSESINC} -L${NCURSESLIB} -I${LOCALBASE}/include -L${LOCALBASE}/lib" >> ${WRKSRC}/_build/hadrian.settings
+	${ECHO_CMD} "*.*.cc.c.opts += ${CFLAGS}" >> ${WRKSRC}/_build/hadrian.settings
+	${ECHO_CMD} "*.terminfo.cabal.configure.opts += --configure-option=--with-curses-libraries=${NCURSESLIB}" >> ${WRKSRC}/_build/hadrian.settings
+MK

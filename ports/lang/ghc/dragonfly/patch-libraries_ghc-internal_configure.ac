@@ -1,6 +1,6 @@
---- libraries/base/configure.ac.orig	2022-07-27 07:27:59 UTC
-+++ libraries/base/configure.ac
-@@ -196,23 +196,6 @@ FP_CHECK_CONST([O_BINARY], [#include <fc
+--- libraries/ghc-internal/configure.ac.orig	2026-03-26 05:06:13 UTC
++++ libraries/ghc-internal/configure.ac
+@@ -260,23 +260,6 @@ then
  if test "$WINDOWS" = "NO"
  then
  
