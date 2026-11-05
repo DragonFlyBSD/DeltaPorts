@@ -6,5 +6,5 @@ target @any
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NTBB}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\(defined(__FreeBSD__)\)@(\1||defined(__DragonFly__))@g'	\
-		${WRKSRC}/common/math/math.h
+		${WRKSRC}/common/math/emath.h
 MK1
