@@ -1,6 +1,12 @@
 port net/freerdp3
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly: epoll-shim, OSS, TLS, SOL_TCP, _recvfrom; no urbdrc"
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
+# Upstream sets EPOLLSHIM for FreeBSD and OpenBSD only; uwac needs
+# <sys/epoll.h>.
+mk add CMAKE_ARGS "-DEPOLLSHIM:BOOL=ON"
+
+# No USB redirection: base libusb lacks libusb_has_capability, set_option
+# and bulk streams. Off also forces CHANNEL_URBDRC_CLIENT off.
+mk add CMAKE_OFF CHANNEL_URBDRC
