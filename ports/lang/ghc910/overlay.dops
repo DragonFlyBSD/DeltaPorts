@@ -1,0 +1,4 @@
+port lang/ghc910
+type port
+reason "DragonFly patches for 9.10.3; the Makefile side is in lang/ghc"
+target @any
