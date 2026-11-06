@@ -1,0 +1,4 @@
+port games/suika3
+type port
+reason "take the FreeBSD target in the bundled HAL and NoctLang"
+target @any
