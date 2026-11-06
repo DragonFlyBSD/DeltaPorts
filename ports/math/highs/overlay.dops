@@ -1,6 +1,3 @@
 port math/highs
 type port
-reason "auto-converted from Makefile.DragonFly"
-target @any
-
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+reason "zstr's strerror_r: g++ defines _GNU_SOURCE, but DragonFly's is the XSI one"
