@@ -1,0 +1,4 @@
+port graphics/hvif-tools
+type port
+reason "missing <cstddef> under gcc/libstdc++"
+target @any
