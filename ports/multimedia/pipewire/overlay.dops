@@ -1,6 +1,6 @@
 port multimedia/pipewire
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "shm and eventfd stand-ins for the missing memfd/eventfd; ALSA backend on for OSS output"
 target @any
 
 mk add LDFLAGS "-L${LOCALBASE}/lib -ltinfo -lncurses"
@@ -11,3 +11,14 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/src/pipewire/meson.build \
 		${WRKSRC}/meson.build
 MK1
+
+# alsa-lib's default pcm is OSS here: 10-alsa-default.conf gives the sink.
+# nofail: without a loaded sound driver pipewire would not start at all.
+mk add OPTIONS_DEFAULT "ALSA"
+text replace-once file files/10-alsa-default.conf.in from "    { factory = adapter\n       args = {\n           factory.name           = api.alsa.pcm.sink\n" to "    { factory = adapter flags = [ nofail ]\n       args = {\n           factory.name           = api.alsa.pcm.sink\n"
+text replace-once file files/10-alsa-default.conf.in from "    { factory = adapter\n       args = {\n           factory.name           = api.alsa.pcm.source\n" to "    { factory = adapter flags = [ nofail ]\n       args = {\n           factory.name           = api.alsa.pcm.source\n"
+
+# sysdefault (OSS) rather than default, which 99-pipewire-default.conf
+# would turn into pipewire itself.
+text replace-once file files/10-alsa-default.conf.in from "           media.class            = \"Audio/Sink\"\n           api.alsa.path          = \"pcm.default\"\n" to "           media.class            = \"Audio/Sink\"\n           api.alsa.path          = \"pcm.sysdefault\"\n"
+text replace-once file files/10-alsa-default.conf.in from "           media.class            = \"Audio/Source\"\n           api.alsa.path          = \"pcm.default\"\n" to "           media.class            = \"Audio/Source\"\n           api.alsa.path          = \"pcm.sysdefault\"\n"
