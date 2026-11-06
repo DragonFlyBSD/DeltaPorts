@@ -1,0 +1,4 @@
+port audio/sonic-visualiser
+type port
+reason "build on DragonFly like FreeBSD"
+target @any
