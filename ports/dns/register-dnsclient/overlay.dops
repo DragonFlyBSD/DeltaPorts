@@ -1,0 +1,6 @@
+port dns/register-dnsclient
+type port
+reason "no Kerberos in base: GSSAPI from MIT krb5, as the other overlays use"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSSAPI_BASE} GSSAPI_MIT"
