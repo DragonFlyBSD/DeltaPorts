@@ -1,6 +1,0 @@
-port x11-toolkits/gtk4-layer-shell
-type port
-reason "needs GTK4's Wayland backend, which the gtk40 overlay leaves out"
-target @any
-
-mk set IGNORE "needs GTK4's Wayland backend; x11-toolkits/gtk40 builds without it on DragonFly"
