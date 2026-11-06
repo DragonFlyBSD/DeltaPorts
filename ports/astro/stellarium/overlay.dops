@@ -1,0 +1,7 @@
+port astro/stellarium
+type port
+reason "install the man page under share/man"
+target @any
+
+# doc/CMakeLists.txt defaults DragonFly to man/; CMAKE_INSTALL_MANDIR overrides it.
+mk add CMAKE_ARGS "-DCMAKE_INSTALL_MANDIR=share/man"
