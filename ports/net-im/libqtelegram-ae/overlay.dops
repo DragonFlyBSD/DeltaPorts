@@ -1,0 +1,6 @@
+port net-im/libqtelegram-ae
+type port
+reason "gcc rejects the case labels (unsigned TL type ids in an int switch) that clang only warns about"
+target @any
+
+mk add CXXFLAGS "-Wno-narrowing"
