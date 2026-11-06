@@ -1,0 +1,7 @@
+port sysutils/vagrant-gitlab
+type port
+reason "RubyGems' extension dir name on DragonFly"
+target @any
+
+# RubyGems has no DragonFly platform: extensions go to x86_64-unknown.
+mk set BUILD_TARGET "${ARCH}-unknown"
