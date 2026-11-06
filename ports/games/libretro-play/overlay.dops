@@ -29,6 +29,6 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/deps/Framework/src/PathUtils.cpp
 MK1
 
-# dragonfly/@2026Q4, @main: Source/ee/Ee_LibMc2.cpp uses strcmp,
-# memset and friends without <cstring>; libc++ pulls it in on FreeBSD,
+# dragonfly/@2026Q4, @main: Ee_LibMc2.cpp, IopBios.cpp and Iop_McServ.cpp
+# use strcmp, memset and friends without <cstring>; libc++ pulls it in on FreeBSD,
 # libstdc++ 12 does not.
