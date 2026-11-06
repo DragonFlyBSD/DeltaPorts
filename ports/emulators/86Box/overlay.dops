@@ -1,0 +1,4 @@
+port emulators/86Box
+type port
+reason "freetype2 include dir for the printer code, as on FreeBSD"
+target @any
