@@ -1,0 +1,4 @@
+port audio/baresip
+type port
+reason "build the evdev module on DragonFly"
+target @any
