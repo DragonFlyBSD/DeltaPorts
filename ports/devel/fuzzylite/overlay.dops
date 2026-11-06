@@ -1,0 +1,8 @@
+port devel/fuzzylite
+type port
+reason "keep libstdc++'s set_unexpected deprecation from failing -Werror"
+target @any
+
+mk block set condition "${CHOSEN_COMPILER_TYPE} == gcc" <<'MK'
+CFLAGS+=	-Wno-error=deprecated-declarations
+MK
