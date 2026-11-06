@@ -1,7 +1,7 @@
 port databases/evolution-data-server
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "no Kerberos in base: GSSAPI from MIT krb5, as the other overlays use"
 target @any
 
-mk add BUILD_DEPENDS "krb5-config:security/krb5"
-mk add RUN_DEPENDS "krb5-config:security/krb5"
+# GSSAPI_MIT's USES=gssapi:mit brings in security/krb5.
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSSAPI_BASE} GSSAPI_MIT"
