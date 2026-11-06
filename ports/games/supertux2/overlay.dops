@@ -1,0 +1,4 @@
+port games/supertux2
+type port
+reason "cxxabi.h and libexecinfo on DragonFly"
+target @any
