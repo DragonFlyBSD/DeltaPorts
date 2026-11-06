@@ -1,0 +1,4 @@
+port filesystems/pod
+type port
+reason "std::set comparator must be const-callable for libstdc++"
+target @any
