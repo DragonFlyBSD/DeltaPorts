@@ -1,5 +1,5 @@
 port math/or-tools
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly takes the FreeBSD fenv_t layout and getrusage memory query (dragonfly/)"
 target @any
 
