@@ -1,0 +1,4 @@
+port dns/kadnode
+type port
+reason "take the FreeBSD paths (NSS module, bind-to-device, IPv6 multicast); sys/socket.h"
+target @any
