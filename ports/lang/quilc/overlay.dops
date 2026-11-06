@@ -1,3 +1,15 @@
 port lang/quilc
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "cffi, qvm and cl+ssl look for FreeBSD's libraries: libffi.so, librt.so.1, base libcrypto"
+target @any
+
+text replace-once file Makefile from ":freebsd \"libffi.so\"|" to ":dragonfly \"libffi.so\"|"
+
+# cl+ssl dlopens libssl/libcrypto, which base keeps private here.
+mk add USES "ssl"
+
+# qvm's shm.lisp loads librt.so.1; base's is librt.so.0.
+mk target set dfly-patch <<'MK'
+	@${REINPLACE_CMD} -e 's|"librt.so.1"|"librt.so.1" "librt.so.0"|' \
+		${QL_DIR}/dists/quicklisp/software/qvm-v1.17.2/src/shm.lisp
+MK
