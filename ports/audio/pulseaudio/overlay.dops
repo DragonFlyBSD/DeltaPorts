@@ -1,6 +1,11 @@
 port audio/pulseaudio
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "client libraries only: the daemon spins a cpu and makes no sound here; pipewire-pulse serves the pulse API"
 target @any
 
-mk set BROKEN "spins one cpu 100% and doesn't make any sound"
+# libpulse, libpulse-simple and libpulse-mainloop-glib (what dependents link)
+# and the pactl/pacat client tools; no daemon, modules or daemon configs.
+mk add MESON_ARGS "-Ddaemon=false"
+mk add LDFLAGS "-L${LOCALBASE}/lib -lintl"
+patch apply diffs/pkg-plist.diff
+text replace-once file Makefile from ".for ii in default.pa daemon.conf client.conf system.pa" to ".for ii in client.conf"
