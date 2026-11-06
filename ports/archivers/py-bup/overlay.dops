@@ -1,0 +1,9 @@
+port archivers/py-bup
+type port
+reason "0.32 assumes python <= 3.11: configure's python probe and csetup.py's distutils"
+target @any
+
+# configure only probes python3.11 and older; csetup.py imports distutils,
+# which 3.12 dropped and setuptools' shim provides.
+mk add MAKE_ENV "PYTHON=${PYTHON_CMD}"
+mk add BUILD_DEPENDS "${PY_SETUPTOOLS}"
