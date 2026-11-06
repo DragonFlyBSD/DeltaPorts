@@ -1,0 +1,32 @@
+port databases/arrow-glib
+type port
+reason "no gandiva-glib: databases/arrow is built without Gandiva here"
+target @any
+
+# meson finds no gandiva, so gandiva-glib and its GIR files are not built.
+text line-remove file pkg-plist exact "include/gandiva-glib/enums.h"
+text line-remove file pkg-plist exact "include/gandiva-glib/expression.h"
+text line-remove file pkg-plist exact "include/gandiva-glib/expression.hpp"
+text line-remove file pkg-plist exact "include/gandiva-glib/filter.h"
+text line-remove file pkg-plist exact "include/gandiva-glib/filter.hpp"
+text line-remove file pkg-plist exact "include/gandiva-glib/function-registry.h"
+text line-remove file pkg-plist exact "include/gandiva-glib/function-signature.h"
+text line-remove file pkg-plist exact "include/gandiva-glib/function-signature.hpp"
+text line-remove file pkg-plist exact "include/gandiva-glib/gandiva-glib.h"
+text line-remove file pkg-plist exact "include/gandiva-glib/gandiva-glib.hpp"
+text line-remove file pkg-plist exact "include/gandiva-glib/native-function.h"
+text line-remove file pkg-plist exact "include/gandiva-glib/native-function.hpp"
+text line-remove file pkg-plist exact "include/gandiva-glib/node.h"
+text line-remove file pkg-plist exact "include/gandiva-glib/node.hpp"
+text line-remove file pkg-plist exact "include/gandiva-glib/projector.h"
+text line-remove file pkg-plist exact "include/gandiva-glib/projector.hpp"
+text line-remove file pkg-plist exact "include/gandiva-glib/selection-vector.h"
+text line-remove file pkg-plist exact "include/gandiva-glib/selection-vector.hpp"
+text line-remove file pkg-plist exact "include/gandiva-glib/version.h"
+text line-remove file pkg-plist exact "lib/girepository-1.0/Gandiva-24.0.typelib"
+text line-remove file pkg-plist exact "lib/libgandiva-glib.a"
+text line-remove file pkg-plist exact "lib/libgandiva-glib.so"
+text line-remove file pkg-plist exact "lib/libgandiva-glib.so.%%SHLIB_MAJOR%%"
+text line-remove file pkg-plist exact "lib/libgandiva-glib.so.%%SHLIB_MAJOR%%.%%SHLIB_MINOR%%.0"
+text line-remove file pkg-plist exact "libdata/pkgconfig/gandiva-glib.pc"
+text line-remove file pkg-plist exact "share/gir-1.0/Gandiva-24.0.gir"
