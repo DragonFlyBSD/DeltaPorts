@@ -1,5 +1,4 @@
 port deskutils/plan
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "take the FreeBSD paths: POSIX regex, atexit, int wait status"
 target @any
-
