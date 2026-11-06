@@ -1,3 +1,7 @@
 port devel/libubox
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "keep gcc's array-bounds warning on blobmsg.c from failing -Werror"
+target @any
+
+# gcc 12 flags the strcpy into blob_attr's flexible name[]; the Makefile has no CFLAGS line.
+text line-insert-after file Makefile anchor "USES=\t\tcmake pkgconfig lua:51" line "CFLAGS+=\t-Wno-error=array-bounds"
