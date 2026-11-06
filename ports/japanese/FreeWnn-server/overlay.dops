@@ -1,6 +1,13 @@
 port japanese/FreeWnn-server
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "preprocess the EUC dictionary sources with traditional cpp"
 target @any
 
 mk set CPP "cpp -P"
+
+# gcc's ISO cpp rewrites EUC bytes as \U escapes (errors on some, korean); dictionaries only, configure keeps CPP.
+# Makefile.common assigns MAKE_ARGS, so append after its include.
+target @2026Q4,@main
+
+text line-insert-after file Makefile anchor ".include \"${.CURDIR}/../../japanese/FreeWnn-lib/Makefile.common\"" line "MAKE_ARGS+=\tCPP='cpp -P -traditional-cpp'"
+mk bump PORTREVISION
