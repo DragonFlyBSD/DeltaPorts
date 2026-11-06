@@ -215,7 +215,7 @@
  BINARY_LINKDIR=	${WRKDIR}/.bin
  PATH:=			${BINARY_LINKDIR}:${PATH}
  .    if !${MAKE_ENV:MPATH=*} && !${CONFIGURE_ENV:MPATH=*}
-@@ -1774,7 +1810,14 @@
+@@ -1774,7 +1810,23 @@
  
  # kludge to strip trailing whitespace from CFLAGS;
  # sub-configure will not # survive double space
@@ -228,10 +228,19 @@
 +.if !${CFLAGS:M-O*}
 +CFLAGS+=	-O2
 +.endif
++# gcc rejects -Wno-error= for a warning it lacks; take clang's
++# incompatible-function-pointer-types as gcc's incompatible-pointer-types
++.if !${CC:M*clang*}
++.  for _f in CFLAGS CPPFLAGS CXXFLAGS
++.    if ${${_f}:U:M-Wno-error=incompatible-function-pointer-types}
++${_f}:=	${${_f}:S/^-Wno-error=incompatible-function-pointer-types$/-Wno-error=incompatible-pointer-types/}
++.    endif
++.  endfor
++.endif
  
  .    if defined(WITHOUT_CPU_CFLAGS)
  .      if defined(_CPUCFLAGS)
-@@ -1806,21 +1849,6 @@
+@@ -1806,21 +1858,6 @@
  PATCH_DEPENDS+=		${LOCALBASE}/bin/unzip:archivers/unzip
  .    endif
  
@@ -253,7 +262,7 @@
  .    if defined(IA32_BINARY_PORT) && ${ARCH} != "i386"
  .      if ${ARCH} == "amd64"
  .        if !defined(HAVE_COMPAT_IA32_KERN)
-@@ -1846,9 +1874,28 @@
+@@ -1846,9 +1883,28 @@
  PKG_DEPENDS+=	${LOCALBASE}/sbin/pkg:${PKG_ORIGIN}
  .    endif
  
@@ -285,7 +294,7 @@
  
  .    if defined(LLD_UNSAFE)
  LDFLAGS+=	-fuse-ld=bfd
-@@ -1857,7 +1904,7 @@
+@@ -1857,7 +1913,7 @@
  .    endif
  
  .    if defined(USE_BINUTILS) && !defined(DISABLE_BINUTILS)
@@ -294,7 +303,7 @@
  BINUTILS?=	ADDR2LINE AR AS CPPFILT GPROF LD NM OBJCOPY OBJDUMP RANLIB \
  	READELF SIZE STRINGS STRIP_CMD
  BINUTILS_NO_MAKE_ENV?=
-@@ -2028,8 +2075,10 @@
+@@ -2028,8 +2084,10 @@
  MAKE_FLAGS?=	-f
  MAKEFILE?=		Makefile
  MAKE_CMD?=		${BSDMAKE}
@@ -305,7 +314,7 @@
  			CC="${CC}" CFLAGS="${CFLAGS}" \
  			CPP="${CPP}" CPPFLAGS="${CPPFLAGS}" \
  			LDFLAGS="${LDFLAGS}" LIBS="${LIBS}" \
-@@ -2066,7 +2115,7 @@
+@@ -2066,7 +2124,7 @@
  _MAKE_JOBS_NUMBER:=	${MAKE_JOBS_NUMBER}
  .      else
  .        if !defined(_SMP_CPUS)
@@ -314,7 +323,7 @@
  .        endif
  _EXPORTED_VARS+=	_SMP_CPUS
  _MAKE_JOBS_NUMBER=	${_SMP_CPUS}
-@@ -2142,7 +2191,9 @@
+@@ -2142,7 +2200,9 @@
  TAR?=	/usr/bin/tar
  
  # EXTRACT_SUFX is defined in .pre.mk section
@@ -325,7 +334,7 @@
  EXTRACT_BEFORE_ARGS?=	-xf
  EXTRACT_AFTER_ARGS?=	--no-same-owner --no-same-permissions
  
-@@ -2434,7 +2485,8 @@
+@@ -2434,7 +2494,8 @@
  
  # The primary backup site.
  MASTER_SITE_BACKUP?=	\
@@ -335,7 +344,7 @@
  MASTER_SITE_BACKUP:=	${MASTER_SITE_BACKUP:S^\${DIST_SUBDIR}/^^}
  
  # If the user has MASTER_SITE_FREEBSD set, go to the FreeBSD repository
-@@ -2731,6 +2783,8 @@
+@@ -2731,6 +2792,8 @@
  SCRIPTS_ENV+=	CURDIR=${MASTERDIR} DISTDIR=${DISTDIR} \
  		  WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} PATCHDIR=${PATCHDIR} \
  		  SCRIPTDIR=${SCRIPTDIR} FILESDIR=${FILESDIR} \
@@ -344,7 +353,7 @@
  		  PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} LOCALBASE=${LOCALBASE}
  
  .    if defined(BATCH)
-@@ -2797,7 +2851,7 @@
+@@ -2797,7 +2860,7 @@
  
  # Check the machine architectures
  .    if defined(ONLY_FOR_ARCHS)
@@ -353,7 +362,7 @@
  .        if ${ARCH:M${__ARCH}} != ""
  __ARCH_OK?=		1
  .        endif
-@@ -2807,7 +2861,7 @@
+@@ -2807,7 +2870,7 @@
  .    endif
  
  .    if defined(NOT_FOR_ARCHS)
@@ -362,7 +371,7 @@
  .        if ${ARCH:M${__NARCH}} != ""
  .undef __ARCH_OK
  .        endif
-@@ -2816,9 +2870,9 @@
+@@ -2816,9 +2879,9 @@
  
  .    if !defined(__ARCH_OK)
  .      if defined(ONLY_FOR_ARCHS)
@@ -374,7 +383,7 @@
  .      endif
  IGNORE+=	while you are running ${ARCH}
  
-@@ -2886,6 +2940,14 @@
+@@ -2886,6 +2949,14 @@
  .      elif defined(FORBIDDEN)
  IGNORE=		is forbidden: ${FORBIDDEN}
  .      endif
@@ -389,7 +398,7 @@
  
  .      if (defined(MANUAL_PACKAGE_BUILD) && defined(PACKAGE_BUILDING))
  IGNORE=		has to be built manually: ${MANUAL_PACKAGE_BUILD}
-@@ -2961,6 +3023,7 @@
+@@ -2961,6 +3032,7 @@
  	  DISTDIR=${DISTDIR} WRKDIR=${WRKDIR} WRKSRC=${WRKSRC} \
  	  PATCHDIR=${PATCHDIR} SCRIPTDIR=${SCRIPTDIR} \
  	  FILESDIR=${FILESDIR} PORTSDIR=${PORTSDIR} PREFIX=${PREFIX} \
@@ -397,7 +406,7 @@
  	  BUILD_DEPENDS="${BUILD_DEPENDS}" RUN_DEPENDS="${RUN_DEPENDS}" \
  	  CONFLICTS="${CONFLICTS}" \
  	${ALL_HOOK}
-@@ -3243,6 +3306,7 @@
+@@ -3243,6 +3315,7 @@
  			dp_OPSYS="${OPSYS}" \
  			dp_PATCH="${PATCH}" \
  			dp_PATCHDIR="${PATCHDIR}" \
@@ -405,7 +414,7 @@
  			dp_PATCHFILES="${_PATCHFILES2}" \
  			dp_PATCH_ARGS=${PATCH_ARGS:Q} \
  			dp_PATCH_DEBUG_TMP="${PATCH_DEBUG_TMP}" \
-@@ -3326,6 +3390,14 @@
+@@ -3326,6 +3399,14 @@
  				${MAKEFILE} ${_MAKE_JOBS} ${MAKE_ARGS:N${DESTDIRNAME}=*}
  .    if !target(do-build)
  do-build:
@@ -420,7 +429,7 @@
  	@(cd ${BUILD_WRKSRC}; if ! ${DO_MAKE_BUILD} ${ALL_TARGET}; then \
  		if [ -n "${BUILD_FAIL_MESSAGE}" ] ; then \
  			${ECHO_MSG} "===> Compilation failed unexpectedly."; \
-@@ -3834,6 +3906,7 @@
+@@ -3834,6 +3915,7 @@
  	@if [ -d ${WRKDIR} ]; then \
  		if [ -w ${WRKDIR} ]; then \
  			${RM} -r ${WRKDIR}; \
@@ -428,7 +437,7 @@
  		else \
  			${ECHO_MSG} "===>   ${WRKDIR} not writable, skipping"; \
  		fi; \
-@@ -4218,7 +4291,7 @@
+@@ -4218,7 +4300,7 @@
  			else	\
  				continue;	\
  			fi;;	\
@@ -437,7 +446,7 @@
  				continue;	\
  			fi;;	\
  		esac;	\
-@@ -4632,10 +4705,15 @@
+@@ -4632,10 +4714,15 @@
  .    if !target(apply-slist) && defined(SUB_FILES)
  apply-slist:
  .      for file in ${SUB_FILES}
@@ -456,7 +465,7 @@
  .        endif
  .      endfor
  .      for i in pkg-message pkg-install pkg-deinstall pkg-req
-@@ -5438,26 +5516,26 @@
+@@ -5438,26 +5525,26 @@
  				350:check-desktop-entries 400:check-depends \
  				500:check-deprecated \
  				550:check-vulnerable 600:check-license 650:check-config \
@@ -487,7 +496,7 @@
  				${_OPTIONS_patch} ${_USES_patch}
  _CONFIGURE_DEP=	patch
  _CONFIGURE_SEQ=	150:build-depends 151:lib-depends 160:create-binary-alias \
-@@ -5465,11 +5543,11 @@
+@@ -5465,11 +5552,11 @@
  				200:configure-message 210:apply-slist \
  				300:pre-configure 450:pre-configure-script \
  				490:run-autotools-fixup 500:do-configure 700:post-configure \
@@ -501,7 +510,7 @@
  				${_OPTIONS_build} ${_USES_build}
  _STAGE_DEP=		build
  # STAGE is special in its numbering as it has install and stage, so install is
-@@ -5478,7 +5556,7 @@
+@@ -5478,7 +5565,7 @@
  				300:pre-install \
  				400:generate-plist 450:pre-su-install 475:create-users-groups \
  				500:do-install 550:kmod-post-install 600:fixup-lib-pkgconfig 700:post-install \
@@ -510,7 +519,7 @@
  				860:install-rc-script 870:install-ldconfig-file \
  				880:install-license 890:install-desktop-entries \
  				900:add-plist-info 910:add-plist-docs 920:add-plist-examples \
-@@ -5492,7 +5570,7 @@
+@@ -5492,7 +5579,7 @@
  .    endif
  _TEST_DEP=		stage
  _TEST_SEQ=		100:test-message 150:test-depends 300:pre-test 500:do-test \
