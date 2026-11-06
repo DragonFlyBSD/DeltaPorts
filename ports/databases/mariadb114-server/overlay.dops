@@ -1,0 +1,11 @@
+port databases/mariadb114-server
+type port
+reason "no Kerberos in base: GSSAPI from MIT krb5; FindCurses pointed at ports ncurses"
+target @any
+
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSSAPI_BASE} GSSAPI_MIT"
+
+# Base ncurses is private here: aim FindCurses at ports ncurses, or
+# HAVE_CURSES_H stays unset and client/mysql.cc misses <curses.h>.
+text replace-once file Makefile from "-DCURSES_FORM_LIBRARY=\"/usr/lib/libform.so\"" to "-DCURSES_FORM_LIBRARY=\"${NCURSESLIB}/libform.so\""
+text replace-once file Makefile from "-DCURSES_CURSES_LIBRARY=\"/usr/lib/libncurses.so\"" to "-DCURSES_CURSES_LIBRARY=\"${NCURSESLIB}/libncurses.so\" -DCURSES_INCLUDE_PATH=\"${NCURSESINC}\""
