@@ -11,6 +11,12 @@ mk set DFLY_UNMAINTAINED "yes"
 # The port never assigns CFLAGS and its first target sits inside
 # .if ${FLAVOR} == static, so `mk add CFLAGS` would write a plain CFLAGS=
 # there; add them after USES instead.
+# dragonfly/patch-tags.c: RB_GENERATE here needs RB_PROTOTYPE's tagtree_scan_info.
 target @2026Q4,@main
 
 text line-insert-after file Makefile anchor "USES=\t\tncurses uidfix" line "CFLAGS+=\t-DSLIST_FOREACH_SAFE=SLIST_FOREACH_MUTABLE -DTAILQ_FOREACH_SAFE=TAILQ_FOREACH_MUTABLE -DMAXNAMLEN=255"
+
+# No libcurses on DragonFly; link the ncurses USES=ncurses provides.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's|-lcurses|${NCURSESLIBS}|' ${WRKSRC}/Makefile
+MK
