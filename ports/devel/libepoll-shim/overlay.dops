@@ -1,6 +1,6 @@
 port devel/libepoll-shim
 type port
-reason "auto-converted from Makefile.DragonFly; drop the i386 (lib32) flavor"
+reason "drop the i386 (lib32) flavor; epoll_wait/epoll_ctl safe against thread cancellation"
 
 # The i386 flavor builds with -m32, which DragonFly cannot do (its
 # amd64-only IGNORE tests ARCH, which is x86_64 here). Set FLAVORS where it
