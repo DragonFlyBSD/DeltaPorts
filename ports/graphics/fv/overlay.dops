@@ -1,0 +1,7 @@
+port graphics/fv
+type port
+reason "hide fv's clamp() under C++17 with libstdc++ too"
+target @any
+
+# FreeBSD's patch tests _LIBCPP_STD_VER, which libstdc++ does not define.
+text replace-once file files/patch-common.h from "+#if _LIBCPP_STD_VER <= 14" to "+#if __cplusplus < 201703L"
