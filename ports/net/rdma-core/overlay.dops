@@ -1,0 +1,9 @@
+port net/rdma-core
+type port
+reason "FreeBSD's RDMA userland: needs tdestroy(3) in libc and a kernel RDMA stack"
+target @any
+
+# IGNORE's own assignment is under an OPSYS == FreeBSD condition.
+mk block set condition "${OPSYS} == DragonFly" <<'MK'
+IGNORE=		needs tdestroy(3) in libc and a kernel RDMA stack
+MK
