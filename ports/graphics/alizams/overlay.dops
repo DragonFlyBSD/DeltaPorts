@@ -1,0 +1,4 @@
+port graphics/alizams
+type port
+reason "total memory via sysctl as on FreeBSD"
+target @any
