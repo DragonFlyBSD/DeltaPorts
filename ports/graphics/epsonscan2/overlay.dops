@@ -8,6 +8,7 @@ reason "DragonFly: take the FreeBSD port's code paths"
 # pthread_tryjoin_np). Take those branches here too. DragonFly has no
 # pthread_peekjoin_np either; the only caller polls until the thread has
 # exited, so a blocking pthread_join() does the same.
+# DragonFly's <sys/sem.h> declares union semun itself.
 target @2026Q4,@main
 
 mk target set dfly-patch <<'MK'
@@ -25,6 +26,8 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/src/SaneWrapper/defines.h
 	${REINPLACE_CMD} -e 's/pthread_peekjoin_np(tid,st)/pthread_join(tid,st)/' \
 		${WRKSRC}/src/Platform.cpp
+	${REINPLACE_CMD} -e 's/^#if defined(__GNU_LIBRARY__) && !defined(_SEM_SEMUN_UNDEFINED)$$/& || defined(__DragonFly__)/' \
+		${WRKSRC}/src/ES2Command/Src/Utils/semaphore.hpp
 	${REINPLACE_CMD} -e 's/CMAKE_SYSTEM_NAME STREQUAL "FreeBSD"/CMAKE_SYSTEM_NAME MATCHES "FreeBSD|DragonFly"/' \
 		${WRKSRC}/CMakeLists.txt
 MK
