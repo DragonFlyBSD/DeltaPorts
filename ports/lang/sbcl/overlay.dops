@@ -11,3 +11,5 @@ text replace-once file distinfo from "SIZE (sbcl-1.2.7-x86-64-dragonfly-binary.t
 
 # The libutil.so.9 compat dep is for FreeBSD's 1.2.7 boot binary on 15+.
 mk replace-if from "${OSVERSION} >= 1500000" to "${OPSYS} == FreeBSD && ${OSVERSION} >= 1500000"
+
+mk bump PORTREVISION
