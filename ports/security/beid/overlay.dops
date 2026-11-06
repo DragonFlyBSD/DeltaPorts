@@ -1,0 +1,7 @@
+port security/beid
+type port
+reason "hash the trustdir with the ports openssl"
+target @any
+
+# Base /usr/bin/openssl is LibreSSL here, which has no rehash command.
+mk add CONFIGURE_ENV "OPENSSL_PATH=${OPENSSLBASE}/bin/openssl"
