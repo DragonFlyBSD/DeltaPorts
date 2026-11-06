@@ -1,0 +1,4 @@
+port news/lusernet
+type port
+reason "sort comparator cast to the NSComparisonResult type GNUstep declares; clang rejects the int one (dragonfly/)"
+target @any
