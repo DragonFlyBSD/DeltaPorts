@@ -1,0 +1,4 @@
+port cad/fritzing
+type port
+reason "Qt 6 defines Q_OS_DRAGONFLY, not Q_OS_FREEBSD"
+target @any
