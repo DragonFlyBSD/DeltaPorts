@@ -1,0 +1,12 @@
+port sysutils/vagrant
+type port
+reason "system plugin state under DATADIR; RubyGems' extension dir name on DragonFly"
+target @any
+
+# RubyGems has no DragonFly platform: extensions go to x86_64-unknown.
+mk set BUILD_TARGET "${ARCH}-unknown"
+
+# The dragonfly/ patches read system plugins from DATADIR/plugins.json.
+text line-insert-after file Makefile anchor "post-patch:" line "\t@${REINPLACE_CMD} -e 's|@DATADIR@|${DATADIR}|g' ${WRKSRC}/lib/vagrant/plugin/manager.rb"
+text line-insert-after file Makefile anchor "post-install:" line "\t${MKDIR} ${STAGEDIR}${DATADIR}/plugins.d\n\t${ECHO} '{}' > ${STAGEDIR}${DATADIR}/plugins.json"
+text line-insert-after file pkg-plist anchor "%%DATADIR%%/embedded/rgloader/loader.rb" line "%%DATADIR%%/plugins.json\n@dir %%DATADIR%%/plugins.d"
