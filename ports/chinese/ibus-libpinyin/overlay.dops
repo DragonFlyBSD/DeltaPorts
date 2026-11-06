@@ -1,3 +1,10 @@
 port chinese/ibus-libpinyin
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "auto-converted from compat (Makefile.DragonFly + dragonfly/); C++17 for opencc headers"
+target @any
+
+# Without boost src/ builds with -std=c++0x; opencc's headers need C++17 string_view.
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's@-std=c++0x@-std=c++17@' \
+		${WRKSRC}/src/Makefile.in
+MK1
