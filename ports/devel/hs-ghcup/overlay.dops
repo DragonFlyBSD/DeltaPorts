@@ -1,0 +1,3 @@
+port devel/hs-ghcup
+type port
+reason "streamly-core: clockid_t is unsigned long here, so hsc2hs types it Word64"
