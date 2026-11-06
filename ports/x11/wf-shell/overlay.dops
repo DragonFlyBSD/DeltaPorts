@@ -1,9 +1,7 @@
 port x11/wf-shell
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly takes the FreeBSD PAM paths (dragonfly/); no wayland-logout here"
 target @any
-
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO}"
 
 # x11/wayland-logout is IGNOREd on DragonFly (it needs the socket peer's
 # pid, which LOCAL_PEERCRED does not report here), and this port is
