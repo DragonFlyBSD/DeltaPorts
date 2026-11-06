@@ -1,0 +1,7 @@
+port games/trx
+type port
+reason "build with clang: C23 bool keyword"
+target @any
+
+# meson sets c_std=c2x and the code uses bool as a keyword, which gcc 12 lacks.
+mk set USE_CLANG_FALLBACK "default"
