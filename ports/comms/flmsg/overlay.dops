@@ -1,0 +1,4 @@
+port comms/flmsg
+type port
+reason "missing <pthread.h> under gcc/libstdc++"
+target @any
