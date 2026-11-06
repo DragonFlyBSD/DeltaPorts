@@ -1,0 +1,4 @@
+port audio/rosegarden
+type port
+reason "PTHREAD_MUTEX_RECURSIVE is an enum here, as on FreeBSD"
+target @any
