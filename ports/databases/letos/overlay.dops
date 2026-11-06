@@ -1,0 +1,7 @@
+port databases/letos
+type port
+reason "build the plugins with the generator the main build uses"
+target @any
+
+# cmake ports use the default (make) generator here; there is no ninja.
+text replace-once file Makefile from ".. -GNinja ${WITH_PLUGIN_ARGS_OFF}" to ".. ${WITH_PLUGIN_ARGS_OFF}"
