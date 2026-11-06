@@ -1,6 +1,6 @@
 port x11/kde
 type port
-reason "drop plasma-pa: audio/pulseaudio is BROKEN here"
+reason "rebuild with plasma-pa, now that audio/pulseaudio builds"
 target @any
 
-mk set USE_KDE "${_USE_PLASMA_ALL:Nplasma-pa:Nbreeze-gtk:Nkde-gtk-config:Noxygen:Noxygen-sounds:Nspectacle}"
+mk bump PORTREVISION
