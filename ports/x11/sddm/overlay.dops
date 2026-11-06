@@ -1,6 +1,5 @@
 port x11/sddm
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly takes sddm's FreeBSD VT and setusercontext paths (dragonfly/)"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
