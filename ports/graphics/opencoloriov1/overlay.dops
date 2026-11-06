@@ -1,0 +1,7 @@
+port graphics/opencoloriov1
+type port
+reason "keep gcc's nonnull warning in ImageDesc.cpp from failing -Werror"
+target @any
+
+# The build appends -Werror after FreeBSD's -Wno-error; a named -Wno-error= survives it.
+mk add CXXFLAGS_gcc "-Wno-error=nonnull"
