@@ -1,0 +1,4 @@
+port graphics/simpleviewer
+type port
+reason "missing <limits> under gcc/libstdc++"
+target @any
