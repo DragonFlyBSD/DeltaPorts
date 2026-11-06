@@ -1,0 +1,4 @@
+port dns/flamethrower
+type port
+reason "missing <cstring> and <iterator> under gcc/libstdc++"
+target @any
