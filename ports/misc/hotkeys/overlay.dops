@@ -1,7 +1,9 @@
 port misc/hotkeys
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly CFLAGS in their own block; FreeBSD's CFLAGS line is OPSYS-guarded"
 target @any
 
-mk add CFLAGS "-DHAVE_LOCALE_H"
-mk add CFLAGS "-Wno-unused-function -Wno-incompatible-pointer-types -Wno-pointer-sign"
+# <regex.h> pulls in <locale.h> here, so common.h's empty setlocale() macro must not be defined.
+mk block set condition "${OPSYS} == DragonFly" <<'MK'
+CFLAGS+=	-DHAVE_LOCALE_H -DHAVE_SETLOCALE -Wno-unused-function -Wno-incompatible-pointer-types -Wno-pointer-sign
+MK
