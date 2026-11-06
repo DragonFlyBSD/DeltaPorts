@@ -1,0 +1,6 @@
+port net-p2p/cardano-node
+type port
+reason "blockio: build FreeBSD's src-linux branch on DragonFly too"
+target @any
+
+text replace-once file files/patch-__cabal__deps_blockio-0.2.0.0_blockio.cabal from "+  elif os(freebsd)" to "+  elif os(freebsd) || os(dragonfly)"
