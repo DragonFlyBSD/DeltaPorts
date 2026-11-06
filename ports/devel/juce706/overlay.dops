@@ -6,3 +6,4 @@ reason "DragonFly: treat DragonFly as JUCE_BSD (dragonfly/@<line>, CRLF kept as 
 # define JUCE_BSD for __DragonFly__ and cover the VST3 SDK BSD section
 # (FreeBSD's files/ patch), plain stat in Projucer's binary builder and
 # kinfo_proc's kp_flags. Three of the files are CRLF; the patches keep it.
+# The extras/Build/CMake patches match DragonFly where CMake matches .*BSD.
