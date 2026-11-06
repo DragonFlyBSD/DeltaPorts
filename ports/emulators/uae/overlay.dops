@@ -1,0 +1,6 @@
+port emulators/uae
+type port
+reason "use gcc's name for the warning FreeBSD's Makefile.in patch downgrades"
+target @any
+
+text replace-once file files/patch-src_Makefile.in from "-Wno-error=incompatible-function-pointer-types" to "-Wno-error=incompatible-pointer-types"
