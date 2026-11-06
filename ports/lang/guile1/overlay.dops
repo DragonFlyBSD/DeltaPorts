@@ -1,0 +1,3 @@
+port lang/guile1
+type port
+reason "configure's stack-direction probe says 'grows up' under gcc 12 -O2"
