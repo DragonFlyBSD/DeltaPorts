@@ -1,7 +1,12 @@
 port databases/arrow
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "leave Gandiva out: its USES=llvm moves the build to clang/libc++, the deps are gcc/libstdc++"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
-mk add CMAKE_OFF "ARROW_JEMALLOC"
+# llvm.mk sets CC/CXX to llvm's clang for GANDIVA, and arrow then fails to
+# link gcc/libstdc++ builds of googletest, grpc and protobuf.
+mk add OPTIONS_EXCLUDE "GANDIVA"
+
+# Gandiva's FindzstdAlt.cmake is listed for GANDIVA || ZSTD, but the
+# Gandiva cmake dir only exists with GANDIVA (Arrow's own is %%ZSTD%%).
+text replace-once file Makefile from ".if ${PORT_OPTIONS:MGANDIVA} || ${PORT_OPTIONS:MZSTD}\nPLIST_FILES+=\tlib/cmake/Gandiva/FindzstdAlt.cmake" to ".if ${PORT_OPTIONS:MGANDIVA}\nPLIST_FILES+=\tlib/cmake/Gandiva/FindzstdAlt.cmake"
