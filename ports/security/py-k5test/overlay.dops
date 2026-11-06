@@ -1,0 +1,6 @@
+port security/py-k5test
+type port
+reason "no Kerberos in base: GSSAPI from MIT krb5, as the other overlays use"
+target @any
+
+text replace-once file Makefile from "USES=\t\tgssapi python" to "USES=\t\tgssapi:mit python"
