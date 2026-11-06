@@ -1,11 +1,4 @@
-target @any
 port graphics/ttyplot
 type port
-reason "auto-converted from Makefile.DragonFly"
-
-mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e 's@-lcurses@-lncurses@g' \
-		${WRKSRC}/Makefile
-	${REINPLACE_CMD} -e 's@|| defined (__FreeBSD__)@|| defined (__FreeBSD__) || defined (__DragonFly__)@' \
-		${WRKSRC}/ttyplot.c
-MK1
+reason "take FreeBSD's _XOPEN_SOURCE_EXTENDED; _XOPEN_SOURCE 500 hides NAN and optreset"
+target @any
