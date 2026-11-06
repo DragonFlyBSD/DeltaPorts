@@ -1,0 +1,9 @@
+port graphics/bmeps
+type port
+reason "name base gcc as gcc so configure builds the shared libraries"
+target @any
+
+# configure picks its toolchain from the CC name and has no case for plain cc.
+mk block set condition "${COMPILER_TYPE} == gcc && ${CC} == cc" <<'MK'
+CC=	gcc
+MK
