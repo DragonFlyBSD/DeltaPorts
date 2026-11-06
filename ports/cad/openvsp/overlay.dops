@@ -1,0 +1,6 @@
+port cad/openvsp
+type port
+reason "CPack names its staging directory after the OS"
+target @any
+
+mk set BUILD_PREFIX "OpenVSP-prefix/src/OpenVSP-build/_CPack_Packages/${OPSYS}/ZIP/OpenVSP-${DISTVERSION}-${OPSYS}"
