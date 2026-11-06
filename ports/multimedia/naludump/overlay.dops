@@ -1,0 +1,8 @@
+port multimedia/naludump
+type port
+reason "take the FreeBSD branches FreeBSD's patches add: sys/mount.h, sys/endian.h, no malloc.h"
+target @any
+
+text replace-once file files/patch-tools.c from "+#ifdef __FreeBSD__" to "+#if defined(__FreeBSD__) || defined(__DragonFly__)"
+text replace-once file files/patch-libsi-headers.h from "+#ifdef __FreeBSD__" to "+#if defined(__FreeBSD__) || defined(__DragonFly__)"
+text replace-once file files/patch-libsi-si.c from "+#ifndef __FreeBSD__" to "+#if !defined(__FreeBSD__) && !defined(__DragonFly__)"
