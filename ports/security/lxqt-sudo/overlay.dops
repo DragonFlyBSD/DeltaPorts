@@ -1,5 +1,7 @@
 port security/lxqt-sudo
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "define FreeBSD's C-locale password prompt on DragonFly too"
 target @any
 
+# files/patch-sudo.cpp defines it for __FreeBSD__ only but uses it everywhere.
+text replace-once file files/patch-sudo.cpp from "+#ifdef __FreeBSD__" to "+#if defined(__FreeBSD__) || defined(__DragonFly__)"
