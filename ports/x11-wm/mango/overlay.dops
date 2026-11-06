@@ -1,0 +1,7 @@
+port x11-wm/mango
+type port
+reason "keep sysconfdir under PREFIX on DragonFly, as FreeBSD's patch does for freebsd"
+target @any
+
+# The FreeBSD patch only skips meson.build's prefix stripping for osname freebsd.
+text replace-once file files/patch-meson.build from "osname != 'freebsd'" to "osname != 'freebsd' and osname != 'dragonfly'"
