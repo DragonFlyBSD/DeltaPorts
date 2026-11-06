@@ -1,9 +1,12 @@
 port deskutils/recoll
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "auto-converted from Makefile.DragonFly; build as C++17 for xapian 2.x headers"
 target @any
 
+# xapian 2.x headers use std::string_view, which libstdc++ has only from C++17.
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@ifdef REAL_GCC@&__z@g' \
 		${WRKSRC}/common/conf_post.h
+	${REINPLACE_CMD} -e 's@-std=c++11@-std=c++17@' \
+		${WRKSRC}/Makefile.in
 MK1
