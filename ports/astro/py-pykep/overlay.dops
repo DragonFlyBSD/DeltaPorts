@@ -1,0 +1,6 @@
+port astro/py-pykep
+type port
+reason "heyoka's headers need C++23 (std::ranges::to): GCC 14, as heyoka is built"
+target @any
+
+mk set USE_GCC_VERSION "14"
