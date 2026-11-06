@@ -1,0 +1,6 @@
+port x11-toolkits/aquamarine
+type port
+reason "hyprutils' headers need C++23 <format>; base GCC 12 lacks it, use GCC 14 as hyprutils does"
+target @any
+
+mk set USE_GCC_VERSION "14"
