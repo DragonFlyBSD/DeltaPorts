@@ -3,8 +3,8 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set USE_CXXSTD "gnu++98"
 mk add CONFIGURE_ENV "CC=c++"
+# config/py-compile still imports imp, gone in Python 3.12
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e "/LINK) -rpath/s/$$/ -lm/g"	\
 		${WRKSRC}/body/Makefile.in	\
@@ -12,4 +12,6 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/media/Makefile.in	\
 		${WRKSRC}/track/Makefile.in	\
 		${WRKSRC}/world/Makefile.in
+	${REINPLACE_CMD} -e 's/py_compile, imp$$/py_compile, importlib.util as imp/' \
+		-e 's/hasattr(imp, .get_tag.)/True/' ${WRKSRC}/config/py-compile
 MK1
