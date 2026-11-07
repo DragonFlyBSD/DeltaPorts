@@ -1,0 +1,4 @@
+port science/quest
+type dport
+reason "QuEST quantum computing simulator; not in FreeBSD ports"
+target @any
