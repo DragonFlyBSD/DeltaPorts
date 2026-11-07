@@ -1,0 +1,9 @@
+port databases/rubygem-red-gandiva
+type port
+reason "needs gandiva-glib; databases/arrow is built without Gandiva here"
+target @any
+
+# arrow's overlay leaves Gandiva out (its USES=llvm moves the build to
+# clang/libc++), so arrow-glib has no gandiva-glib for the gem's
+# dependency-check.
+mk set IGNORE "needs gandiva-glib, and databases/arrow is built without Gandiva on DragonFly"
