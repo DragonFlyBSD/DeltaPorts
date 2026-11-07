@@ -1,15 +1,17 @@
 port devel/gdb
 type port
-reason "filter warning options; set CONFIGURE_TARGET for DragonFly; dfly-patch copies dragonfly files"
+reason "DragonFly kgdb (kvm target, thread list, amd64 kernel frames); filter warning options; set CONFIGURE_TARGET for DragonFly; dfly-patch copies dragonfly files"
 target @any
 
 mk eval CFLAGS "${CFLAGS:N-Wno-unknown-warning-option}"
-mk add CXXFLAGS "-fpermissive"
 
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NKGDB}"
 mk eval CONFIGURE_TARGET "x86_64-portbld-${OPSYS:tl}${OSREL}"
 
-mk set KGDB_BROKEN "KGDB support not ready yet"
+# CXXFLAGS+= by hand: mk add writes a plain = here, dropping the default
+# flags (poly-bhz2). -fno-ipa-modref needs COMPILER_*, so after pre.mk.
+text replace-once file Makefile \
+     from ".include <bsd.port.pre.mk>\n" \
+     to   "CXXFLAGS+= -fpermissive\n.include <bsd.port.pre.mk>\n\n# Work around PR gcc/120987, as gdb 17.1 and later do themselves in\n# gdbsupport/common-defs.h for gcc 12 up to 16.0.\n.if ${COMPILER_TYPE} == gcc && ${COMPILER_VERSION} >= 120\nCXXFLAGS+=\t-fno-ipa-modref\n.endif\n"
 
 mk target set dfly-patch <<'MK'
 	${CP} ${DFLY_FILESDIR}/dfly-tdep.* ${WRKSRC}/gdb/
@@ -17,5 +19,21 @@ mk target set dfly-patch <<'MK'
 	${CP} ${DFLY_FILESDIR}/i386* ${WRKSRC}/gdb/
 	${CP} ${DFLY_FILESDIR}/amd64* ${WRKSRC}/gdb/
 MK
+
+# kgdb: FreeBSD's portable parts (modules, main) plus the DragonFly
+# target, thread list and amd64 support. FreeBSD's extrapatch-kgdb adds
+# FreeBSD-only objects; dragonfly/extrapatch-kgdb (cut against gdb 15.1
+# with dragonfly/patch-* applied) replaces it.
+mk target set post-patch-KGDB-on <<'MK'
+	@${CP} ${FILESDIR}/kgdb/fbsd-kld.c ${FILESDIR}/kgdb/kgdb-main.c \
+	    ${FILESDIR}/kgdb/kgdb.h ${WRKSRC}/gdb/
+	@${CP} ${DFLY_FILESDIR}/dfly-kgdb.h ${DFLY_FILESDIR}/dfly-kvm.c \
+	    ${DFLY_FILESDIR}/dfly-kthr.c ${DFLY_FILESDIR}/amd64dfly-kern.c \
+	    ${WRKSRC}/gdb/
+	@${PATCH} -d ${PATCH_WRKSRC} ${PATCH_ARGS} < ${DFLY_FILESDIR}/extrapatch-kgdb
+MK
+
+# The package now has kgdb (KGDB is on by default, as in FreeBSD).
+mk bump PORTREVISION
 
 patch apply diffs/Makefile.diff
