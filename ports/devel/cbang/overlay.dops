@@ -1,3 +1,3 @@
 port devel/cbang
 type port
-reason "DragonFly: CPURegsAArch64.cpp calls memset without <cstring>, which libstdc++ does not pull in (dragonfly/@<line> patch)"
+reason "DragonFly: CPURegsAArch64.cpp calls memset without <cstring> (dragonfly/@<line>); take the FreeBSD <netinet/in.h> and executable-path code (dragonfly/)"
