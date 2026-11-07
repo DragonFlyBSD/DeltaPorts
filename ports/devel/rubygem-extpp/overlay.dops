@@ -1,0 +1,8 @@
+port devel/rubygem-extpp
+type port
+reason "read the base gcc version, which DragonFly prints as '12.5' (dragonfly/)"
+target @any
+
+# "c++ [DragonFly] 12.5 Release/..." missed the X.Y.Z match, so extensions
+# (red-arrow) got no -std and arrow's headers need C++20. Rebuild the gem.
+mk bump PORTREVISION
