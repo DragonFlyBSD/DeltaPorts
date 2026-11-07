@@ -1,6 +1,31 @@
 port sysutils/cpu-microcode-amd
 type port
-reason "auto-converted from Makefile.DragonFly"
 target @any
-
-mk set DFLY_UNMAINTAINED "yes"
+reason "Use packaged firmware for early and late CPU microcode loading"
+mk set MAINTAINER "lileding@gmail.com"
+mk set DISTFILES ""
+mk set ONLY_FOR_ARCHS "x86_64"
+mk set UCODEDIR "${LOCALBASE}/lib/firmware/amd-ucode" on-missing noop
+mk set BUILD_DEPENDS "linux-firmware-nonfree>=20260622:sysutils/firmware@nonfree" on-missing noop
+mk set PORTVERSION "20260622"
+mk unset MASTER_SITES
+mk unset DIST_SUBDIR
+mk unset _REV
+mk unset EXTRACT_CMD
+mk unset EXTRACT_BEFORE_ARGS
+mk unset EXTRACT_AFTER_ARGS
+mk set UCODE_FILES "microcode_amd.bin microcode_amd_fam15h.bin microcode_amd_fam16h.bin microcode_amd_fam17h.bin microcode_amd_fam19h.bin microcode_amd_fam1ah.bin" on-missing noop
+mk set PLIST_FILES "${UCODE_FILES:S,^,${DATADIR}/,} ${FWDIR}/amd-ucode.bin"
+mk target set post-extract <<'MK'
+	${CAT} ${UCODE_FILES:S,^,${UCODEDIR}/,} > ${WRKSRC}/amd-ucode.bin
+MK
+mk target set do-install <<'MK'
+	${MKDIR} ${STAGEDIR}${DATADIR} ${STAGEDIR}${FWDIR}
+	${INSTALL_DATA} ${WRKSRC}/amd-ucode.bin ${STAGEDIR}${FWDIR}/
+	${INSTALL_DATA} ${UCODE_FILES:S,^,${UCODEDIR}/,} ${STAGEDIR}${DATADIR}/
+MK
+file materialize dragonfly/pkg-message -> pkg-message
+text replace-once file Makefile from ".for f in ${DISTFILES}\n\t${INSTALL_DATA} ${WRKSRC}/${f} ${STAGEDIR}${DATADIR}/${f:C/\\?.*//}\n.endfor" to ""
+mk target rename post-extract -> pre-configure
+text replace-once file files/LICENSE.amd-ucode from "2010-2018" to "2010-2025"
+mk add PLIST_DIRS "${FWDIR}"
