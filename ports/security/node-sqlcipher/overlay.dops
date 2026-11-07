@@ -1,9 +1,13 @@
 port security/node-sqlcipher
 type port
-reason "DragonFly: build the addon with GCC 13 like node24"
+reason "DragonFly: build the addon with GCC 13 like node24; devel/esbuild for the TypeScript build"
 target @2026Q4,@main
 
 # 4.x compiles its node-gyp addon with -std=gnu++20, which base gcc 8
 # rejects. Use gcc 13, the compiler www/node24 (USES=nodejs:24) is built
 # with, so the addon and node share one libstdc++.
 mk set USE_GCC_VERSION "13"
+
+# npm's @esbuild/freebsd-x64 binary does not run on DragonFly.
+mk add BUILD_DEPENDS "esbuild:devel/esbuild"
+mk add MAKE_ENV "ESBUILD_BINARY_PATH=${LOCALBASE}/bin/esbuild"
