@@ -1,0 +1,4 @@
+port audio/gnustep-cdplayer
+type port
+reason "declare libcdaudio's cddb_direct_discid(), which clang 16+ rejects implicitly (dragonfly/)"
+target @any
