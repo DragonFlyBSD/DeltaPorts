@@ -1,0 +1,5 @@
+port science/dssp
+type port
+reason "C++20 <format>: base GCC 12's libstdc++ lacks it, use GCC 14"
+target @any
+mk set USE_GCC_VERSION "14"
