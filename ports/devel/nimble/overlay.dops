@@ -1,6 +1,6 @@
 port devel/nimble
 type port
-reason "DragonFly: the bundled nim-chronos tests defined(dragonflybsd) for its BSD sendfile(); Nim calls the OS dragonfly. DragonFly's ln -sF does not replace bearssl's empty csources directory"
+reason "DragonFly: the bundled nim-chronos tests defined(dragonflybsd) for its BSD sendfile(); Nim calls the OS dragonfly. DragonFly's ln -sF does not replace bearssl's empty csources directory; getNightliesUrl() has no DragonFly OS name"
 
 # post-extract links BearSSL in with "ln -sF bearsslc .../bearssl/csources".
 # FreeBSD's ln -F replaces the existing (empty) csources directory;
@@ -13,3 +13,6 @@ mk target set dfly-patch <<'MK1'
 	${RM} -r ${WRKSRC_bearssl}/bearssl/csources
 	${LN} -s ${WRKSRC_bearsslc} ${WRKSRC_bearssl}/bearssl/csources
 MK1
+
+# dragonfly/@2026Q4: 0.24.1's getNightliesUrl() picks an OS name with a
+# when chain that has no else, so it does not compile here.
