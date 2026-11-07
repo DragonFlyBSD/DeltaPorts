@@ -1,6 +1,6 @@
 port devel/qtcreator
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "fdatasync, asyncjob plist entry, GLSL T_RESERVED clash; no Qt docs (dp-shs.52)"
 target @any
 
 mk add CFLAGS "-Dfdatasync=fsync"
@@ -12,3 +12,7 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/src/libs/glsl/glslparsertable_p.h		\
 		${WRKSRC}/src/plugins/glsleditor/glslhighlighter.cpp
 MK1
+
+# The Qt API documentation (misc/qt6-doc) needs qdoc, which devel/qt6-tools
+# does not build here (dp-shs.52).
+mk add OPTIONS_EXCLUDE "DOCS"
