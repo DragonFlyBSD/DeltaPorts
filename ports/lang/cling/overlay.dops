@@ -1,4 +1,20 @@
 port lang/cling
 type port
-reason "DragonFly: HandleLLVMOptions.cmake patch (dragonfly/)"
+reason "python:build for LLVM's CMakeLists; no libprocstat on DragonFly (dragonfly/); install cling's tools from their own Makefile"
 target @any
+
+# FreeBSD's builders get python from another dependency; ours don't.
+text replace-once file Makefile \
+     from "USES=\t\tcmake gnome" \
+     to   "USES=\t\tcmake gnome python:build"
+
+# dragonfly/: FreeBSD's patch links procstat for its executable-path lookup
+# (__FreeBSD__ only); DragonFly takes the generic Unix branch.
+
+# tools/cling/tools/install/strip is a ninja target name; with Unix Makefiles
+# (cmake.mk has no ninja here) it only exists in that directory's Makefile.
+text line-remove file Makefile exact "INSTALL_TARGET+=\ttools/cling/tools/install/strip"
+mk target set dfly-install <<'MK'
+	cd ${INSTALL_WRKSRC}/tools/cling/tools && \
+		${SETENV} ${MAKE_ENV} ${MAKE_CMD} ${MAKE_ARGS} DESTDIR=${STAGEDIR} install/strip
+MK
