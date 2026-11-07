@@ -1,0 +1,12 @@
+port x11-toolkits/copperspice
+type port
+reason "the module cmake files list the BSDs without DragonFly; add it. kinfo_proc's kp_ fields (dragonfly/)"
+target @any
+
+# 18 CMAKE_SYSTEM_NAME tests pick the unix sources for OpenBSD|FreeBSD|NetBSD
+# only (the top-level CMakeLists.txt already has DragonFly).
+mk target set dfly-patch <<'MK1'
+	${GREP} -rlF --include='*.cmake' --include=CMakeLists.txt \
+		'FreeBSD|NetBSD)"' ${WRKSRC}/src | \
+		${XARGS} ${REINPLACE_CMD} -e 's/FreeBSD|NetBSD)"/FreeBSD|NetBSD|DragonFly)"/'
+MK1
