@@ -1,3 +1,10 @@
 port sysutils/wmtop
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly takes the FREEBSD code (kinfo_proc fields in dragonfly/)"
+target @any
+
+# configure.ac accepts only linux* and *freebsd* hosts.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/\[\*freebsd\*\],/[*freebsd*|*dragonfly*],/' \
+		${WRKSRC}/configure.ac
+MK
