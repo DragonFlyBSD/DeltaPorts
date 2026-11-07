@@ -1,0 +1,6 @@
+port devel/qt6
+type port
+reason "leave out the qt6-doc component, which needs qdoc (dp-shs.52)"
+target @any
+
+mk set USE_QT "${_USE_QT_ALL:Ndoc:S/$/:run/}"
