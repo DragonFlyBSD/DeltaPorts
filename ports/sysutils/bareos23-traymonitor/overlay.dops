@@ -1,0 +1,13 @@
+port sysutils/bareos23-traymonitor
+type port
+reason "the server overlay's ACL/xattr and libintl settings, which sit in the master's client/server-only block"
+target @any
+
+# bareos23-server's overlay lands inside the master Makefile's
+# 23-client/23-server block. The traymonitor builds bconsole with -Dnls=ON
+# (only FreeBSD gets link_libraries(intl)) and the findlib ACL/xattr code,
+# which has no DragonFly section.
+mk add CMAKE_ARGS "-Dacl=OFF -DHAVE_SYS_EXTATTR_H:BOOL=OFF"
+mk block set condition "1" <<'MK'
+LDFLAGS+=	-lintl
+MK
