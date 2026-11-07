@@ -1,5 +1,5 @@
---- pdfium/core/fxcrt/include/fx_system.h.intermediate	2019-09-05 10:50:28.000000000 +0000
-+++ pdfium/core/fxcrt/include/fx_system.h
+--- 3rdparty/pdfium/core/fxcrt/fx_system.h.orig
++++ 3rdparty/pdfium/core/fxcrt/fx_system.h
 @@ -40,7 +40,7 @@
  #elif defined(_WIN64)
  #define _FX_OS_ _FX_WIN64_DESKTOP_
