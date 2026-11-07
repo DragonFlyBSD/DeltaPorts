@@ -1,0 +1,7 @@
+port misc/qt6-doc
+type port
+reason "needs qdoc, which devel/qt6-tools does not build here (dp-shs.52)"
+target @any
+
+# qdoc links libclang's C++ API; Qt6 is gcc/libstdc++, devel/llvm* libc++.
+mk set IGNORE "needs qdoc, which needs a libclang built against libstdc++ (dp-shs.52)"
