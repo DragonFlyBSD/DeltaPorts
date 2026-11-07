@@ -1,11 +1,14 @@
 port net-mgmt/resource-agents
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "no icmp6.h probe, no -Werror or -Wunsigned-char for gcc, FreeBSD storage_mon ioctls (dragonfly/)"
 target @any
 
 mk add CONFIGURE_ARGS "ac_cv_header_netinet_icmp6_h=no"
+# cc_supports_flag runs AC_PROG_CPP's sanity check with each flag, and gcc's
+# cpp fails on -Wunsigned-char (unknown to gcc), aborting configure.
 mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e 's/-Werror[[:>:]]//g' ${WRKSRC}/configure.ac
+	${REINPLACE_CMD} -e 's/-Werror[[:>:]]//g' -e '/^[[:space:]]*-Wunsigned-char$$/d' \
+		${WRKSRC}/configure.ac
 MK1
 
 # dragonfly/@2026Q4, @main: patch-tools_storage__mon.c, regenerated for
