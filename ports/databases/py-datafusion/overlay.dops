@@ -1,0 +1,10 @@
+port databases/py-datafusion
+type port
+reason "opt into cargo:extra for the libmimalloc-sys TLS model patch"
+target @any
+
+# on the USES line itself: the Makefile includes bsd.port.pre.mk, which
+# processes USES before anything appended later
+text replace-once file Makefile \
+     from "USES=\t\tcargo python" \
+     to   "USES=\t\tcargo:extra python"
