@@ -1,0 +1,4 @@
+port graphics/libosmesa
+type lock
+reason "Mesa 21.3.9 classic OSMesa, kept from DPorts; FreeBSD no longer has graphics/libosmesa"
+target @any
