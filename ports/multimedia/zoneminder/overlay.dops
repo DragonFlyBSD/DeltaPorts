@@ -1,6 +1,6 @@
 port multimedia/zoneminder
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "take the FreeBSD build settings, ENODATA fallback and mc_rip (dragonfly/)"
 target @any
 
 mk add CMAKE_ARGS "BSD=1"
