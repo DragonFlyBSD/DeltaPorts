@@ -1,6 +1,6 @@
 port databases/mysql97-server
 type port
-reason "DragonFly: C++20 needs GCC_DEFAULT (server and mysql97-client)"
+reason "DragonFly: C++20 needs GCC_DEFAULT (server and mysql97-client); pkg-config for libfido2, the BSD DNS SRV path and the bundled abseil's FreeBSD branches (dragonfly/)"
 
 # compiler:c++20-lang resolves to base gcc 8.3, which rejects -std=c++20,
 # so CMake's compiler check fails for mysql97-client, a slave of this port.
