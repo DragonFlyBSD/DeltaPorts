@@ -1,6 +1,6 @@
 port sysutils/libdnf
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "no sys/auxv.h: skip the ARM hwcap probe and take <limits.h> as FreeBSD does (dragonfly/)"
 target @any
 
 mk target set dfly-patch <<'MK1'
