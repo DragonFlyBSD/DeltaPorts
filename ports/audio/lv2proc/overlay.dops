@@ -1,0 +1,9 @@
+port audio/lv2proc
+type port
+reason "drop -Wno-error=nullability-extension (clang-only, gcc rejects it)"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/ -Wno-error=nullability-extension//' \
+		${WRKSRC}/src/Makefile.in
+MK
