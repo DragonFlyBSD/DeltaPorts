@@ -11,10 +11,14 @@ reason "DragonFly: no CMake runtime dependency sets; take the FreeBSD code paths
 # branches; DragonFly has both, so take them too. libf3d and the
 # application use std::filesystem throughout, which base gcc 8.3 cannot
 # link without libstdc++fs; build with GCC_DEFAULT (VTK and the other C++
-# dependencies are libstdc++ builds).
+# dependencies are libstdc++ builds). dragonfly/: <limits.h> for PATH_MAX
+# (FreeBSD gets it indirectly) and tinyfiledialogs' XSI realpath().
 target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+# post-install's cmake --install takes DESTDIR from the environment, which
+# only ninja.mk (off in our cmake.mk) puts there.
+mk add MAKE_ENV "DESTDIR=${STAGEDIR}"
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e '/^    RUNTIME_DEPENDENCY_SET libf3dDeps$$/d' \
 		-e '/^  install(RUNTIME_DEPENDENCY_SET libf3dDeps$$/,/^    DIRECTORIES /d' \
