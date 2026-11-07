@@ -1,10 +1,17 @@
 port net/sngrep
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "ncurses and libpcap from ports: no public panel/menu/form or libpcap.pc in DragonFly's base; ports ncurses has no w-suffixed .pc for them"
 target @any
 
-mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e 's@ncursesw@ncurses@g' -e 's@menuw@menu@g' \
-			 -e 's@panelw@panel@g' -e 's@formw@form@g' \
-		${WRKSRC}/configure.ac
-MK1
+# devel/ncurses is built --disable-lib-suffixes (ncursesw.pc is a compat
+# link, panel/form/menu.pc are the wide ones). net/libpcap as net/ipdecap.
+text replace-once file Makefile \
+     from "USES=\t\tcmake ncurses pkgconfig" \
+     to   "USES=\t\tcmake ncurses:port pkgconfig"
+mk add LIB_DEPENDS "libpcap.so:net/libpcap"
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/IMPORTED_TARGET panelw )/IMPORTED_TARGET panel )/' \
+		-e 's/IMPORTED_TARGET formw )/IMPORTED_TARGET form )/' \
+		-e 's/IMPORTED_TARGET menuw )/IMPORTED_TARGET menu )/' \
+		${WRKSRC}/CMakeLists.txt
+MK
