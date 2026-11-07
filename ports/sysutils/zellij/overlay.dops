@@ -1,6 +1,6 @@
 port sysutils/zellij
 type port
-reason "DragonFly: cap-primitives 3.4.4 oflags and aws-lc-sys 0.39.0 entropy source"
+reason "DragonFly cases for vendored crates: cap-primitives and system-interface oflags, aws-lc-sys entropy, notify, polling"
 target @any
 
 # dragonfly/@2026Q4, @main:
@@ -12,3 +12,5 @@ target @any
 #   (misc/py-hf-xet's patches).
 # - notify 8.2.0: its kqueue and mio dependencies are keyed on a
 #   "dragonflybsd" target_os that does not exist (devel/ruff's patch).
+# - system-interface 0.27.2: rustix has no fadvise, fallocate or
+#   OFlags::DSYNC/RSYNC here; take the NetBSD and FreeBSD fallbacks.
