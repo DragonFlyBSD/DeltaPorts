@@ -1,0 +1,9 @@
+port emulators/Ymir
+type port
+reason "build with GCC 14 against the libstdc++ deps; the FreeBSD crash handler with CS and SS only (dragonfly/)"
+target @any
+
+# USES=llvm exports ports clang, whose libc++ does not link with the
+# gcc-built fmt and rtmidi here.
+mk eval USES "${USES:Nllvm*}"
+mk set USE_GCC_VERSION "14"
