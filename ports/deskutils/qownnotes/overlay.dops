@@ -1,9 +1,15 @@
 port deskutils/qownnotes
 type port
-reason "DragonFly: no elf_aux_info()/<sys/auxv.h> for the bundled Botan"
+reason "DragonFly: no elf_aux_info()/<sys/auxv.h> for the bundled Botan; gmake for the qt6 Makefiles; a DragonFly platform() name (dragonfly/)"
 target @any
 
 mk add CFLAGS "-Wno-deprecated-declarations"
+
+# Our cmake.mk generates Unix Makefiles (no ninja); the demonotes rules
+# name files with spaces, which only gmake reads.
+text replace-once file Makefile \
+     from "USES+=\t\tcmake qt:6" \
+     to   "USES+=\t\tcmake gmake qt:6"
 
 # FreeBSD's botan.pri patch defines BOTAN_TARGET_OS_HAS_ELF_AUX_INFO for the
 # freebsd qmake scope, which DragonFly's Qt5 also takes; DragonFly has
