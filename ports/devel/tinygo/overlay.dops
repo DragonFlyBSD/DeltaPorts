@@ -1,19 +1,17 @@
 port devel/tinygo
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: vendored go.bug.st/serial uses FreeBSD's port code"
 target @any
 
+# TIOCFLUSH takes a pointer on DragonFly, so the buffer resets come from
+# dragonfly/, not from FreeBSD's serial_resetbuf_linux_bsd.go.
 mk target set dfly-patch <<'MK1'
-	# Copy over some files and add dragonfly to the list of systems
-	# available for vendor/go.bug.st
 	${CP} ${WRKSRC}/vendor/go.bug.st/serial/serial_freebsd.go \
 		${WRKSRC}/vendor/go.bug.st/serial/serial_dragonfly.go
-	${CP} ${WRKSRC}/vendor/go.bug.st/serial/zsyscall_freebsd.go \
-		${WRKSRC}/vendor/go.bug.st/serial/zsyscall_dragonfly.go
-	${REINPLACE_CMD} -e 's/openbsd/& dragonfly/' \
+	${CP} ${WRKSRC}/vendor/go.bug.st/serial/enumerator/usb_freebsd.go \
+		${WRKSRC}/vendor/go.bug.st/serial/enumerator/usb_dragonfly.go
+	${REINPLACE_CMD} -e 's/|| openbsd$$/|| openbsd || dragonfly/' \
 		${WRKSRC}/vendor/go.bug.st/serial/serial_unix.go \
 		${WRKSRC}/vendor/go.bug.st/serial/unixutils/pipe.go \
 		${WRKSRC}/vendor/go.bug.st/serial/unixutils/select.go
-	${REINPLACE_CMD} -e '/B460800/d' -e '/B921600/d' \
-		${WRKSRC}/vendor/go.bug.st/serial/serial_dragonfly.go
 MK1
