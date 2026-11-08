@@ -1,3 +1,7 @@
 port editors/imhex
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "gcc 14 and libstdc++: no libc++ experimental flag"
+target @any
+
+mk set USE_GCC_VERSION "14"
+mk remove CXXFLAGS "-fexperimental-library"
