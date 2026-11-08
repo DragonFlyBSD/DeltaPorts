@@ -1,6 +1,6 @@
 --- Uses/qt.mk
 +++ Uses/qt.mk
-@@ -109,7 +109,9 @@
+@@ -109,7 +109,13 @@
  # better to support custom settings. Dereferencing the detection allows to
  # avoid forking a shell on each inclusion of this file, and to catch any CXX
  # customization (via USE_GCC, etc.).
@@ -8,6 +8,10 @@
 +# Qt5 and Qt6 build with gcc and libstdc++, like the C++ libraries they
 +# link. Stated rather than detected.
 +QMAKE_COMPILER=	g++
++# 6.4's base gcc 8 cannot build Qt 6: use the ports default gcc there.
++.  if ${_QT_VER:M6} && ${DFLY_BASE_CCVER} == gcc80
++USE_GCC_VERSION?=	${GCC_DEFAULT}
++.  endif
  
  .  for dir in BIN INC LIB ARCH PLUGIN LIBEXEC IMPORT \
  	QML SBOM DATA DOC L10N ETC EXAMPLE TEST MKSPEC \
