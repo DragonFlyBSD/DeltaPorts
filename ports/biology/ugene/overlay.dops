@@ -1,8 +1,16 @@
 port biology/ugene
 type port
-reason "remove umuscle plugin from plist; materialize dragonfly patches"
+reason "no umuscle plugin (needs a complete FILE); gcc-only -Werror flags"
 target @any
 
+# umuscle subclasses FILE, which is opaque on DragonFly.
 text line-remove file pkg-plist exact "lib/ugene/plugins/libumuscle.so" on-missing noop
 text line-remove file pkg-plist exact "lib/ugene/plugins/umuscle.license" on-missing noop
 text line-remove file pkg-plist exact "lib/ugene/plugins/umuscle.plugin" on-missing noop
+
+# Upstream sets -Werror= for GCC only, so FreeBSD's clang never sees them.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/-Werror=/-W/' \
+		-e '/add_subdirectory(src\/plugins_3rdparty\/umuscle)/d' \
+		${WRKSRC}/CMakeLists.txt
+MK
