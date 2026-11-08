@@ -1,7 +1,22 @@
 port astro/qmapshack
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "Qt 6 defines Q_OS_DRAGONFLY, not Q_OS_FREEBSD; take the FreeBSD paths"
 target @any
 
-mk add USES "gmake"
+# bsdisks is FreeBSD-only (libgeom).
 mk eval RUN_DEPENDS "${RUN_DEPENDS:N*bsdisks}"
+
+# CMake makes Makefiles here, and bmake can't handle the icon names with spaces.
+mk add USES "gmake"
+
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/defined(Q_OS_FREEBSD)/(defined(Q_OS_FREEBSD) || defined(Q_OS_DRAGONFLY))/g' \
+		${WRKSRC}/src/qmt_rgb2pct/main.cpp \
+		${WRKSRC}/src/qmaptool/setup/CAppSetupLinux.cpp \
+		${WRKSRC}/src/qmaptool/setup/IAppSetup.cpp \
+		${WRKSRC}/src/qmapshack/CAbout.cpp \
+		${WRKSRC}/src/qmapshack/device/CDeviceWatcherLinux.cpp \
+		${WRKSRC}/src/qmapshack/setup/CAppSetupLinux.cpp \
+		${WRKSRC}/src/qmapshack/setup/IAppSetup.cpp \
+		${WRKSRC}/src/qmapshack/gis/CGisListWks.cpp
+MK1
