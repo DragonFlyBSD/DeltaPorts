@@ -1,19 +1,32 @@
 port emulators/qemu-devel
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "emulators/qemu's DragonFly patches; ncurses; no netmap; ports gcc"
 target @any
 
 mk add USES "ncurses"
-mk add CONFIGURE_ARGS "--disable-netmap --disable-stack-protector --enable-curses"
-mk target set dfly-patch <<'MK1'
+mk add CONFIGURE_ARGS "--disable-stack-protector"
+mk add CONFIGURE_ARGS "--enable-curses"
+
+# No netmap on DragonFly.
+text replace-once file Makefile from "--enable-netmap" to "--disable-netmap"
+
+# meson.build requires GCC 10.4 or later.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e "/find_library/s@'iconv',@& dirs: '${LOCALBASE}/lib',@g" \
 			 -e "/dirs =/s@'/usr/include/ncursesw'@&, '${LOCALBASE}/include/ncurses', '${LOCALBASE}/lib'@g" \
 			 -e "s@'ncursesw', 'ncurses', 'cursesw', 'pdcurses'@'ncurses'@" \
 			 -e "s@dependency(curses_libname,@dependency('ncurses_xxx',@g" \
 			 -e "s@links(curses_test,@& args: '-DNCURSES_WIDECHAR',@g" \
 		${WRKSRC}/meson.build
+MK
 
-MK1
-mk target set dfly-install <<'MK2'
-	${TOUCH} ${STAGEDIR}${PREFIX}/bin/qemu-i386 ${STAGEDIR}${PREFIX}/bin/qemu-x86_64
-MK2
+# No bsd-user here; the plist lists its binaries.
+mk target set dfly-install <<'MK'
+	${TOUCH} ${STAGEDIR}${PREFIX}/bin/qemu-i386 \
+		${STAGEDIR}${PREFIX}/bin/qemu-x86_64 \
+		${STAGEDIR}${PREFIX}/bin/qemu-arm \
+		${STAGEDIR}${PREFIX}/bin/qemu-aarch64 \
+		${STAGEDIR}${PREFIX}/bin/qemu-riscv64
+MK
