@@ -6,3 +6,9 @@ target @any
 mk set USE_GCC_VERSION "13"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSASLCLIENT}"
 mk add LDFLAGS "-Wl,--start-group"
+
+# 6.4's base zlib is 1.2.11; MySQL wants 1.2.13. The client takes this from here.
+mk ensure-include bsd.port.options.mk
+mk block set condition "${DFLYVERSION} < 600500" <<'MK'
+CMAKE_ARGS+=	-DWITH_ZLIB=bundled
+MK
