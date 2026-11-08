@@ -1,6 +1,6 @@
---- src/util/u_thread.h.orig	2021-06-15 12:49:06.371343000 +0200
-+++ src/util/u_thread.h	2021-06-15 12:49:34.200714000 +0200
-@@ -113,7 +113,7 @@
+--- src/util/u_thread.c.orig	2026-09-30 21:48:02 UTC
++++ src/util/u_thread.c
+@@ -106,7 +106,7 @@
        buf[len] = '\0';
        pthread_setname_np(pthread_self(), buf);
     }

@@ -4,3 +4,6 @@ reason "clear OPTIONS_EXCLUDE_DragonFly and add dragonfly source patches"
 target @any
 
 mk set OPTIONS_EXCLUDE_DragonFly ""
+
+# radeonsi needs libelf, which DragonFly's base lacks (FreeBSD's has it).
+mk add LIB_DEPENDS "libelf.so:devel/libelf"
