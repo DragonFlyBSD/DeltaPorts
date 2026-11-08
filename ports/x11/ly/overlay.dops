@@ -1,9 +1,18 @@
 port x11/ly
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "ly knows Linux and FreeBSD only: take the FreeBSD code; Aro has no __thread"
 target @any
 
+# DragonFly has FreeBSD's kbio.h, consio.h and login_cap.h. Aro (translate-c)
+# has no __thread, which DragonFly's <errno.h> uses.
 mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
-		${WRKSRC}/makefile
+	${REINPLACE_CMD} -e 's/target\.result\.os\.tag == \.freebsd/(& or target.result.os.tag == .dragonfly)/' \
+		${WRKSRC}/ly-core/build.zig ${WRKSRC}/ly-ui/build.zig
+	${REINPLACE_CMD} -e 's/\.freebsd => struct/.freebsd, .dragonfly => struct/' \
+		-e 's/builtin\.os\.tag == \.freebsd/(& or builtin.os.tag == .dragonfly)/' \
+		${WRKSRC}/ly-core/src/interop.zig
+	${REINPLACE_CMD} -e 's/builtin\.os\.tag != \.freebsd/(& and builtin.os.tag != .dragonfly)/' \
+		${WRKSRC}/src/auth.zig
+	${REINPLACE_CMD} -e 's/\.{ "_Thread_local", \.keyword_thread_local },/& .{ "__thread", .keyword_thread_local },/' \
+		${WRKDIR}/zig-packages/aro-*/src/aro/Tokenizer.zig
 MK1
