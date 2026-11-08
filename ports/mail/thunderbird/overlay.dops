@@ -2,7 +2,7 @@ port mail/thunderbird
 type port
 reason "DragonFly: Gecko built like www/firefox (clang + libc++ headers, per-line dragonfly/ patch sets)"
 
-# Same Gecko as www/firefox 159.0: same setup and patches (see there), plus
+# Same Gecko as www/firefox 160.0: same setup and patches (see there), plus
 # malloc.h out of system-headers and the mtu patches for comm/'s own copy.
 target @2026Q4,@main
 
