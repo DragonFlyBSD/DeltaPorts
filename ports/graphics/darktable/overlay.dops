@@ -1,7 +1,10 @@
 port graphics/darktable
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "gcc 13; backtrace() is in libexecinfo"
 target @any
 
 mk set USE_GCC_VERSION "13"
-mk add LDFLAGS "-lexecinfo"
+
+# FreeBSD's LDFLAGS+= -lexecinfo is powerpc64le-only, and mk add treats it
+# as already present (poly-85cy), so add it at top level.
+text line-insert-after file Makefile anchor ".include <bsd.port.options.mk>" line "LDFLAGS+=\t-lexecinfo"
