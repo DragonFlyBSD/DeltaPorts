@@ -24,6 +24,11 @@ mk add BUILD_DEPENDS "${LOCALBASE}/llvm${LLVM_VERSION}/include/c++/v1/new:devel/
 mk add LDFLAGS "-L${LLVM_PREFIX}/lib"
 mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_VERSION}"
 mk add LDFLAGS "-Wl,-rpath,/usr/lib/${DFLY_BASE_CCVER}"
+# 6.4: link libpthread into the executables, as www/firefox does.
+mk ensure-include bsd.port.options.mk
+mk block set condition "${DFLYVERSION} < 600500" <<'MK'
+LDFLAGS+=	-Wl,--no-as-needed -lpthread -Wl,--as-needed
+MK
 mk add CONFIGURE_ENV "BINDGEN_CFLAGS=\"-I${LOCALBASE}/include -stdlib=libc++ -cxx-isystem ${LLVM_PREFIX}/include/c++/v1\""
 mk set BINARY_ALIAS "clang=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang clang++=${LOCALBASE}/llvm${LLVM_VERSION}/bin/clang++ wasm-ld=${LOCALBASE}/llvm${LLVM_VERSION}/bin/wasm-ld"
 mk set CC "${LLVM_PREFIX}/bin/clang"
