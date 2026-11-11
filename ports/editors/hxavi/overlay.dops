@@ -1,0 +1,8 @@
+port editors/hxavi
+type port
+reason "dev_t, not glibc's __dev_t; the link line ignores LDFLAGS, pass the ncurses -L in LIBS"
+target @any
+
+mk block set condition "1" <<'MK'
+MAKE_ARGS+=	LIBS="-L${NCURSESLIB} -lncursesw -lm"
+MK
