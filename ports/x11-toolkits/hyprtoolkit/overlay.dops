@@ -1,0 +1,13 @@
+port x11-toolkits/hyprtoolkit
+type port
+reason "hyprutils' headers need C++23 <format>, use GCC 14 as hyprutils does; eventfd from devel/libepoll-shim"
+target @any
+mk set USE_GCC_VERSION "14"
+
+# SyncTimeline.cpp includes <sys/eventfd.h>, which DragonFly lacks
+# (devel/sdbus-cpp does the same).
+mk add LIB_DEPENDS "libepoll-shim.so:devel/libepoll-shim"
+mk block set condition "1" <<'MK'
+CXXFLAGS+=	-I${LOCALBASE}/include/libepoll-shim
+LDFLAGS+=	-L${LOCALBASE}/lib -lepoll-shim
+MK
