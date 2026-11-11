@@ -1,0 +1,8 @@
+port graphics/ximaging
+type port
+reason "no mf/Makefile.DragonFly: build with the FreeBSD one"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${CP} ${WRKSRC}/mf/Makefile.FreeBSD ${WRKSRC}/mf/Makefile.DragonFly
+MK
