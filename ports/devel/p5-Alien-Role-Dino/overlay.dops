@@ -1,0 +1,7 @@
+port devel/p5-Alien-Role-Dino
+type port
+reason "add a DragonFly role, the same as the FreeBSD one (rpath in libs)"
+target @any
+
+text line-insert-after file pkg-plist anchor "%%SITE_PERL%%/Alien/Role/Dino/darwin.pm" line "%%SITE_PERL%%/Alien/Role/Dino/dragonfly.pm"
+text line-insert-after file pkg-plist anchor "%%PERL5_MAN3%%/Alien::Role::Dino::darwin.3.gz" line "%%PERL5_MAN3%%/Alien::Role::Dino::dragonfly.3.gz"
