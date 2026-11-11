@@ -1,0 +1,8 @@
+port sysutils/pollinfo
+type port
+reason "FreeBSD specific: ptrace syscall-argument interface"
+target @any
+
+mk block set condition "1" <<'MK'
+IGNORE=	FreeBSD specific: ptrace syscall-argument interface
+MK
