@@ -1,0 +1,4 @@
+port devel/cltune
+type port
+reason "include <limits> for std::numeric_limits; gcc 12's libstdc++ no longer pulls it in"
+target @any
