@@ -1,0 +1,4 @@
+port sysutils/goaccess
+type port
+reason "take the FreeBSD branches: <sys/endian.h> in websocket.h, _POSIX_HOST_NAME_MAX in wsauth.c"
+target @any
