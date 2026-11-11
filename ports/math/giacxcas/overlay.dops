@@ -1,0 +1,4 @@
+port math/giacxcas
+type port
+reason "QuickJS: declare environ and sighandler_t as on FreeBSD"
+target @any
