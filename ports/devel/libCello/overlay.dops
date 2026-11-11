@@ -1,0 +1,4 @@
+port devel/libCello
+type port
+reason "take the FreeBSD branch of the Makefile (shared library, DESTDIR)"
+target @any
