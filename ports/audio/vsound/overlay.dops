@@ -1,6 +1,6 @@
 port audio/vsound
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "configure: x86_64; ioctl takes an unsigned long request as on FreeBSD"
 target @any
 
 mk target set dfly-patch <<'MK1'
