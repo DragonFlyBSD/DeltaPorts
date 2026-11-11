@@ -1,0 +1,4 @@
+port ftp/vsftpd-ext
+type port
+reason "define WTMPX_FILE for updwtmpx()"
+target @any
