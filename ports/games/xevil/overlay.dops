@@ -1,0 +1,11 @@
+port games/xevil
+type port
+reason "build the freebsd target; there is no dragonfly one"
+target @any
+
+text replace-once file Makefile \
+     from "ALL_TARGET=\t${OPSYS:tl}" \
+     to   "ALL_TARGET=\tfreebsd"
+text replace-once file Makefile \
+     from "${WRKSRC}/x11/${OPSYS:tu}/${PORTNAME}" \
+     to   "${WRKSRC}/x11/FREEBSD/${PORTNAME}"
