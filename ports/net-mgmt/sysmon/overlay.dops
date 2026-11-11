@@ -1,0 +1,4 @@
+port net-mgmt/sysmon
+type port
+reason "BSD ip/icmp header names and RLIMIT_NOFILE, as on FreeBSD"
+target @any
