@@ -1,0 +1,4 @@
+port math/fastops
+type port
+reason "gcc 11+ has _mm_loadu_si32 too; do not declare it again"
+target @any
