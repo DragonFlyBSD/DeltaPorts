@@ -1,0 +1,4 @@
+port net-mgmt/simplomon
+type port
+reason "take the FreeBSD branches: HOST_NAME_MAX fallback, no ICMP ping checker"
+target @any
