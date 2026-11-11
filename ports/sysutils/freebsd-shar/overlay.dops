@@ -1,0 +1,6 @@
+port sysutils/freebsd-shar
+type port
+reason "build with the system mk files; there is no /usr/src/share/mk in the builder"
+target @any
+
+mk eval MAKE_ENV "${MAKE_ENV:NMAKESYSPATH=*}"
