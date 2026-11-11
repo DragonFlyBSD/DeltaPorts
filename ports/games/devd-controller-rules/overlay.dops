@@ -1,0 +1,5 @@
+port games/devd-controller-rules
+type port
+reason "the rules generator reads UTF-8 headers; dsynth builds under LANG=C"
+target @any
+mk add MAKE_ENV "LC_ALL=en_US.UTF-8"
