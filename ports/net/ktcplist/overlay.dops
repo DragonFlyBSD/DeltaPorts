@@ -1,0 +1,8 @@
+port net/ktcplist
+type port
+reason "FreeBSD specific: kernel TLS (KTLS) sessions"
+target @any
+
+mk block set condition "1" <<'MK'
+IGNORE=	FreeBSD specific: kernel TLS (KTLS) sessions
+MK
