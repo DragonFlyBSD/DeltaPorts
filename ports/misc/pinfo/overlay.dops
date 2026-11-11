@@ -1,6 +1,8 @@
 port misc/pinfo
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "configure adds -Werror; gcc warns on format and strncpy bounds"
 target @any
 
-mk add CFLAGS "-Wno-error=format"
+mk block set condition "1" <<'MK'
+CFLAGS+=	-Wno-error=format -Wno-error=stringop-truncation
+MK
