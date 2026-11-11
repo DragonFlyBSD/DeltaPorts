@@ -1,0 +1,4 @@
+port audio/caps-plugins
+type port
+reason "no exp10f in libm: define it with powf()"
+target @any
