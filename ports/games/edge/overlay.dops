@@ -1,0 +1,4 @@
+port games/edge
+type port
+reason "<stddef.h> for ptrdiff_t (libc++ pulls it in on FreeBSD)"
+target @any
