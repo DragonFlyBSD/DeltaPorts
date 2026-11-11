@@ -1,0 +1,5 @@
+port filesystems/hammer2
+type port
+reason "FreeBSD port of HAMMER2; DragonFly has it in base"
+target @any
+mk set IGNORE "FreeBSD port of HAMMER2; DragonFly has it in base"
