@@ -1,0 +1,6 @@
+port databases/redistimeseries
+type port
+reason "do-build runs cc under env -i; keep PATH so gcc finds ld"
+target @any
+
+mk set SETENVI "/usr/bin/env -i PATH=${PATH:Q}"
