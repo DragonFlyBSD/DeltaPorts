@@ -1,0 +1,4 @@
+port benchmarks/iorate
+type port
+reason "take the FreeBSD branches (lseek, F_SETLK, <sys/wait.h>)"
+target @any
