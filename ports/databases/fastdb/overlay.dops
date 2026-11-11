@@ -1,6 +1,6 @@
 port databases/fastdb
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "fpermissive; DragonFly makefile; <sys/sem.h> defines union semun"
 target @any
 
 mk add CXXFLAGS "-fpermissive"
