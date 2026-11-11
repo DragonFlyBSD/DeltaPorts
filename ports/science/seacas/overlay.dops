@@ -1,0 +1,4 @@
+port science/seacas
+type port
+reason "IOSS: statfs as on the BSDs, <termios.h> (no sys/termios.h)"
+target @any
