@@ -1,5 +1,5 @@
 port mail/sentinel
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "glibc-style gethostbyname_r on DragonFly: take the Linux branch"
 target @any
 
