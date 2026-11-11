@@ -1,0 +1,4 @@
+port www/domoticz-devel
+type port
+reason "take the FreeBSD branches: thread names, executable path via sysctl, <netinet/in.h>, libexecinfo"
+target @any
