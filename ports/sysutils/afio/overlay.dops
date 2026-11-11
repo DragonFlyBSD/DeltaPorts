@@ -1,6 +1,8 @@
 port sysutils/afio
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "MAXNAMLEN; <dirent.h> and the signal() prototype as on FreeBSD"
 target @any
 
-mk add CFLAGS "-DMAXNAMLEN=255"
+mk block set condition "1" <<'MK'
+CFLAGS+=	-DMAXNAMLEN=255
+MK
