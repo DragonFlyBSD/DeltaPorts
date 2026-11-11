@@ -1,5 +1,5 @@
 port games/r1q2
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "Makefile fixes; DragonFly in the FreeBSD platform tests (no x86 asm, MAP_ANON, BUILDSTRING)"
 target @any
 
