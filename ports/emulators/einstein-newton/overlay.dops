@@ -1,0 +1,4 @@
+port emulators/einstein-newton
+type port
+reason "build DragonFly as FreeBSD/NetBSD in CMakeLists.txt"
+target @any
