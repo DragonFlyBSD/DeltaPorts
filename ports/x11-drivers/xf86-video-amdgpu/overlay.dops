@@ -1,0 +1,4 @@
+port x11-drivers/xf86-video-amdgpu
+type port
+reason "test HAVE_GBM_BO_USE_FRONT_RENDERING by value: mesa-libs is locked at 21.3"
+target @any
