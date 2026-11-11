@@ -1,0 +1,4 @@
+port security/rnp
+type port
+reason "include <cstring> for strlen; libstdc++ does not pull it in"
+target @any
