@@ -1,0 +1,4 @@
+port net-p2p/rtorrent
+type port
+reason "struct dirent has no d_reclen on DragonFly"
+target @any
