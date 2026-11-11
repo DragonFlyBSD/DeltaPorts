@@ -1,0 +1,4 @@
+port x11-drivers/xf86-video-qxl
+type port
+reason "initialize the region boxes (gcc 12 -Wmaybe-uninitialized under -Werror=uninitialized); include linux/input.h after the X server headers"
+target @any
