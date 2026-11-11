@@ -1,5 +1,5 @@
 port sysutils/bksh
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "take the FreeBSD branch (optreset, libgen.h)"
 target @any
 
