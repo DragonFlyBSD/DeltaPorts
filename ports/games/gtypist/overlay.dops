@@ -1,0 +1,12 @@
+port games/gtypist
+type port
+reason "sources include <ncursesw/ncurses.h>; devel/ncurses here installs one header set, in include/ncurses"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${MKDIR} ${WRKDIR}/include
+	${LN} -sf ${NCURSESINC} ${WRKDIR}/include/ncursesw
+MK
+mk block set condition "1" <<'MK'
+CPPFLAGS+=	-I${WRKDIR}/include
+MK
