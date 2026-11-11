@@ -1,0 +1,4 @@
+port games/qtv
+type port
+reason "take the FreeBSD/Linux socket headers in qtv.h"
+target @any
