@@ -1,6 +1,9 @@
 port ports-mgmt/synth
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "no elfctl here: leave USES=elfctl out (FreeBSD W^X marking)"
 target @any
 
+text replace-once file Makefile \
+     from "USES=\t\tada elfctl ncurses" \
+     to   "USES=\t\tada ncurses"
 mk eval USES "${USES:Nncurses*}"
