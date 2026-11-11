@@ -1,6 +1,12 @@
 port x11-wm/enlightenment
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "no pulseaudio; procstats off (FreeBSD kinfo_proc fields); _BIF battery ioctl; BSD branches in dragonfly/"
 target @any
 
 mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibpulse*}"
+mk block set condition "1" <<'MK'
+MESON_ARGS+=	-Dprocstats=false
+MK
+text line-remove file pkg-plist exact "lib/enlightenment/modules/procstats/e-module-procstats.edj"
+text line-remove file pkg-plist exact "lib/enlightenment/modules/procstats/%%ENLIGHTENMENT_ARCH%%/module.so"
+text line-remove file pkg-plist exact "lib/enlightenment/modules/procstats/module.desktop"
