@@ -1,0 +1,5 @@
+port sysutils/progress
+type port
+reason "no DragonFly backend to find open files (Linux /proc, FreeBSD libprocstat, macOS libproc only)"
+target @any
+mk set IGNORE "has no DragonFly backend to find processes' open files"
