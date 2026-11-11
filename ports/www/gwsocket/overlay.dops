@@ -1,0 +1,4 @@
+port www/gwsocket
+type port
+reason "websocket.h: take the FreeBSD/NetBSD <sys/endian.h> branch"
+target @any
