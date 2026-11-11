@@ -1,0 +1,5 @@
+port emulators/ares
+type port
+reason "take the FreeBSD paths (cmake osconfig, nall platform), no st_birthtime, no udev or usbhid input (Linux uapi, FreeBSD dev/usb headers)"
+target @any
+mk set OPTIONS_EXCLUDE_DragonFly "UDEV USBHID"
