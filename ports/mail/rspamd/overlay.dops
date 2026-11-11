@@ -1,8 +1,9 @@
 port mail/rspamd
 type port
-reason "set GCC version and strip LUAJIT from OPTIONS_DEFAULT and OPTIONS_DEFAULT_x86_64"
+reason "set GCC version, strip LUAJIT from OPTIONS_DEFAULT*, depend on the ports libarchive it links (base has .so.5)"
 target @any
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add LIB_DEPENDS "libarchive.so.13:archivers/libarchive"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLUAJIT}"
 mk eval OPTIONS_DEFAULT_x86_64 "${OPTIONS_DEFAULT_x86_64:NLUAJIT}"
