@@ -1,5 +1,5 @@
 port net/rtpproxy
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "rtp.h fix; <time.h> where headers use struct timespec (FreeBSD gets it from <sys/types.h>)"
 target @any
 
