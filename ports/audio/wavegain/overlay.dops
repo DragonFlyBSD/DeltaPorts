@@ -1,6 +1,8 @@
 port audio/wavegain
 type port
-reason "DragonFly: skip <malloc.h>, which DragonFly no longer has (dragonfly/@<line> patches)"
+reason "DragonFly: skip <malloc.h>, which DragonFly no longer has (dragonfly/@<line> patches); keep PATH under env -i so gcc finds ld"
 
 # dragonfly/@<line>/patch-{audio,wavegain}.c (on top of FreeBSD's files/
 # patches): DragonFly has no <malloc.h>; stdlib.h is already included.
+
+mk set SETENVI "/usr/bin/env -i PATH=${PATH:Q}"
