@@ -1,6 +1,6 @@
 port math/cado-nfs
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "no hwloc; DragonFly in cado.h, select_mpi.h and lingen; <memory> in mksol.cpp"
 target @any
 
 mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibhwloc*}"
