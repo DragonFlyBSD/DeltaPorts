@@ -1,0 +1,4 @@
+port science/paraview
+type port
+reason "VTK: loguru thread id via lwp_gettid(); DragonFly in the FreeBSD tests (IOSS, fmt, eigen, KWSys) as math/vtk9 does"
+target @any
