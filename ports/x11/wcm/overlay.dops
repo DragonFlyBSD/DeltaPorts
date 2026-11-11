@@ -1,0 +1,9 @@
+port x11/wcm
+type port
+reason "no separate intl dependency, as on FreeBSD"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e "s/build_machine.system() != 'freebsd'/build_machine.system() not in ['freebsd', 'dragonfly']/" \
+		${WRKSRC}/src/meson.build
+MK
