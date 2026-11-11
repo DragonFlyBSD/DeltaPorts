@@ -1,0 +1,4 @@
+port x11-drivers/xlibre-xf86-video-nv
+type port
+reason "initialize the PLL values (gcc: -Werror=uninitialized from xorg-cat)"
+target @any
