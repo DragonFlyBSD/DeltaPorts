@@ -1,0 +1,4 @@
+port sysutils/fsearch
+type port
+reason "no off64_t on DragonFly; off_t is 64-bit"
+target @any
