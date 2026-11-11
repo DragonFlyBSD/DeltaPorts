@@ -1,6 +1,6 @@
 port sysutils/di
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "localbase ldflags; vquotactl code: use the limit field it declares, link libprop"
 target @any
 
 mk add USES "localbase:ldflags"
