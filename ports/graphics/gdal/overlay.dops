@@ -1,9 +1,10 @@
 port graphics/gdal
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "gcc, no IPO or hidden symbols, no float16; depend on the ports libarchive it links (base has .so.5)"
 target @any
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+mk add LIB_DEPENDS "libarchive.so.13:archivers/libarchive"
 mk eval CMAKE_ON "${CMAKE_ON:NENABLE_IPO:NGDAL_HIDE_INTERNAL_SYMBOLS}"
 mk add CMAKE_OFF "ENABLE_IPO GDAL_HIDE_INTERNAL_SYMBOLS"
 mk add CFLAGS "-DGDAL_DISABLE_FLOAT16"
