@@ -1,0 +1,8 @@
+port filesystems/nbd-client-kmod
+type port
+reason "FreeBSD kernel module"
+target @any
+
+mk block set condition "1" <<'MK'
+IGNORE=	FreeBSD specific: kernel module
+MK
