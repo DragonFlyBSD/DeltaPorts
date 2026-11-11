@@ -1,6 +1,6 @@
 port x11/cool-retro-term
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "HAVE_OS_DRAGONFLYBSD for qmltermwidget; include <cwctype> for std::iswspace"
 target @any
 
 mk add CXXFLAGS "-DHAVE_OS_DRAGONFLYBSD"
