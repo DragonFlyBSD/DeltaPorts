@@ -1,0 +1,4 @@
+port sysutils/moreutils
+type port
+reason "ifdata.c: take the FreeBSD/BSD block (net/if.h, s6_addr16)"
+target @any
