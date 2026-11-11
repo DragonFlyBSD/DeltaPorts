@@ -1,0 +1,6 @@
+port x11/nwg-dock-hyprland
+type port
+reason "the Go GTK bindings ask pkg-config for gobject-introspection-1.0, which nothing else pulls in here"
+target @any
+
+mk add USE_GNOME "introspection:build"
