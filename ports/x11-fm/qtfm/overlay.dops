@@ -1,5 +1,5 @@
 port x11-fm/qtfm
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "<sys/mount.h> for statfs as on the other BSDs"
 target @any
 
