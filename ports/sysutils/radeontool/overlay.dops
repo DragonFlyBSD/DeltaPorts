@@ -1,5 +1,5 @@
 port sysutils/radeontool
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "take the FreeBSD paths (PAGE_SIZE, pciio)"
 target @any
 
