@@ -3,3 +3,9 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
+
+# Like FreeBSD, DragonFly declares sys_nerr/sys_errlist (const) in <stdio.h>.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^#ifndef __FreeBSD__$$/#if !defined(__FreeBSD__) \&\& !defined(__DragonFly__)/' \
+		${WRKSRC}/rfc822.h
+MK
