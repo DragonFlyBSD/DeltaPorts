@@ -1,0 +1,5 @@
+port www/castget
+type port
+reason "ronn reads UTF-8 sources; dsynth builds under LANG=C"
+target @any
+mk add MAKE_ENV "LC_ALL=en_US.UTF-8"
