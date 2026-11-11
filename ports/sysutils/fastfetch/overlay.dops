@@ -1,0 +1,6 @@
+port sysutils/fastfetch
+type port
+reason "C23 needs gcc 13+ or clang; upstream defines __FreeBSD__ on DragonFly, which gcc's stddef.h takes for FreeBSD"
+target @any
+
+mk set USE_CLANG_FALLBACK "default"
