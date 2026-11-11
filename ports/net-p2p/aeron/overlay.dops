@@ -1,0 +1,4 @@
+port net-p2p/aeron
+type port
+reason "CLOCK_MONOTONIC as on FreeBSD (no CLOCK_MONOTONIC_RAW)"
+target @any
