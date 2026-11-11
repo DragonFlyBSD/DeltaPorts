@@ -1,0 +1,8 @@
+port net/freebsd-routed
+type port
+reason "FreeBSD's routed, removed from its base; DragonFly has routed in base"
+target @any
+
+mk block set condition "1" <<'MK'
+IGNORE=	DragonFly has routed in base
+MK
