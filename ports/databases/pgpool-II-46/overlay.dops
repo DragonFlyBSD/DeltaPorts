@@ -1,0 +1,4 @@
+port databases/pgpool-II-46
+type port
+reason "take the FreeBSD paths: <netinet/in.h>, route socket alignment"
+target @any
