@@ -1,0 +1,5 @@
+port sysutils/geomman
+type port
+reason "FreeBSD specific: GEOM (libgeom)"
+target @any
+mk set IGNORE "FreeBSD specific: GEOM (libgeom)"
