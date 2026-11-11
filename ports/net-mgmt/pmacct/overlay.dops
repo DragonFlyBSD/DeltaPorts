@@ -1,6 +1,9 @@
 port net-mgmt/pmacct
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "gcc warnings the -Werror build trips on; tee_plugin fix in dragonfly/"
 target @any
 
-mk add CFLAGS "-Wno-format-truncation -Wno-stringop-truncation -Wno-maybe-uninitialized"
+mk block set condition "1" <<'MK'
+CFLAGS+=	-Wno-format-truncation -Wno-stringop-truncation -Wno-maybe-uninitialized \
+		-Wno-array-bounds
+MK
