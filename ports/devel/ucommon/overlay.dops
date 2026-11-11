@@ -7,3 +7,9 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@STREQUAL "FreeBSD"@MATCHES "^(FreeBSD|DragonFly)$$"@g'	\
 		${WRKSRC}/CMakeLists.txt
 MK1
+
+# FreeBSD sets USE_CXXSTD=c++11 for clang only; gcc 12 defaults to C++17,
+# which rejects the dynamic exception specifications.
+mk block set condition "1" <<'MK'
+USE_CXXSTD=	c++11
+MK
