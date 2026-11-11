@@ -1,0 +1,5 @@
+port devel/bear
+type port
+reason "intercept-preload links with rustc's rust-lld, which has no default library path"
+target @any
+mk add LDFLAGS "-L/usr/lib"
