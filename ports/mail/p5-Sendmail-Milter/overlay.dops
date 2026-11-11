@@ -1,10 +1,14 @@
 port mail/p5-Sendmail-Milter
 type port
-reason "include bsd.milter.mk and run dfly-patch reinplace on Makefile.PL"
+reason "libmilter from mail/libmilter (no sendmail in base); Makefile.PL looks in LOCALBASE"
 target @any
+
+mk block set condition "!exists(/usr/include/libmilter/mfapi.h)" <<'MK'
+LIB_DEPENDS+=	libmilter.so.7:mail/libmilter
+MK
 
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e "s@/usr/lib@${LOCALBASE}/lib@g" \
-			 -e "s@/usr/include@${LOCALBASE}/include@g" \
+			 -e 's@"/usr/include/libmilter"@"${LOCALBASE}/include/libmilter -I${LOCALBASE}/include"@' \
 		${WRKSRC}/Makefile.PL
 MK
