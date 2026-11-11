@@ -1,0 +1,5 @@
+port sysutils/kassiber
+type port
+reason "FreeBSD specific: jails through libjail"
+target @any
+mk set IGNORE "FreeBSD specific: jails through libjail"
