@@ -1,0 +1,4 @@
+port x11-drivers/xlibre-xf86-video-qxl
+type port
+reason "initialize the region boxes: gcc 12 -Wmaybe-uninitialized, made an error by xorg-cat.mk's -Werror=uninitialized"
+target @any
