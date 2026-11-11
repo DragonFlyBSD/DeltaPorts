@@ -1,0 +1,4 @@
+port security/duo
+type port
+reason "<netinet/in.h> in https.c as on FreeBSD"
+target @any
