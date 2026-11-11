@@ -1,0 +1,6 @@
+port x11-wm/wlmaker
+type port
+reason "curses from USES=ncurses (FreeBSD has it in base)"
+target @any
+
+mk add USES "ncurses"
