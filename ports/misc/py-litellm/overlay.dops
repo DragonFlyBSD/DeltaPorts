@@ -1,0 +1,6 @@
+port misc/py-litellm
+type port
+reason "No py-polars for PROXY: it needs lang/rust-nightly (no DragonFly bootstrap); only the proxy's CloudZero/FOCUS/Vantage cost exports import it"
+target @any
+
+mk eval PROXY_RUN_DEPENDS "${PROXY_RUN_DEPENDS:N*misc/py-polars*}"
