@@ -1,0 +1,5 @@
+port x11/contour
+type port
+reason "C++20 <format> needs GCC 14; take the FreeBSD paths (FreeType/Fontconfig, kqueue, libutil pty) via dragonfly/"
+target @any
+mk set USE_GCC_VERSION "14"
