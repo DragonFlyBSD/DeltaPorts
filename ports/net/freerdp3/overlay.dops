@@ -1,6 +1,6 @@
 port net/freerdp3
 type port
-reason "DragonFly: epoll-shim, OSS, TLS, SOL_TCP, _recvfrom; no urbdrc"
+reason "DragonFly: epoll-shim, OSS, TLS, SOL_TCP, _recvfrom; no urbdrc; ports gcc on 6.4"
 target @any
 
 # Upstream sets EPOLLSHIM for FreeBSD and OpenBSD only; uwac needs
@@ -10,3 +10,10 @@ mk add CMAKE_ARGS "-DEPOLLSHIM:BOOL=ON"
 # No USB redirection: base libusb lacks libusb_has_capability, set_option
 # and bulk streams. Off also forces CHANNEL_URBDRC_CLIENT off.
 mk add CMAKE_OFF CHANNEL_URBDRC
+
+# 6.4's base gcc 8 can't build this (labels at the end of blocks;
+# std::filesystem needs libstdc++fs): use ports gcc there, as Qt 6 does.
+mk block set condition "${DFLY_BASE_CCVER} == gcc80" <<'MK'
+USE_GCC_VERSION=	${GCC_DEFAULT}
+LDFLAGS+=	-static-libgcc
+MK
