@@ -1,0 +1,14 @@
+port devel/lua-language-server
+type port
+reason "DragonFly: the pinned bee.lua/luamake sources have no DragonFly lane; build this C++17 tree with a pinned dports gcc"
+
+# The port bakes ${CC} into luamake's globals.lua, which drives the compiler
+# of the generated main build. Base cc is gcc 8.3 on 6.4, so pin the dports
+# gcc14 lane with the knob editors/imhex uses.
+target @any
+
+text line-insert-after file Makefile \
+     anchor "\t${REINPLACE_CMD} -e 's|%INOTIFY_LIB%|${INOTIFY_LIB}|' ${WRKSRC}/3rd/luamake/compile/ninja/freebsd.ninja" \
+     line   "\t${REINPLACE_CMD} -e 's|%CC%|${CCACHE_BIN} ${CC}|g; s|%LOCALBASE%|${LOCALBASE}|g; s|%INOTIFY_LIB%|${INOTIFY_LIB}|g' ${WRKSRC}/3rd/luamake/compile/ninja/dragonfly.ninja"
+
+mk set USE_GCC_VERSION "14"
