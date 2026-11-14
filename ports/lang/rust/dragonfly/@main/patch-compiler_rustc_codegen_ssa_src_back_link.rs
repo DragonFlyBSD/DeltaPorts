@@ -1,6 +1,6 @@
 --- compiler/rustc_codegen_ssa/src/back/link.rs.orig
 +++ compiler/rustc_codegen_ssa/src/back/link.rs
-@@ -2978,8 +2978,11 @@
+@@ -3324,8 +3324,11 @@
          // as it appears to be unused. This can then cause the PGO profile file to lose
          // some functions. If we are generating a profile we shouldn't strip those metadata
          // sections to ensure we have all the data for PGO.

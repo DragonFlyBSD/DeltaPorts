@@ -1,6 +1,6 @@
 --- src/bootstrap/src/cli_main.rs.orig
 +++ src/bootstrap/src/cli_main.rs
-@@ -71,7 +71,8 @@
+@@ -72,7 +72,8 @@
  
      let mut build_lock;
  
