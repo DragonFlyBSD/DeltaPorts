@@ -1,6 +1,17 @@
 --- lib/kpty.cpp.orig	2019-01-24 21:57:59 UTC
 +++ lib/kpty.cpp
-@@ -94,7 +94,9 @@ extern "C" {
+@@ -30,6 +30,10 @@
+ #if defined(__FreeBSD__) || defined(__DragonFly__)
+ #define HAVE_LOGIN
+ #define HAVE_LIBUTIL_H
++#endif
++
++#if defined(__DragonFly__)
++#define HAVE_OPENPTY
+ #endif
+ 
+ #if defined(__OpenBSD__)
+@@ -94,7 +98,9 @@ extern "C" {
  # include <utempter.h>
  }
  #else
