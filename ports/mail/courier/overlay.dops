@@ -1,6 +1,0 @@
-port mail/courier
-type port
-reason "DragonFly: version-conditional install workaround, IGNORE unmaintained"
-target @any
-
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

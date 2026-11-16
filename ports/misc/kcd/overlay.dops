@@ -3,4 +3,6 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
+# devel/ncurses keeps WINDOW and friends opaque.
+mk add CFLAGS "-DNCURSES_INTERNALS"
+mk add CXXFLAGS "-DNCURSES_INTERNALS"

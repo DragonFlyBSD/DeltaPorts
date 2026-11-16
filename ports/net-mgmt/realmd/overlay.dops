@@ -1,6 +1,10 @@
 port net-mgmt/realmd
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "HOST_NAME_MAX from MAXHOSTNAMELEN, as FreeBSD's patches do"
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^#if defined(__FreeBSD__)$$/& || defined(__DragonFly__)/' \
+		${WRKSRC}/service/realm-provider.c \
+		${WRKSRC}/service/realm-samba-enroll.c
+MK

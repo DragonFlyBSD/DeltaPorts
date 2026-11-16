@@ -3,4 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
+# configure finds no swap API here, so check_swap is not built.
+text line-remove file pkg-plist exact "libexec/nagios/check_swap"

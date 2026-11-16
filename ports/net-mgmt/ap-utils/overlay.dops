@@ -7,4 +7,6 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\(\*bsd\*\)@\1|*dragonfly*@g'	\
 		${WRKSRC}/configure
 MK1
-mk set DFLY_UNMAINTAINED "yes"
+# devel/ncurses keeps WINDOW and friends opaque.
+mk add CFLAGS "-DNCURSES_INTERNALS"
+mk add CXXFLAGS "-DNCURSES_INTERNALS"
