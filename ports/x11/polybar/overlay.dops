@@ -11,4 +11,6 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@ifndef \(__FreeBSD__\)@if !defined(\1) \&\& !defined(__DragonFly__)@g' \
 		${WRKSRC}/include/adapters/alsa/generic.hpp
 MK1
-mk set DFLY_UNMAINTAINED "yes"
+text replace-once file Makefile \
+     from ".if ${OPSYS} == FreeBSD && ${OSVERSION} < 1500050" \
+     to   ".if ${OPSYS} == DragonFly || (${OPSYS} == FreeBSD && ${OSVERSION} < 1500050)"

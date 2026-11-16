@@ -3,4 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
+# devel/elfutils installs libdw and libelf in ${LOCALBASE}/lib/elfutils.
+mk set LIB_DIRS "/lib /usr/lib ${LOCALBASE}/lib ${LOCALBASE}/lib/elfutils"

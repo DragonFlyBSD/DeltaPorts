@@ -3,4 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+mk target set dfly-patch <<'MK'
+	cd ${WRKSRC} && ${GREP} -rlE --include='*.h' --include='*.cpp' 'defined ?\(__FreeBSD__\)' . | \
+		${XARGS} ${REINPLACE_CMD} -E -e 's/defined ?\(__FreeBSD__\)/(defined(__FreeBSD__) || defined(__DragonFly__))/g'
+MK
