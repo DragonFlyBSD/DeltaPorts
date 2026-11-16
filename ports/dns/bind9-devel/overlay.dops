@@ -6,4 +6,3 @@ target @any
 mk target set dfly-install <<'MK1'
 	${RM} -rfv ${STAGEDIR}/construction
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

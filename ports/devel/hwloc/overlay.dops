@@ -7,4 +7,3 @@ mk ensure-include bsd.port.options.mk
 mk block set condition "${DFLYVERSION} >= 400706" <<'MK'
 PLIST_FILES+=	include/hwloc/glibc-sched.h
 MK
-mk set DFLY_UNMAINTAINED "yes"

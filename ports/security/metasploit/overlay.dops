@@ -17,4 +17,3 @@ NO_ARCH_IGNORE+=	libndkstager.so CVE-2013-6282.so CVE-2014-3153.so ofs-lib.so \
 			template_x86_bsd.bin template_x64_bsd.bin exploit
 MK
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

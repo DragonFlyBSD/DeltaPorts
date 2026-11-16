@@ -13,4 +13,3 @@ mk target set dfly-patch <<'MK1'
 			 -e "s@^SYSTEM_LIBS =@& -L${LOCALBASE}/lib -lncurses@g" \
 		${WRKSRC}/mk_freebsd.mk
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

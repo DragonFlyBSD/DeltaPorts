@@ -11,4 +11,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/core/showfoto/CMakeLists.txt				\
 		${WRKSRC}/core/tests/CMakeLists.txt
 MK1
-mk set DFLY_UNMAINTAINED "yes"

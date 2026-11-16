@@ -4,7 +4,6 @@ reason "auto-converted from Makefile.DragonFly"
 
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
 
 # DragonFly's <sys/queue.h> spells the *_FOREACH_SAFE macros
 # *_FOREACH_MUTABLE, and there is no MAXNAMLEN (NAME_MAX is 255).

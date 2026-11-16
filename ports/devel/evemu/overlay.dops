@@ -6,4 +6,3 @@ target @any
 mk target set dfly-install <<'MK1'
 	${RM} -fv ${STAGEDIR}${LOCALBASE}/man/man1/*.bak
 MK1
-mk set DFLY_UNMAINTAINED "yes"

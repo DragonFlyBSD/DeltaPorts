@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e '/puma>/s@~>@>=@g' \
 		${WRKSRC}/oxidized-web.gemspec
 MK1
-mk set DFLY_UNMAINTAINED "yes"
