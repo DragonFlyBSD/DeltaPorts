@@ -16,5 +16,8 @@ dfly-patch:
 			 -e 's/-Werror[[:>:]]//g' \
 		${WRKSRC}/Makefile
 MK
-
-mk set DFLY_UNMAINTAINED "yes"
+# -Wfor-loop-analysis is clang-only; gcc then fails the compiler check.
+text line-remove file Makefile exact "CXXFLAGS+=\t-Wno-error=for-loop-analysis"
+# Macros from devel/ncurses' curses.h trip -Werror=old-style-cast unless
+# the headers count as system ones, as base ncurses does on FreeBSD.
+mk add CXXFLAGS "-isystem ${LOCALBASE}/include/ncurses"

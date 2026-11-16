@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\(MATCHES "FreeBSD\)"@\1|DragonFly"@g' \
 		${WRKSRC}/CMakeLists.txt
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

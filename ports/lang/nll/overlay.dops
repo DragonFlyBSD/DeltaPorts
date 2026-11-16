@@ -3,4 +3,10 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
+mk add USES "ncurses"
+# Its Makefile sets CFLAGS itself; <curses.h> is in include/ncurses.
+mk add MAKE_ENV "CPATH=${NCURSESINC}"
+# devel/ncurses has no libcurses.
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/ -lcurses)/ -lncurses)/' ${WRKSRC}/Makefile
+MK1

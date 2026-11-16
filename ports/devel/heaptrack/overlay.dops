@@ -10,5 +10,16 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/tests/auto/CMakeLists.txt \
 		${WRKSRC}/src/track/heaptrack.sh.cmake \
 		${WRKSRC}/CMakeLists.txt
+	# Take the FreeBSD code paths (rtld's unrelocated dynamic tables,
+	# sysctl for the exe and arguments); RSS keeps its DragonFly branch.
+	cd ${WRKSRC}/src/track && ${REINPLACE_CMD} \
+		-e 's/^#ifdef __FreeBSD__$$/#if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		-e 's/^#elif defined(__FreeBSD__)$$/#elif defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		heaptrack_env.cpp heaptrack_inject.cpp libheaptrack.cpp
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# devel/elfutils installs libdw and libelf in ${LOCALBASE}/lib/elfutils.
+mk set LIB_DIRS "/lib /usr/lib ${LOCALBASE}/lib ${LOCALBASE}/lib/elfutils"
+# FindElfutils does not look in lib/elfutils.
+mk add CMAKE_ARGS "-DLIBDW_LIBRARIES=${LOCALBASE}/lib/elfutils/libdw.so"
+# libdw.h includes <gelf.h>, which devel/elfutils has in include/elfutils.
+mk add CXXFLAGS "-I${LOCALBASE}/include/elfutils"

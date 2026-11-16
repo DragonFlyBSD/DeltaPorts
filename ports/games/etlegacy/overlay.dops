@@ -3,4 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
+# backtrace() is in libexecinfo, not libc.
+mk add LDFLAGS "-lexecinfo"
+# CMake makes Makefiles here, and bmake can't handle the font names with spaces.
+mk add USES "gmake"
