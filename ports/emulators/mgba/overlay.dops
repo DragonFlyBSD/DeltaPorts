@@ -4,4 +4,5 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NDEBUGGERS}"
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# devel/elfutils installs libdw and libelf in ${LOCALBASE}/lib/elfutils.
+mk set LIB_DIRS "/lib /usr/lib ${LOCALBASE}/lib ${LOCALBASE}/lib/elfutils"
