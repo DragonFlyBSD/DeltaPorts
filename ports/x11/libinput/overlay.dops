@@ -12,3 +12,14 @@ reason "auto-converted from Makefile.DragonFly"
 # same so the vendored evdev constants (EV_REL, BUS_*, INPUT_PROP_*, struct
 # input_event) are visible on DragonFly too.
 # dragonfly/patch-include_linux_input.h
+
+# libinput's quirks loader needs DMI data to start: init_dmi() in src/quirks.c
+# only knows Linux and FreeBSD, so on DragonFly it returns NULL and, with no
+# device tree either, quirks_init_subsystem() gives up before reading a single
+# quirks file ("Failed to load the device quirks" in every wlroots session, and
+# no device quirks apply).  Build the FreeBSD kenv-based init_dmi_freebsd() on
+# DragonFly too, read the chassis vendor from smbios.chassis.maker (the name the
+# DragonFly and FreeBSD loaders set; upstream reads smbios.chassis.vendor, which
+# neither sets) and initialize the kenv buffers (kenv() leaves a buffer alone
+# when a name is not set).
+# dragonfly/patch-src_quirks.c
