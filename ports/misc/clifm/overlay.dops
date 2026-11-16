@@ -12,4 +12,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/src/listing.c \
 		${WRKSRC}/src/properties.c
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

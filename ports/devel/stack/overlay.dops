@@ -4,7 +4,6 @@ reason "filter lang/gcc from RUN_DEPENDS; mark unmaintained; fix libncursesw dep
 target @any
 
 mk eval RUN_DEPENDS "${RUN_DEPENDS:N*lang/gcc}"
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
 
 # Was: patch apply diffs/Makefile.diff, which rewrote
 #   .if ${ARCH} != powerpc64

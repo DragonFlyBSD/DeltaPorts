@@ -6,5 +6,4 @@ target @any
 mk target set post-install <<'MK1'
 	${CP} ${STAGEDIR}${PREFIX}/lib/libab25.a ${STAGEDIR}${PREFIX}/lib/libab25_p.a
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
 mk set RUN_DEPENDS "${LOCALBASE}/lib/pcsc/drivers/ifd-ccid.bundle/Contents/${OPSYS}/libccid.so:devel/libccid"

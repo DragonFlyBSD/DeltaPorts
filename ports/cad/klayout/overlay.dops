@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 			 -e 's@-pedantic@@g' -e 's@-Wsign-promo@-Wno-parentheses@g'	\
 		${WRKSRC}/src/klayout.pri
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

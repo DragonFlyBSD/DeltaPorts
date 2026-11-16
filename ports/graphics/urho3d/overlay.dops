@@ -3,6 +3,5 @@ type port
 reason "unmaintained marker and dragonfly source patches"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
 
 text replace-once file pkg-plist from "@dir include/Urho3D/Precompiled.h.pch" to "@dir include/Urho3D/Precompiled.h.gch"

@@ -3,5 +3,4 @@ type port
 reason "ignore port as unmaintained"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
 patch apply diffs/Makefile.diff

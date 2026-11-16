@@ -7,4 +7,3 @@ mk target set dfly-patch <<'MK1'
 	${LN} -sv ${WRKSRC}/doc/licensing/freebsd-licensing.cmake ${WRKSRC}/doc/licensing/dragonfly-licensing.cmake
 	${REINPLACE_CMD} -e '/third_party_components gdal/d' ${WRKSRC}/doc/licensing/CMakeLists.txt
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
