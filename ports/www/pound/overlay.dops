@@ -8,4 +8,6 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e "s@openssl dhparam@${LOCALBASE}/bin/&@g" \
 		${WRKSRC}/Makefile.in
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# OpenSSL comes from ports.
+mk add CPPFLAGS "-I${OPENSSLINC}"
+mk add LDFLAGS "-L${OPENSSLLIB}"

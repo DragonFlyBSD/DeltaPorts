@@ -3,4 +3,9 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# The bundled OpenSSL builds its devcrypto engine on BSD; there is no
+# <crypto/cryptodev.h> here (security/openssl passes the same).
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/ enable-weak-ssl-ciphers zlib / enable-weak-ssl-ciphers zlib no-devcryptoeng /' \
+		${WRKSRC}/Makefile
+MK1

@@ -5,4 +5,3 @@ target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NNETMAP}"
 mk add LDFLAGS "-lm"
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
