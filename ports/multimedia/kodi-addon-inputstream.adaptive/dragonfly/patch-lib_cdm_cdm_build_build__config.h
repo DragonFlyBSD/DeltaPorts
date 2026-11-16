@@ -1,5 +1,5 @@
---- wvdecrypter/cdm/build/build_config.h.orig	2021-08-06 12:32:58 UTC
-+++ wvdecrypter/cdm/build/build_config.h
+--- lib/cdm/cdm/build/build_config.h.orig
++++ lib/cdm/cdm/build/build_config.h
 @@ -49,7 +49,7 @@
  #elif defined(_WIN32)
  #define OS_WIN 1

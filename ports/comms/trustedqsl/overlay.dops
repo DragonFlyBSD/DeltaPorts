@@ -5,7 +5,5 @@ target @any
 
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@ STREQUAL "\(FreeBSD\)"@ MATCHES "\1|DragonFly"@g'	\
-		${WRKSRC}/apps/CMakeLists.txt				\
-		${WRKSRC}/cmakemodules/FindBDB.cmake
+		${WRKSRC}/apps/CMakeLists.txt
 MK1
-mk set DFLY_UNMAINTAINED "yes"

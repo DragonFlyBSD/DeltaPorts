@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@"FreeBSD@&|DragonFly@g' \
 		${WRKSRC}/cmake/Modules/Findlibusb-1.0.cmake
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
