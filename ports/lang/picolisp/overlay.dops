@@ -3,4 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
+# OpenSSL comes from ports here, and the Makefile calls clang without CFLAGS.
+mk add MAKE_ENV "CPATH=${OPENSSLINC} LIBRARY_PATH=${OPENSSLLIB}"

@@ -1,6 +1,7 @@
 port games/powder-toy
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "backtrace() is in libexecinfo"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# backtrace() is in libexecinfo, not libc.
+mk add LDFLAGS "-lexecinfo"

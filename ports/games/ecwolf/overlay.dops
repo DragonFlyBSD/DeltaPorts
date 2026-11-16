@@ -2,5 +2,3 @@ port games/ecwolf
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
-
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

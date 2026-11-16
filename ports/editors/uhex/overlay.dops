@@ -3,4 +3,6 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+mk add USES "ncurses"
+# do-build links -lncurses with CFLAGS only.
+mk add CFLAGS "-L${NCURSESLIB}"

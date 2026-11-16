@@ -9,4 +9,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@HAVE_EXECINFO_H@do_not_use@g' \
 		${WRKSRC}/code/windows_stub/stubs.cpp
 MK1
-mk set DFLY_UNMAINTAINED "yes"
