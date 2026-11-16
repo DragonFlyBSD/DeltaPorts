@@ -1,0 +1,23 @@
+port www/py-yt-dlp-ejs
+type port
+reason "no deno; rollup's native module is a FreeBSD binary: take the bundles from upstream's wheel"
+target @any
+
+# The wheel carries the two bundles that the sdist builds with rollup;
+# yt-dlp runs them with node (www/yt-dlp defaults to node here).
+mk set DISTFILES "${DISTNAME}${EXTRACT_SUFX} ${DISTNAME}-py3-none-any.whl:wheel"
+mk set MASTER_SITES "PYPI https://files.pythonhosted.org/packages/py3/y/yt_dlp_ejs/:wheel"
+mk add EXTRACT_ONLY "${DISTNAME}${EXTRACT_SUFX}"
+mk unset FETCH_DEPENDS
+mk set BUILD_DEPENDS "${PYTHON_PKGNAMEPREFIX}hatch-vcs>=0:devel/py-hatch-vcs@${PY_FLAVOR} ${PYTHON_PKGNAMEPREFIX}hatchling>0:devel/py-hatchling@${PY_FLAVOR}"
+mk set RUN_DEPENDS "node:www/node"
+mk set DIST_SUBDIR "${PORTNAME}"
+mk set DISTINFO_FILE "${.CURDIR}/dragonfly/distinfo"
+mk target remove do-fetch
+mk target remove post-extract
+mk target set do-build <<'MK'
+	@${MKDIR} ${WRKSRC}/dist
+	@${TAR} -xOf ${DD}/${DISTNAME}-py3-none-any.whl yt_dlp_ejs/yt/solver/core.min.js > ${WRKSRC}/dist/yt.solver.core.min.js
+	@${TAR} -xOf ${DD}/${DISTNAME}-py3-none-any.whl yt_dlp_ejs/yt/solver/lib.min.js > ${WRKSRC}/dist/yt.solver.lib.min.js
+	@cd ${WRKSRC} && ${SETENV} ${MAKE_ENV} ${PYTHON_CMD} -m build --no-isolation --wheel --outdir ${WRKSRC}/dist
+MK

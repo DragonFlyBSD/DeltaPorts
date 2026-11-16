@@ -1,0 +1,4 @@
+port www/yt-dlp
+type port
+reason "no deno on DragonFly: enable node as the default JavaScript runtime"
+target @any
