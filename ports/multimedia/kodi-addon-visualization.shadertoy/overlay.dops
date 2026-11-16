@@ -3,4 +3,6 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+mk add USES "pkgconfig"
+# CMake wants jsoncpp, which the port does not list.
+mk add LIB_DEPENDS "libjsoncpp.so:devel/jsoncpp"

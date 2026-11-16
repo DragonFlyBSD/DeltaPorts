@@ -3,4 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# C++20 needs gcc 13 or later.
+mk set USE_GCC_VERSION "14"

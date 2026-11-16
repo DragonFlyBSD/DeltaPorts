@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@[[:<:]]sed[[:>:]]@gsed@g' \
 		${WRKSRC}/doc/Makefile.in
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
