@@ -1,5 +1,5 @@
---- fastahack/LargeFileSupport.h.orig	2019-09-04 06:16:27 UTC
-+++ fastahack/LargeFileSupport.h
+--- contrib/fastahack/LargeFileSupport.h.orig
++++ contrib/fastahack/LargeFileSupport.h
 @@ -5,7 +5,7 @@
  #define ftell64(a)     _ftelli64(a)
  #define fseek64(a,b,c) _fseeki64(a,b,c)
