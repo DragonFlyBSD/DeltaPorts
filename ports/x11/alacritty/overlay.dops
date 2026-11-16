@@ -4,4 +4,3 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk eval USES "${USES:S/cargo/cargo:extra/}"
-mk set DFLY_UNMAINTAINED "yes"

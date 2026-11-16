@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	awk '{print; if (tolower($$1) == "executable") {print "    extra-libraries: m"}}' \
 		${WRKSRC}/${PORTNAME}.cabal.orig > ${WRKSRC}/${PORTNAME}.cabal
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

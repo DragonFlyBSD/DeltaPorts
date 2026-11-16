@@ -5,4 +5,3 @@ target @any
 
 mk add PLIST_FILES lib/libscrypt-kdf.so
 mk add PLIST_FILES lib/libscrypt-kdf.so.1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

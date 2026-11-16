@@ -7,4 +7,3 @@ mk add NO_ARCH_IGNORE "libsetuid-linux.so libsetuid-osx.so"
 mk target set dfly-install <<'MK1'
 	${RMDIR} ${STAGEDIR}${LOCALBASE}/jetty_bastillion/resources
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
