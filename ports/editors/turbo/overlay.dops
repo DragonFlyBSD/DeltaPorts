@@ -3,4 +3,6 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+mk add USES "ncurses"
+# tvision looks for ncurses.h in the default paths; devel/ncurses has it in include/ncurses.
+mk add CMAKE_ARGS "-DCMAKE_INCLUDE_PATH=${NCURSESINC}"
