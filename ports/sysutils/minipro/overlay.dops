@@ -8,4 +8,3 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e ' s|clang|gcc|g'  \
 		${WRKSRC}/Makefile
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

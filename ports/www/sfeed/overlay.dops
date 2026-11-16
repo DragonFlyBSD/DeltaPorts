@@ -3,4 +3,6 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# No curses in base; devel/ncurses has no libcurses.
+mk add USES "ncurses"
+mk add MAKE_ARGS "SFEED_CURSES_LDFLAGS=\"-L${NCURSESLIB} -lncursesw\""

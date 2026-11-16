@@ -3,4 +3,7 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# devel/ncurses has no libcurses.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's|-lcurses|-lncursesw|' ${WRKSRC}/Makefile
+MK

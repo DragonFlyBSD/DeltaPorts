@@ -3,4 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# -fsanitize=fuzzer is clang-only.
+mk unset OPTIONS_DEFAULT_amd64

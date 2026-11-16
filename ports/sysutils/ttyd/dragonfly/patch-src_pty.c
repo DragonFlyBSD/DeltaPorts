@@ -1,6 +1,6 @@
---- src/terminal.c.orig	2020-02-09 08:37:18 UTC
-+++ src/terminal.c
-@@ -8,7 +8,7 @@
+--- src/pty.c.orig
++++ src/pty.c
+@@ -12,7 +12,7 @@
  
  #if defined(__OpenBSD__) || defined(__APPLE__)
  #include <util.h>

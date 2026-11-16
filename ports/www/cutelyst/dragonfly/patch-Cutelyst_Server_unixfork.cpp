@@ -1,7 +1,7 @@
---- server/unixfork.cpp.orig	2021-07-30 19:54:47 UTC
-+++ server/unixfork.cpp
-@@ -566,12 +566,12 @@ void UnixFork::setSched(Cutelyst::Server
-             qCCritical(WSGI_UNIX) << "unable to initialize cpu affinity !!!";
+--- Cutelyst/Server/unixfork.cpp.orig
++++ Cutelyst/Server/unixfork.cpp
+@@ -559,12 +559,12 @@
+             qCCritical(C_SERVER_UNIX) << "unable to initialize cpu affinity !!!";
              exit(1);
          }
 -#if defined(__linux__) || defined(__GNU_kFreeBSD__)
@@ -15,7 +15,7 @@
          int coreCount = idealThreadCount();
  
          int workerThreads = 1;
-@@ -606,7 +606,7 @@ void UnixFork::setSched(Cutelyst::Server
+@@ -599,7 +599,7 @@
              base_cpu++;
          }
  #endif

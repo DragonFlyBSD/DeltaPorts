@@ -1,6 +1,0 @@
-port x11/gmrun
-type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
-target @any
-
-mk set DFLY_UNMAINTAINED "yes"

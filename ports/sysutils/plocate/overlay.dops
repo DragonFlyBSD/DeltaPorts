@@ -3,4 +3,6 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# No MNT_UNION here; files/mntent_compat.c++ is copied in at post-patch.
+text line-insert-after file files/mntent_compat.c++ anchor "\t{ MNT_SYNCHRONOUS,\t\"sync\"}," line "#ifdef MNT_UNION"
+text line-insert-after file files/mntent_compat.c++ anchor "\t{ MNT_UNION,\t\t\"union\"}," line "#endif"

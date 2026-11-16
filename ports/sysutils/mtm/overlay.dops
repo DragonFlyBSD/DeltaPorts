@@ -4,4 +4,6 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add MAKE_ARGS "LIBPATH=\"-L${LOCALBASE}/lib\""
-mk set DFLY_UNMAINTAINED "yes"
+# No curses in base.
+mk remove USES "ncurses:base"
+mk add USES "ncurses"
