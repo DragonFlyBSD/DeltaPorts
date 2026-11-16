@@ -3,4 +3,6 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# FreeBSD has libmilter in base.
+mk add LIB_DEPENDS "libmilter.so:mail/libmilter"
+mk add CONFIGURE_ARGS "--with-milter=${LOCALBASE}"

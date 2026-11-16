@@ -3,4 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
+# Its Makefile passes no include or library path for readline.
+mk add MAKE_ENV "CPATH=${LOCALBASE}/include LIBRARY_PATH=${LOCALBASE}/lib"

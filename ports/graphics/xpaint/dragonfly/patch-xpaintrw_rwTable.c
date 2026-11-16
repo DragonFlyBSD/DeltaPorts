@@ -1,6 +1,6 @@
---- rw/rwTable.c.intermediate	2015-12-18 20:45:04.000000000 +0200
-+++ rw/rwTable.c
-@@ -366,7 +366,7 @@ RWtableGetWriterList()
+--- xpaintrw/rwTable.c.orig
++++ xpaintrw/rwTable.c
+@@ -294,7 +294,7 @@
  char *
  RWGetMsg()
  {

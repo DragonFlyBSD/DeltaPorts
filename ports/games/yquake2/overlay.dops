@@ -3,4 +3,4 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+mk add MAKE_ENV "LDLIBS=-lm"
