@@ -5,14 +5,15 @@ target @any
 
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSCTP}"
 mk add MAKE_ARGS "SCTP=0 LOCALBASE=${LOCALBASE}"
-mk add PLIST_FILES "lib/kamailio/libprint.so.1.2"
-mk add PLIST_FILES "lib/kamailio/libsrdb1.so.1.0 lib/kamailio/libsrdb2.so.1.0"
-mk add PLIST_FILES "lib/kamailio/libtrie.so.1.0"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@clang@gcc@g' \
 			 -e 's@"-ldl"@-ldl -lm@g' \
 		${WRKSRC}/src/Makefile.defs
 	${REINPLACE_CMD} -e "s@LIBS = @& -L${LOCALBASE}/lib @g" \
 		${WRKSRC}/src/modules/db_mysql/Makefile
+	# Upstream's dragonfly.cmake is a copy of linux.cmake (epoll, SIGIO_RT).
+	${CP} ${WRKSRC}/cmake/os-specific/freebsd.cmake \
+		${WRKSRC}/cmake/os-specific/dragonfly.cmake
 MK1
-mk set DFLY_UNMAINTAINED "yes"
+# No SCTP here; the CMake build turns USE_SCTP on by default.
+mk add CMAKE_ARGS "-DUSE_SCTP=OFF"

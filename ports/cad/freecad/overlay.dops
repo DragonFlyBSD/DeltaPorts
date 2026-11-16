@@ -5,4 +5,3 @@ target @any
 
 mk eval LIB_DEPENDS "${LIB_DEPENDS:Nlibmpi*}"
 mk eval CMAKE_ARGS "${CMAKE_ARGS:N-DOPENMPI_INCLUDE_DIRS*}"
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
