@@ -3,9 +3,6 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
-mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
-mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
 mk add MAKE_ENV "LDVER=ld.bfd"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@gcc_s gcc@gcc_pic gcc@g' \
@@ -13,4 +10,5 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e '/ -Wnull-dereference)/d' \
 		${WRKSRC}/CMakeLists.txt
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# Upstream builds with -Werror; gcc 12 warns falsely in <bits/stl_algobase.h>.
+mk add CXXFLAGS "-Wno-error=stringop-overflow"

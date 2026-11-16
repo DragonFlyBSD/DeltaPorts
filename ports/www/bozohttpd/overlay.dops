@@ -3,5 +3,8 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBLACKLIST}"
-mk set DFLY_UNMAINTAINED "yes"
+# No blocklistd in base.
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NBLOCKLIST}"
+# FreeBSD's Makefile adds these for OPSYS FreeBSD, and the OpenSSL one
+# for base or openssl3* only; SSL_DEFAULT is openssl (3.5) here.
+mk add CFLAGS "-DOPENSSL_API_COMPAT=0x10100000L -Wno-error=unused-but-set-variable"
