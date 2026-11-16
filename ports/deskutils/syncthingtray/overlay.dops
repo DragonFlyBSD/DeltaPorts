@@ -1,6 +1,4 @@
 port deskutils/syncthingtray
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "the Makefile generator does not create qmltmp/ for the QML rewrite"
 target @any
-
-mk set IGNORE "unmaintained, please request fixing to users mailing list"

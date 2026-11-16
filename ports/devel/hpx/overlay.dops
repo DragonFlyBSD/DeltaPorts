@@ -4,4 +4,14 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk add USES "fortran"
-mk set DFLY_UNMAINTAINED "yes"
+# Take hpx's FreeBSD code paths (sysctl, pthread_np) on DragonFly too.
+mk target set dfly-patch <<'MK'
+	cd ${WRKSRC} && ${GREP} -rlF 'defined(__FreeBSD__)' libs | \
+		${XARGS} ${REINPLACE_CMD} -e 's/defined(__FreeBSD__)/(defined(__FreeBSD__) || defined(__DragonFly__))/g'
+	# No memory counter implementation here either.
+	${REINPLACE_CMD} -e 's/MATCHES "FreeBSD")/MATCHES "FreeBSD|DragonFly")/' \
+		${WRKSRC}/components/performance_counters/memory_counters/CMakeLists.txt
+MK
+# Ninja, which FreeBSD builds with, turns this on, and the plist lists the
+# module archives; our cmake.mk uses Makefiles.
+mk add CMAKE_ARGS "-DHPX_WITH_MODULES_AS_STATIC_LIBRARIES=ON"
