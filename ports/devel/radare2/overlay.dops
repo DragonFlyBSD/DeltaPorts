@@ -4,4 +4,5 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk set MAKE_JOBS_UNSAFE "yes"
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# libr/io/p/io_self.c reads BSD process maps with libkvm.
+mk add LDFLAGS "-lexecinfo -lkvm"

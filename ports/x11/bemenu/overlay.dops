@@ -18,4 +18,5 @@ mk target set dfly-install <<'MK2'
 	ln -fv ${STAGEDIR}${PREFIX}/share/man/man1/bemenu.1 \
 	       ${STAGEDIR}${PREFIX}/share/man/man1/bemenu-run.1
 MK2
-mk set DFLY_UNMAINTAINED "yes"
+# No curses in base.
+mk set NCURSES_USES "ncurses"

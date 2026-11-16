@@ -3,4 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# FreeBSD has <threads.h> in base.
+mk add BUILD_DEPENDS "${LOCALBASE}/include/threads.h:misc/libstdthreads"

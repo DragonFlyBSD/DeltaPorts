@@ -3,4 +3,5 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
+# hyprlang.hpp includes <print>, which needs gcc 14.
+mk set USE_GCC_VERSION "14"

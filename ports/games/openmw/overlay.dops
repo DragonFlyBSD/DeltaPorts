@@ -4,8 +4,16 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add OPTIONS_EXCLUDE "DOCS"
+# DragonFly takes the FreeBSD paths in crashcatcher and components/files.
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@ki_flag@kp_flags@' \
+		-e 's/defined(__FreeBSD__)/(defined(__FreeBSD__) || defined(__DragonFly__))/g' \
+		-e 's/^#ifndef __FreeBSD__$$/#if !defined(__FreeBSD__) \&\& !defined(__DragonFly__)/' \
 		${WRKSRC}/components/crashcatcher/crashcatcher.cpp
+	${REINPLACE_CMD} -e 's/defined(__FreeBSD__) || defined(__FreeBSD_kernel__)/& || defined(__DragonFly__)/' \
+		${WRKSRC}/components/files/fixedpath.hpp \
+		${WRKSRC}/components/files/linuxpath.hpp \
+		${WRKSRC}/components/files/linuxpath.cpp
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# <format> needs gcc 13 or later.
+mk set USE_GCC_VERSION "14"

@@ -4,4 +4,3 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
 mk add MAKE_ENV "LDVER=ld.bfd"
-mk set DFLY_UNMAINTAINED "yes"
