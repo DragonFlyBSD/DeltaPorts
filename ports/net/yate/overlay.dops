@@ -19,4 +19,3 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/engine/Mutex.cpp		\
 		${WRKSRC}/yateclass.h
 MK1
-mk set DFLY_UNMAINTAINED "yes"
