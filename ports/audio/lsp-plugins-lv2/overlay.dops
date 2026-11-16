@@ -3,13 +3,7 @@ type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk add USES "localbase:ldflags"
+text replace-once file Makefile from "pkgconfig xorg # compiler:c11" to "pkgconfig xorg localbase:ldflags # compiler:c11"
 mk add LIB_DEPENDS "libexpat.so:textproc/expat2"
 mk add CFLAGS "-DWCHAR=wchar_t -Dfdatasync=fsync"
-mk add MAKE_ENV "ICONV_LIBS=-liconv BUILD_PLATFORM=DragonFly"
-mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e 's@[[:<:]]BSD[[:>:]]@DragonFly@g' \
-		${WRKSRC}/src/container/Makefile \
-		${WRKSRC}/src/utils/Makefile
-MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+mk add MAKE_ENV "ICONV_LIBS=-liconv PLATFORM=BSD"

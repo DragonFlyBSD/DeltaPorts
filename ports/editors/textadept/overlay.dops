@@ -9,4 +9,8 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's,<menu.h>,<cdkmenu.h>,g' \
 		${WRKSRC}/src/cdk/cdk.h
 MK1
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
+# devel/ncurses keeps WINDOW and friends opaque.
+mk add CFLAGS "-DNCURSES_INTERNALS"
+# The link needs devel/ncurses' library path, which ncurses.pc leaves out;
+# the Makefile sets LDFLAGS itself, so pass it in CXXFLAGS.
+mk add CXXFLAGS "-L${NCURSESLIB}"

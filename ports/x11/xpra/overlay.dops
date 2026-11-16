@@ -7,6 +7,6 @@ mk add USES "localbase:ldflags"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NGSTREAMER}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FREEBSD@DRAGONFLY@g' \
+		-e '/^peercred_ENABLED = /s@$$@ or DRAGONFLY@' \
 		${WRKSRC}/setup.py
 MK1
-mk set DFLY_UNMAINTAINED "yes"

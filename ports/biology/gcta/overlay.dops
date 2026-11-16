@@ -1,10 +1,12 @@
 port biology/gcta
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "CMake platform checks"
 target @any
 
+# files/ patches keep MKL and the OS checks to __FreeBSD__.
 mk target set dfly-patch <<'MK1'
-	${REINPLACE_CMD} -e 's@-lz -Wl,--start-group @-lz @g' \
-		${WRKSRC}/Makefile
+	${REINPLACE_CMD} -e 's@!defined(__FreeBSD__)@& \&\& !defined(__DragonFly__)@' \
+		${WRKSRC}/include/cpu.h ${WRKSRC}/include/cpu_f77blas.h
+	${REINPLACE_CMD} -e 's@defined __FreeBSD__ ||@& defined __DragonFly__ ||@' \
+		${WRKSRC}/main/option.cpp ${WRKSRC}/src/main.cpp
 MK1
-mk set DFLY_UNMAINTAINED "yes"

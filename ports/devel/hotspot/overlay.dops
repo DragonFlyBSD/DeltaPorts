@@ -3,4 +3,8 @@ type port
 reason "auto-converted from Makefile.DragonFly"
 target @any
 
-mk set DFLY_UNMAINTAINED "yes"
+# devel/elfutils installs libdw and libelf in ${LOCALBASE}/lib/elfutils.
+mk set LIB_DIRS "/lib /usr/lib ${LOCALBASE}/lib ${LOCALBASE}/lib/elfutils"
+# FindLibElf and FindElfUtils do not look in include/elfutils and lib/elfutils.
+mk add CMAKE_ARGS "-DLIBELF_INCLUDE_DIRS=${LOCALBASE}/include/elfutils -DLIBELF_LIBRARIES=${LOCALBASE}/lib/elfutils/libelf.so"
+mk add CMAKE_ARGS "-DLIBDW_LIBRARIES=${LOCALBASE}/lib/elfutils/libdw.so"
