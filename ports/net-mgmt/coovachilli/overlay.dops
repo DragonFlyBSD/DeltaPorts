@@ -1,5 +1,13 @@
 port net-mgmt/coovachilli
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "take the FreeBSD tun/net code paths"
 target @any
 
+# tun.c and net.c have FreeBSD/macOS/OpenBSD/NetBSD branches and stop
+# with #error "Unknown platform!" elsewhere.
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/defined *(__FreeBSD__)/(defined(__FreeBSD__) || defined(__DragonFly__))/g' \
+		${WRKSRC}/src/chilli.c ${WRKSRC}/src/dhcp.c ${WRKSRC}/src/dhcp.h \
+		${WRKSRC}/src/main-query.c ${WRKSRC}/src/net.c ${WRKSRC}/src/redir.c \
+		${WRKSRC}/src/system.h ${WRKSRC}/src/tun.c
+MK1
