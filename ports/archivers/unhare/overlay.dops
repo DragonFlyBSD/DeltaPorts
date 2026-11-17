@@ -1,0 +1,7 @@
+port archivers/unhare
+type port
+reason "libelf from devel/libelf, which DragonFly base lacks"
+target @any
+
+mk add LIB_DEPENDS "libelf.so:devel/libelf"
+mk add CFLAGS "-I${LOCALBASE}/include/libelf -I${LOCALBASE}/include -L${LOCALBASE}/lib"
