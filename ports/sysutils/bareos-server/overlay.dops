@@ -18,3 +18,10 @@ mk set NLS_LDFLAGS "-lintl"
 
 # From the former Makefile.DragonFly: no LTO AME crypto plugin.
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NSCSICRYPTO}"
+
+# FreeBSD's files/ adds fastlz/include to the stored plugins only for
+# HAVE_FREEBSD_OS (autoxflate-sd: no fastlz/fastlzlib.h).
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/^if(HAVE_FREEBSD_OS)$$/if(HAVE_FREEBSD_OS OR CMAKE_SYSTEM_NAME STREQUAL "DragonFly")/' \
+		${WRKSRC}/core/src/plugins/stored/CMakeLists.txt
+MK1

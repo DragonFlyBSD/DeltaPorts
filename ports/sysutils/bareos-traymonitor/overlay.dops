@@ -1,13 +1,13 @@
 port sysutils/bareos-traymonitor
 type port
-reason "pkg-plist: share/pixmaps path replaced by share/icons in upstream; remove stale xpm entry, add png entry (both on-missing noop)"
+reason "the server overlay's ACL/xattr and libintl settings, which sit in the master's client/server-only block"
 target @any
 
-# Upstream moved from share/pixmaps/ to share/icons/hicolor/; the diff targets
-# a share/pixmaps/*.xpm path that no longer exists in the upstream pkg-plist.
-# Use on-missing noop for both the removal and the addition since the upstream
-# already reflects the correct state.
-text line-remove file pkg-plist exact "share/pixmaps/bareos-tray-monitor.xpm" on-missing noop
-text line-insert-after file pkg-plist \
-    anchor "share/applications/bareos-tray-monitor.desktop" \
-    line "share/pixmaps/bareos-tray-monitor.png" on-missing noop
+# bareos-server's overlay lands inside the master Makefile's client/server
+# block. The traymonitor builds bconsole with NLS (only FreeBSD gets
+# link_libraries(intl)) and the findlib ACL/xattr code, which has no
+# DragonFly section.
+mk add CMAKE_ARGS "-Dacl=OFF -DHAVE_SYS_EXTATTR_H:BOOL=OFF"
+mk block set condition "1" <<'MK'
+LDFLAGS+=	-lintl
+MK
