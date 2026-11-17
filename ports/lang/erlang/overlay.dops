@@ -1,3 +1,3 @@
 port lang/erlang
-type lock
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+type port
+reason "DragonFly cases in configure (shared driver linking); no SCTP"
