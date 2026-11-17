@@ -1,0 +1,10 @@
+port net-im/flare
+type port
+reason "cargo:extra for rustix-1.1.4 (no source-specific multicast); system gettext"
+target @any
+
+mk eval USES "${USES:S/cargo/cargo:extra/}"
+
+# gettext-sys links the system libintl only on the targets it names, and
+# otherwise builds its bundled gettext unless GETTEXT_DIR is set.
+mk add MAKE_ENV "GETTEXT_DIR=${LOCALBASE}"
