@@ -1,0 +1,3 @@
+port multimedia/tenacity
+type port
+reason "nyquist byte order, GTK and GLib for DragonFly (dragonfly/)"
