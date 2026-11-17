@@ -1,0 +1,18 @@
+port cad/OrcaSlicer
+type port
+reason "take the FreeBSD code paths and build checks"
+target @any
+
+# Take the FreeBSD branches, upstream's and those files/ adds: the sources
+# under src/ and the CMake checks that add GTK, dbus and libusb.
+mk target set dfly-patch <<'MK1'
+	cd ${WRKSRC}/src && ${GREP} -rlF --include='*.h' --include='*.hpp' \
+		--include='*.c' --include='*.cpp' '__FreeBSD__' . | \
+		${XARGS} ${REINPLACE_CMD} \
+		-e 's/defined(__FreeBSD__)/(defined(__FreeBSD__) || defined(__DragonFly__))/g' \
+		-e 's/^\([[:space:]]*\)#ifdef __FreeBSD__$$/\1#if defined(__FreeBSD__) || defined(__DragonFly__)/'
+	${REINPLACE_CMD} -e 's/CMAKE_SYSTEM_NAME STREQUAL "FreeBSD"/CMAKE_SYSTEM_NAME MATCHES "FreeBSD|DragonFly"/' \
+		${WRKSRC}/CMakeLists.txt ${WRKSRC}/src/CMakeLists.txt \
+		${WRKSRC}/src/slic3r/CMakeLists.txt \
+		${WRKSRC}/deps_src/hidapi/CMakeLists.txt
+MK1
