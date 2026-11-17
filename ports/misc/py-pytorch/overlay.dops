@@ -1,20 +1,25 @@
 port misc/py-pytorch
 type port
-reason "set IGNORE, add clang binary aliases, CXXFLAGS, LDFLAGS, LIB_DIRS dep, materialize dragonfly patches"
+reason "take the FreeBSD code paths, materialize dragonfly patches"
 target @any
 
-mk set IGNORE "unmaintained, please request fixing to users mailing list"
-mk set USE_CLANG_FALLBACK "default"
-mk add BINARY_ALIAS "cpp=${LOCALBASE}/bin/clang-cpp${LLVM_DEFAULT}"
-mk add BINARY_ALIAS "cc=${LOCALBASE}/bin/clang${LLVM_DEFAULT}"
-mk add BINARY_ALIAS "c++=${LOCALBASE}/bin/clang++${LLVM_DEFAULT}"
-mk add BINARY_ALIAS "ar=${LOCALBASE}/bin/llvm-ar${LLVM_DEFAULT}"
-mk add BINARY_ALIAS "nm=${LOCALBASE}/bin/llvm-nm${LLVM_DEFAULT}"
-mk add CXXFLAGS -nostdlib++
-mk add CXXFLAGS -nostdinc++
-mk add CXXFLAGS "-I${LOCALBASE}/include"
-mk add CXXFLAGS "-I${LOCALBASE}/include/cxxrt"
-mk add CXXFLAGS "-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/include/c++/v1"
-mk set LDFLAGS "-L /usr/lib -L${LOCALBASE}/llvm${LLVM_DEFAULT}/lib/c++ -L /lib"
-mk add LIB_DIRS "${PREFIX}/llvm${LLVM_DEFAULT}/lib"
-mk add LIB_DEPENDS "libc++.so.1:devel/libcxx${LLVM_DEFAULT}"
+# Built with base gcc and libstdc++, as are abseil, onnx and protobuf,
+# whose C++ APIs it calls.
+# Take the FreeBSD branches, upstream's and those files/ adds: 64-bit long
+# Scalar, <xlocale.h>, bswap, tensorpipe's boot id, the gloo device and
+# HOST_NAME_MAX.
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/defined(__FreeBSD__) || defined(__OpenBSD__)/defined(__FreeBSD__) || defined(__DragonFly__) || defined(__OpenBSD__)/' \
+		${WRKSRC}/c10/core/Scalar.h
+	${REINPLACE_CMD} -e 's/^#if defined(__APPLE__) || defined(__FreeBSD__)$$/& || defined(__DragonFly__)/' \
+		${WRKSRC}/torch/csrc/jit/frontend/strtod.cpp
+	${REINPLACE_CMD} -e 's/^#ifdef __FreeBSD__$$/#if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/torch/csrc/utils/byte_order.h
+	${REINPLACE_CMD} -e 's/^#elif defined(__FreeBSD__)$$/#elif defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/third_party/tensorpipe/tensorpipe/common/system.cc
+	${REINPLACE_CMD} -e 's/defined(__FreeBSD__)/(defined(__FreeBSD__) || defined(__DragonFly__))/g' \
+		${WRKSRC}/torch/csrc/distributed/c10d/ProcessGroupGloo.cpp
+	# Base gcc has no libgcc_s; its driver links libgcc_pic instead.
+	${REINPLACE_CMD} -e 's/ gcc_s gcc)/ gcc_pic gcc)/' \
+		${WRKSRC}/CMakeLists.txt
+MK1
