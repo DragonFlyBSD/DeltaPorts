@@ -1,0 +1,12 @@
+port audio/bespokesynth
+type port
+reason "take ableton-link's Linux/FreeBSD platform code"
+target @any
+
+# FreeBSD's files/ add __FreeBSD__ to the LINK_PLATFORM_LINUX checks; the
+# bundled link has no DragonFly platform and lacks htonll otherwise.
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's/defined(LINK_PLATFORM_LINUX) || defined(__FreeBSD__)/& || defined(__DragonFly__)/' \
+		${WRKSRC}/libs/ableton-link/include/ableton/discovery/NetworkByteStreamSerializable.hpp \
+		${WRKSRC}/libs/ableton-link/include/ableton/platforms/Config.hpp
+MK1
