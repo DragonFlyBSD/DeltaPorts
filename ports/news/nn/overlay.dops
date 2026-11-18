@@ -1,10 +1,12 @@
 port news/nn
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "port ncurses; DragonFly in term.c's __FreeBSD__ tests"
 target @any
 
 mk add USES "ncurses"
 mk add MAKE_ARGS "CPP=\"${CC} -E -P\""
+
+# term.c tests __FreeBSD__ only (USES=alias defined it, dp-r65).
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@-ltermcap@-lncurses@g'	\
 		${WRKSRC}/conf/s-freebsd.h
@@ -13,4 +15,7 @@ mk target set dfly-patch <<'MK1'
 		${WRKSRC}/global.c			\
 		${WRKSRC}/global.h			\
 		${WRKSRC}/execute.c
+	${REINPLACE_CMD} -E -e 's/defined[ ]*\([ ]*__FreeBSD__[ ]*\)/(defined(__FreeBSD__) || defined(__DragonFly__))/g' \
+		-e 's/^#([[:space:]]*)ifndef[[:space:]]+__FreeBSD__/#\1if !defined(__FreeBSD__) \&\& !defined(__DragonFly__)/' \
+		${WRKSRC}/term.c
 MK1
