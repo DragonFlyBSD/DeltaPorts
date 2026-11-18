@@ -1,0 +1,11 @@
+port filesystems/chironfs
+type port
+reason "DragonFly takes the Linux/FreeBSD fuse headers and FreeBSD's getmntinfo"
+target @any
+
+# Elsewhere it builds NetBSD's refuse path (own cpuset_t, fuse_opt.h).
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/defined(linux) || defined(__FreeBSD__)/& || defined(__DragonFly__)/' \
+		-e 's/^#if defined(__FreeBSD__)$$/#if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/src/chirctl.c ${WRKSRC}/src/chirondbg.c ${WRKSRC}/src/chironfs.c
+MK
