@@ -1,0 +1,10 @@
+port security/naabu
+type port
+reason "isPrivileged as on FreeBSD"
+target @any
+
+# pkg/privileges has isPrivileged per OS by file name.
+mk target set dfly-patch <<'MK'
+	${SED} -e 's@^//go:build freebsd$$@//go:build dragonfly@' \
+		${WRKSRC}/pkg/privileges/privileges_freebsd.go > ${WRKSRC}/pkg/privileges/privileges_dragonfly.go
+MK
