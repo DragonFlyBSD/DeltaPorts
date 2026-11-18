@@ -1,6 +1,12 @@
 port science/siconos
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "dlopen without RTLD_DEEPBIND, which DragonFly lacks"
 target @any
 
-mk add CFLAGS "-DRTLD_DEEPBIND=0"
+# open_lib.c and SiconosSharedLibrary.cpp pass RTLD_DEEPBIND everywhere
+# but macOS; a -D in CFLAGS lands after the Makefile's CFLAGS comment.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/RTLD_LAZY | RTLD_DEEPBIND/RTLD_LAZY/' \
+		${WRKSRC}/numerics/src/tools/open_lib.c \
+		${WRKSRC}/kernel/src/utils/SiconosSharedLibrary/SiconosSharedLibrary.cpp
+MK
