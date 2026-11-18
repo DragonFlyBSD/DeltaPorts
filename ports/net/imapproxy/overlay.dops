@@ -1,6 +1,6 @@
 port net/imapproxy
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "pass configure --host for the build triple"
 target @any
 
-mk add CONFIGURE_ARGS "--host=$(CONFIGURE_TARGET}"
+mk add CONFIGURE_ARGS "--host=${CONFIGURE_TARGET}"
