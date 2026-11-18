@@ -1,0 +1,3 @@
+port sysutils/porch
+type port
+reason "DragonFly takes the BSD sys_signame code (dragonfly/)"
