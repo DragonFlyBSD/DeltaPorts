@@ -1,5 +1,5 @@
 port net/trickle
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly: poll() with nfds_t and FreeBSD's sendfile (dragonfly/)"
 target @any
 
