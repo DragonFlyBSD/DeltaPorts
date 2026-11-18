@@ -1,0 +1,3 @@
+port devel/outcome
+type port
+reason "define ENOSR, ENOSTR and ETIME as libc++ does (dragonfly/)"
