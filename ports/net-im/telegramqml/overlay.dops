@@ -1,0 +1,6 @@
+port net-im/telegramqml
+type port
+reason "gcc rejects the enum-to-int narrowing in its case labels"
+target @any
+
+mk add CXXFLAGS "-Wno-narrowing"
