@@ -1,0 +1,10 @@
+port devel/openocd-devel
+type port
+reason "a defined() guard for -Werror=undef on __FreeBSD__"
+target @any
+
+# The build has -Werror=undef, and DragonFly has no __FreeBSD__ to compare.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^#if __FreeBSD__ >= 15$$/#if defined(__FreeBSD__) \&\& __FreeBSD__ >= 15/' \
+		${WRKSRC}/src/jtag/drivers/libusb_helper.c
+MK
