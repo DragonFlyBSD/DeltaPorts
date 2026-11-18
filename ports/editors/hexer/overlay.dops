@@ -1,9 +1,14 @@
 port editors/hexer
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "port ncurses: its include and library paths"
 target @any
 
-mk add USES "ncurses"
+# FreeBSD's only USES line sits under .if ${OPSYS} == FreeBSD.
+mk block set condition "1" <<'MK'
+USES+=	ncurses
+MK
+mk add CFLAGS "-I${NCURSESINC}"
+mk add LDFLAGS "-L${NCURSESLIB}"
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@-lcurses@-lncurses@'	\
 		${WRKSRC}/Makefile
