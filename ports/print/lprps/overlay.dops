@@ -1,5 +1,5 @@
 port print/lprps
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "libc's sys_siglist, as on BSD (dragonfly/)"
 target @any
 
