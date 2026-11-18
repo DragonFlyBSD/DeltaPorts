@@ -1,0 +1,3 @@
+port devel/libks
+type port
+reason "no _XOPEN_SOURCE, as on FreeBSD; thread id from lwp_gettid() (dragonfly/)"
