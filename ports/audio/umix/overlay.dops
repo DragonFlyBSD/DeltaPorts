@@ -1,0 +1,3 @@
+port audio/umix
+type port
+reason "sys/soundcard.h as on FreeBSD (dragonfly/)"
