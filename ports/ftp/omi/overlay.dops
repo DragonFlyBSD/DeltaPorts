@@ -1,5 +1,5 @@
 port ftp/omi
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "libc's strndup, as on FreeBSD (dragonfly/)"
 target @any
 
