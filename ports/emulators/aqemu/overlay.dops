@@ -1,0 +1,10 @@
+port emulators/aqemu
+type port
+reason "tinyxml2 fseeko as on FreeBSD (dragonfly/); install rules"
+target @any
+
+# CMakeLists.txt installs the program and data for Linux and FreeBSD only.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/"^(Linux|FreeBSD)$$"/"^(Linux|FreeBSD|DragonFly)$$"/' \
+		${WRKSRC}/CMakeLists.txt
+MK
