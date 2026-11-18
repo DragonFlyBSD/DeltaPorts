@@ -1,0 +1,7 @@
+port devel/nextpnr-devel
+type port
+reason "build with gcc: llvm's clang links libc++, boost-libs is built against libstdc++"
+target @any
+
+# FreeBSD takes ports clang to avoid a base clang crash.
+mk remove USES "llvm:min=20"
