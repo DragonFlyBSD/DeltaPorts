@@ -1,0 +1,10 @@
+port devel/gf2
+type port
+reason "the BSD fork-based gdb launch (dragonfly/); do-build with WRK_ENV"
+target @any
+
+# do-build runs c++ under env -i without WRK_ENV, so gcc's collect2 finds
+# no ld in an empty PATH.
+mk target set do-build <<'MK'
+	(cd ${WRKSRC} && ${SETENVI} ${WRK_ENV} ${CXX} ${PORTNAME}.cpp -o ${PORTNAME} ${CXXFLAGS} ${LDFLAGS})
+MK
