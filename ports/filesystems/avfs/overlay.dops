@@ -1,0 +1,3 @@
+port filesystems/avfs
+type port
+reason "struct dirent has no d_reclen (dragonfly/)"
