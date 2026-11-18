@@ -1,0 +1,10 @@
+port security/openca-ocspd
+type port
+reason "configure: DragonFly as a BSD"
+target @any
+
+# configure.ac's OS case matches *bsd*, not dragonfly6.x.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^ \*bsd\*) myarch=bsd$$/ *bsd*|*dragonfly*) myarch=bsd/' \
+		${WRKSRC}/configure.ac
+MK
