@@ -1,0 +1,7 @@
+port net/dot1ag-utils
+type port
+reason "gcc's stringop-truncation under the build's -Werror"
+target @any
+
+# The build has -Werror; gcc flags the strncpy calls.
+mk add CFLAGS "-Wno-error=stringop-truncation"
