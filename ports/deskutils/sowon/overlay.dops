@@ -1,0 +1,3 @@
+port deskutils/sowon
+type port
+reason "RGFW's event-wait pipe as on FreeBSD (dragonfly/)"
