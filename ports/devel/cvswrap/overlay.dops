@@ -1,6 +1,6 @@
 port devel/cvswrap
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "sys/param.h; libc's strndup, as on FreeBSD (dragonfly/)"
 target @any
 
 mk target set dfly-patch <<'MK1'
