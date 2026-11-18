@@ -1,0 +1,6 @@
+port security/pam_worker
+type port
+reason "link libpam: DragonFly's bsd.prog.mk has no LIBADD"
+target @any
+
+mk add MAKE_ARGS "LDADD=-lpam"
