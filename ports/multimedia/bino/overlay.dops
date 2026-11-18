@@ -1,0 +1,7 @@
+port multimedia/bino
+type port
+reason "<exception> for std::set_terminate"
+target @any
+
+# dbg.cpp calls std::set_terminate without <exception>, which libc++ brings in.
+mk add CXXFLAGS "-include exception"
