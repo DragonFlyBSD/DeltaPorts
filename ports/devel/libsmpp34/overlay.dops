@@ -1,5 +1,5 @@
 port devel/libsmpp34
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "glibc-style gethostbyname_r as on FreeBSD (dragonfly/)"
 target @any
 
