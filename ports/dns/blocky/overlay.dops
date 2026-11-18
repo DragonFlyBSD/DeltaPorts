@@ -1,0 +1,12 @@
+port dns/blocky
+type port
+reason "no SQLite query log: modernc.org/libc has no DragonFly port"
+target @any
+
+# Join the platforms blocky builds without its SQLite query log (dp-lu6).
+mk target set dfly-patch <<'MK1'
+	${REINPLACE_CMD} -e 's,^//go:build !mips .*,& \&\& !dragonfly,' \
+		${WRKSRC}/querylog/database_writer_sqlite.go
+	${REINPLACE_CMD} -e 's,^//go:build mips .*,& || dragonfly,' \
+		${WRKSRC}/querylog/database_writer_sqlite_unsupported.go
+MK1
