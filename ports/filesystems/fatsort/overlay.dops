@@ -1,0 +1,3 @@
+port filesystems/fatsort
+type port
+reason "DragonFly builds the BSD device code (dragonfly/)"
