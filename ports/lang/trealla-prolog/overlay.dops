@@ -1,0 +1,3 @@
+port lang/trealla-prolog
+type port
+reason "no posix_spawn_file_actions_addchdir_np: report cwd as unsupported, as on OpenBSD (dragonfly/)"
