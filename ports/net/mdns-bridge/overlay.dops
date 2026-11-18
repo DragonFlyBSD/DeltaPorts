@@ -1,0 +1,3 @@
+port net/mdns-bridge
+type port
+reason "DragonFly takes kqueue as on FreeBSD (dragonfly/)"
