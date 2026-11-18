@@ -1,0 +1,7 @@
+port textproc/goldendict-ng
+type port
+reason "USES=iconv: LIBICONV_PLUG when converters/libiconv's iconv.h is in LOCALBASE"
+target @any
+
+# Without it iconv.cc calls libiconv_open, and only libc's iconv is linked.
+mk add USES "iconv"
