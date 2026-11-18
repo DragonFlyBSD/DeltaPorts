@@ -1,6 +1,7 @@
 port multimedia/mpc-qt
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "gmake; Boost.Stacktrace with gcc needs _Unwind_Backtrace allowed without _GNU_SOURCE"
 target @any
 
 mk add USES "gmake"
+mk add CXXFLAGS "-DBOOST_STACKTRACE_GNU_SOURCE_NOT_REQUIRED"
