@@ -1,0 +1,9 @@
+port math/p5-PDL-IO-Browser
+type port
+reason "port ncurses: base has no public curses"
+target @any
+
+# Devel::CheckLib probes curses.h with the compiler's default include path;
+# ncursesw6-config then gives the build flags.
+mk add USES "ncurses"
+mk add CONFIGURE_ENV "CPATH=${LOCALBASE}/include"
