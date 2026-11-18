@@ -1,0 +1,8 @@
+port databases/redis86
+type port
+reason "malloc_np.h and the FreeBSD Makefile settings (dragonfly/, as databases/redis); md5sum as md5; OpenSSL from LOCALBASE"
+target @any
+
+# deps/Makefile hashes its build flags with md5sum; FreeBSD aliases gmd5sum to it.
+mk add MAKE_ENV "OPENSSL_PREFIX=${LOCALBASE}"
+mk set BINARY_ALIAS "md5sum=md5"
