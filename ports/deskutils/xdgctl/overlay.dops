@@ -1,0 +1,6 @@
+port deskutils/xdgctl
+type port
+reason "build with the port's compiler: the Makefile hardcodes CC = clang"
+target @any
+
+mk add MAKE_ARGS "CC=${CC}"
