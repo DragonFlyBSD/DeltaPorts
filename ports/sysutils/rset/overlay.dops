@@ -1,0 +1,7 @@
+port sysutils/rset
+type port
+reason "configure as FreeBSD: man pages under share/man"
+target @any
+
+# configure copies Makefile.freebsd (MANPREFIX share/man) only on FreeBSD.
+mk add CONFIGURE_ENV "TARGET_OS=FreeBSD"
