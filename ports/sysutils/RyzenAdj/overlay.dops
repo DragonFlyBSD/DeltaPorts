@@ -1,0 +1,10 @@
+port sysutils/RyzenAdj
+type port
+reason "build the libpci OS layer, as on FreeBSD"
+target @any
+
+# CMakeLists.txt takes the libpci code for Linux and FreeBSD only.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/"^(Linux|FreeBSD)\$$"/"^(Linux|FreeBSD|DragonFly)$$"/' \
+		${WRKSRC}/CMakeLists.txt
+MK
