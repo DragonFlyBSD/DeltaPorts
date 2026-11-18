@@ -1,9 +1,12 @@
 port net/gerbera
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "build with GCC_DEFAULT for std::filesystem; libupnp rather than npupnp; libinotify"
 target @any
 
-mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
-mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
-mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+# The cxxfs_gcc8 shim mixes gcc 8's filesystem library into a gcc 12
+# build, and FindFilesystem's test program fails to run.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NLIBNPUPNP} LIBUPNP"
+
+# inotify is in libc on FreeBSD 15 only; DragonFly needs devel/libinotify.
+mk replace-if from "${OPSYS} == FreeBSD && ${OSVERSION} < 1500050" to "(${OPSYS} == FreeBSD && ${OSVERSION} < 1500050) || ${OPSYS} == DragonFly"
