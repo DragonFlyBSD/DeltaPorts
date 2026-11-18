@@ -1,5 +1,4 @@
 port comms/sredird
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly takes the FreeBSD termios code (dragonfly/)"
 target @any
-
