@@ -1,0 +1,11 @@
+port devel/pinact
+type port
+reason "vendored ghtkn browser: the Linux opener, as FreeBSD copies it"
+target @any
+
+# ghtkn's browser package is per OS by file name; FreeBSD's post-patch
+# copies browser_linux.go to browser_freebsd.go.
+mk target set dfly-patch <<'MK'
+	${CP} ${GO_WRKSRC}/vendor/github.com/suzuki-shunsuke/ghtkn-go-sdk/ghtkn/browser/browser_linux.go \
+		${GO_WRKSRC}/vendor/github.com/suzuki-shunsuke/ghtkn-go-sdk/ghtkn/browser/browser_dragonfly.go
+MK
