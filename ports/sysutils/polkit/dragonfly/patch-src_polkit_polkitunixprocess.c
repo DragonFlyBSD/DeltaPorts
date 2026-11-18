@@ -31,7 +31,22 @@
  static gboolean
  get_kinfo_proc (pid_t pid, struct kinfo_proc *p)
  {
-@@ -1263,7 +1269,7 @@
+@@ -1220,6 +1226,14 @@
+ 
+   if (sysctl (mib, 4, p, &len, NULL, 0) == -1)
+     return FALSE;
++#ifdef HAVE_DRAGONFLY
++  /* a pid that is gone returns no data, not ESRCH */
++  if (len == 0)
++    {
++      errno = ESRCH;
++      return FALSE;
++    }
++#endif
+ 
+   return TRUE;
+ }
+@@ -1263,7 +1277,7 @@
                          GError **error)
  {
    guint64 start_time;
@@ -40,7 +55,7 @@
    gchar *filename;
    gchar *contents;
    size_t length;
-@@ -1355,8 +1361,10 @@
+@@ -1355,8 +1369,10 @@
        goto out;
      }
  
@@ -52,7 +67,7 @@
  #else
    start_time = (guint64) p.p_ustart_sec;
  #endif
-@@ -1810,7 +1818,7 @@
+@@ -1810,7 +1826,7 @@
    gchar *contents;
    gchar **lines;
    guint64 start_time;
@@ -61,7 +76,7 @@
    struct kinfo_proc p;
  #elif defined(HAVE_NETBSD)
    struct kinfo_proc2 p;
-@@ -1837,7 +1845,7 @@
+@@ -1837,7 +1853,7 @@
        goto out;
      }
  
@@ -70,7 +85,7 @@
    if (get_kinfo_proc (pid, &p) == 0)
      {
        g_set_error (error,
-@@ -1852,6 +1860,9 @@
+@@ -1852,6 +1868,9 @@
  #if defined(HAVE_FREEBSD)
    result = p.ki_uid;
    start_time = (guint64) p.ki_start.tv_sec;

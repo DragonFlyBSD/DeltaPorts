@@ -1,6 +1,6 @@
 port sysutils/polkit
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "kinfo_proc for process uid/start time, pkexec PDEATHSIG (dragonfly/)"
 target @any
 
 mk add LIB_DEPENDS "libxml2.so:textproc/libxml2"
