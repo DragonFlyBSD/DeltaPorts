@@ -1,0 +1,9 @@
+port misc/tlm
+type port
+reason "GetShell as on FreeBSD"
+target @any
+
+# pkg/shell has GetShell per OS by file name only.
+mk target set dfly-patch <<'MK'
+	${CP} ${WRKSRC}/pkg/shell/shell_freebsd.go ${WRKSRC}/pkg/shell/shell_dragonfly.go
+MK
