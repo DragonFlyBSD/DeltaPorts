@@ -1,3 +1,10 @@
 port www/writeas-cli
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "vendored jibber_jabber: DragonFly as a Unix"
+target @any
+
+# jibber_jabber_unix.go (DetectLanguage) lists the other Unixes only.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@^// +build darwin freebsd linux netbsd openbsd$$@& dragonfly@' \
+		${WRKSRC}/vendor/github.com/cloudfoundry/jibber_jabber/jibber_jabber_unix.go
+MK
