@@ -1,0 +1,8 @@
+port math/flexiblas
+type port
+reason "plist: math/openblas is the OpenMP variant here"
+target @any
+
+# FreeBSD tells the variant by base's omp.h, which DragonFly has not; its
+# openblas builds with gcc's OpenMP.
+mk replace-if from "exists(/usr/include/omp.h)" to "exists(/usr/include/omp.h) || ${OPSYS} == DragonFly"
