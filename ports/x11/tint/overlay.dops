@@ -1,0 +1,7 @@
+port x11/tint
+type port
+reason "libm for tint2conf"
+target @any
+
+# tint2conf's draw_shadow() calls sqrt(), and the target links no libm.
+mk add LDFLAGS "-lm"
