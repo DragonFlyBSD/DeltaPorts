@@ -1,0 +1,3 @@
+port net-mgmt/andwatch
+type port
+reason "ether_addr_octet as on FreeBSD (dragonfly/)"
