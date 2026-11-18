@@ -1,0 +1,9 @@
+port multimedia/lebiniou
+type port
+reason "v4l_compat for the webcam plugins, as on FreeBSD before 16"
+target @any
+
+# FreeBSD adds it for OSVERSION < 1600021 only; configure looks for
+# linux/videodev2.h without LOCALBASE's include path.
+mk replace-if from "${OPSYS} == FreeBSD && ${OSVERSION} < 1600021" to "${OPSYS} == DragonFly || (${OPSYS} == FreeBSD && ${OSVERSION} < 1600021)"
+mk add USES "localbase"
