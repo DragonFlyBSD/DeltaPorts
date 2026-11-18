@@ -1,0 +1,11 @@
+port www/urlfinder
+type port
+reason "vendored projectdiscovery/utils permission: DragonFly as the other BSDs"
+target @any
+
+# permission_other.go (checkCurrentUserRoot) lists the other BSDs only;
+# upstream added dragonfly later.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@^//go:build darwin || freebsd || @//go:build darwin || freebsd || dragonfly || @' \
+		${GO_WRKSRC}/vendor/github.com/projectdiscovery/utils/permission/permission_other.go
+MK
