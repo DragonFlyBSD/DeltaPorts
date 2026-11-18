@@ -1,0 +1,7 @@
+port www/gitea
+type port
+reason "SQLite through the cgo driver: modernc.org/libc has no DragonFly port"
+target @any
+
+# Gitea 28 uses mattn/go-sqlite3 only with sqlite_mattn (dp-lu6).
+mk set SQLITE_VARS "GO_TAGS+=\"sqlite sqlite_unlock_notify sqlite_mattn\""
