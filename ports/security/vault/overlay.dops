@@ -1,3 +1,11 @@
 port security/vault
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "vendored consul-template signals: DragonFly as a Unix"
+target @any
+
+# The vendored consul-template signals package builds SignalLookup for the
+# other Unixes only.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's|^//go:build linux .*|& \|\| dragonfly|' -e 's|^// +build linux .*|& dragonfly|' \
+		${GO_WRKSRC}/vendor/github.com/hashicorp/consul-template/signals/signals_unix.go
+MK
