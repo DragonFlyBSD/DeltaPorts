@@ -1,0 +1,18 @@
+port emulators/fbneo
+type port
+reason "serial build; DragonFly takes the FreeBSD fopen/fseeko paths"
+target @any
+
+# Depend files are written before their obj/ directories exist.
+mk set MAKE_JOBS_UNSAFE "yes"
+
+# The bundled dr_libs, minizip and miniz use fopen64 except on the systems
+# they list (FreeBSD's files/ adds FreeBSD to dr_libs).
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/defined(__FreeBSD__)/& || defined(__DragonFly__)/' \
+		${WRKSRC}/src/dep/libs/dr_libs/dr_mp3.h \
+		${WRKSRC}/src/dep/libs/dr_libs/dr_wav.h \
+		${WRKSRC}/src/dep/libs/dr_libs/dr_flac.h \
+		${WRKSRC}/src/burner/ioapi.h \
+		${WRKSRC}/src/dep/libs/zip/miniz.h
+MK
