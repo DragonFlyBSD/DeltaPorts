@@ -1,0 +1,11 @@
+port shells/elvish
+type port
+reason "rlim_t is int64 on DragonFly, as on FreeBSD"
+target @any
+
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's|^//go:build freebsd$$|//go:build freebsd \|\| dragonfly|' \
+		${WRKSRC}/pkg/mods/unix/rlim_t_int64.go
+	${REINPLACE_CMD} -e 's|^//go:build unix && !freebsd$$|//go:build unix \&\& !freebsd \&\& !dragonfly|' \
+		${WRKSRC}/pkg/mods/unix/rlim_t_uint64.go
+MK
