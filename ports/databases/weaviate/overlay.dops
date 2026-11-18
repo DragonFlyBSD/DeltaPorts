@@ -1,0 +1,11 @@
+port databases/weaviate
+type port
+reason "Statfs_t.Blocks and Bfree are int64 on DragonFly"
+target @any
+
+# The disk usage code multiplies fs.Blocks and fs.Bfree by a uint64.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -E -e 's/([ (:])fs\.(Blocks|Bfree) \* uint64\(fs\.Bsize\)/\1uint64(fs.\2) * uint64(fs.Bsize)/g' \
+		${WRKSRC}/usecases/cluster/disk_use_unix.go \
+		${WRKSRC}/adapters/repos/db/disk_use_unix.go
+MK
