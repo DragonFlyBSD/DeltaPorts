@@ -1,0 +1,7 @@
+port www/filebrowser-quantum
+type port
+reason "SQLite through the cgo driver: modernc.org/libc has no DragonFly port"
+target @any
+
+# cgosql picks mattn/go-sqlite3 over modernc.org/sqlite (dp-lu6).
+mk add GO_BUILDFLAGS "-tags cgosql"
