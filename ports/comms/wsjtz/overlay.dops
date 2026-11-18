@@ -1,0 +1,7 @@
+port comms/wsjtz
+type port
+reason "hamlib's deprecated rig_get_conf under the build's -Werror"
+target @any
+
+# The build has -Werror; hamlib deprecates rig_get_conf().
+mk add CXXFLAGS "-Wno-error=deprecated-declarations"
