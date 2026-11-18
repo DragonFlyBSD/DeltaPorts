@@ -1,0 +1,7 @@
+port misc/sff
+type port
+reason "link the ports ncursesw from NCURSESLIB"
+target @any
+
+# The Makefile sets LDFLAGS = -lncursesw without a library path.
+mk add MAKE_ARGS "LDFLAGS=\"-L${NCURSESLIB} -lncursesw\""
