@@ -11,3 +11,18 @@ mk target set post-patch <<'MK1'
 	${REINPLACE_CMD} -e 's/-flto=auto//g' -e 's/-fno-fat-lto-objects//g' -e 's/-fstrength-reduce//g' ${WRKSRC}/NeuralRack/makefile
 	${REINPLACE_CMD} -e 's/CFLAGS :=/CFLAGS +=/g' -e 's/ -02/ -O2/' ${WRKSRC}/NeuralRack/makefile
 MK1
+
+# The standalone and libxputty pick X11 for Linux and the other BSDs and
+# otherwise build the Windows code (MSG, GetMessage).
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/defined(__linux__) || defined(__FreeBSD__)/& || defined(__DragonFly__)/' \
+		${WRKSRC}/NeuralRack/standalone/main.cpp \
+		${WRKSRC}/NeuralRack/standalone/NeuralRack.cc \
+		${WRKSRC}/NeuralRack/standalone/xpa.h \
+		${WRKSRC}/libxputty/xputty/header/xputty.h \
+		${WRKSRC}/libxputty/xputty/header/xfilepicker.h \
+		${WRKSRC}/libxputty/xputty/xwidget-linux.c
+MK
+
+# The VST3 bundle's Contents dir is named <arch>-<os>.
+text replace-once file pkg-plist from "%%VST3_ARCH%%-freebsd" to "%%VST3_ARCH%%-dragonfly"
