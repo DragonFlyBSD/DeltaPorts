@@ -1,0 +1,3 @@
+port multimedia/asdcplib
+type port
+reason "DragonFly reads /proc/curproc/file as FreeBSD does (dragonfly/)"
