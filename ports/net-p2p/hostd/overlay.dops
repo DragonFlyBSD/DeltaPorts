@@ -1,0 +1,10 @@
+port net-p2p/hostd
+type port
+reason "Statfs_t.Bfree and Blocks are int64 on DragonFly"
+target @any
+
+# usage_default.go multiplies stat.Bfree and stat.Blocks by a uint64.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/return stat\.Bfree \* uint64(stat\.Bsize), stat\.Blocks \* uint64(stat\.Bsize), nil/return uint64(stat.Bfree) * uint64(stat.Bsize), uint64(stat.Blocks) * uint64(stat.Bsize), nil/' \
+		${WRKSRC}/internal/disk/usage_default.go
+MK
