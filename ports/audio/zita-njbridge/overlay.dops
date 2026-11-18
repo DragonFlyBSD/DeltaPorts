@@ -1,5 +1,4 @@
 port audio/zita-njbridge
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly takes the POSIX semaphore and thread code; netinet/in.h for the socket code (dragonfly/)"
 target @any
-
