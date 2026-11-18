@@ -1,8 +1,9 @@
 port net-mgmt/driftnet
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "configure and build as FreeBSD; bswap_32, not glibc's __bswap_32"
 target @any
 
+# image.c calls glibc's internal __bswap_32; byteswap.h has bswap_32.
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\(freebsd\*\))@\1|dragonfly*)@g' \
 		${WRKSRC}/configure.ac
@@ -12,4 +13,6 @@ mk target set dfly-patch <<'MK1'
 			 -e 's@ifdef \(__FreeBSD__\)@if defined(\1) || defined(__DragonFly__)@' \
 		${WRKSRC}/src/pid.c ${WRKSRC}/src/compat/compat.h \
 		${WRKSRC}/src/network/layer2.c ${WRKSRC}/src/network/layer3.c
+	${REINPLACE_CMD} -e 's@__bswap_32(@bswap_32(@g' \
+		${WRKSRC}/src/media/image.c
 MK1
