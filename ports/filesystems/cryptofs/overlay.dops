@@ -1,0 +1,3 @@
+port filesystems/cryptofs
+type port
+reason "DragonFly takes the BSD statvfs/fsync code (dragonfly/)"
