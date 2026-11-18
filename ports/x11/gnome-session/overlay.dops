@@ -1,0 +1,10 @@
+port x11/gnome-session
+type port
+reason "acceleration-check flag on Exec= only, so TryExec stays valid"
+target @any
+
+# FreeBSD appends the flag to every /gnome-session, TryExec too; gdm then
+# finds no valid "gnome" session and defaults to GNOME Classic.
+text replace-once file Makefile \
+     from "'s|/gnome-session|/gnome-session --disable-acceleration-check|g'" \
+     to "'/^Exec=/s|/gnome-session|/gnome-session --disable-acceleration-check|'"
