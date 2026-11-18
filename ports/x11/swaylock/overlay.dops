@@ -1,11 +1,15 @@
 port x11/swaylock
 type port
-reason "conditional dfly-patch for swaylock-effects SSE2 fix; IGNORE unmaintained"
+reason "DragonFly as FreeBSD in meson.build; swaylock-effects SSE2 fix"
 target @any
 
-
-mk block set condition "defined(PKGNAMESUFFIX) && ${PKGNAMESUFFIX:M-effects}" <<'MK'
-dfly-patch:
+# A sed, not a patch: x11/swaylock-effects builds from this Makefile and its
+# meson.build differs.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e "s/startswith('freebsd')$$/& or host_machine.system().startswith('dragonfly')/" \
+		${WRKSRC}/meson.build
+.if ${PKGNAMESUFFIX:U:M-effects}
 	${REINPLACE_CMD} -e 's@#ifdef __SSE2__@#if defined(__SSE2__) \&\& __GNUC__ \!= 8@g' \
 		${WRKSRC}/fade.c
+.endif
 MK
