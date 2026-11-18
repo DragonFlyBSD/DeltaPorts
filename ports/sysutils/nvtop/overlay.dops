@@ -1,0 +1,3 @@
+port sysutils/nvtop
+type port
+reason "SIGPWR as SIGINFO, as on FreeBSD; no kcmp(2) (dragonfly/)"
