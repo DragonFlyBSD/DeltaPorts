@@ -1,6 +1,6 @@
 port graphics/airsaned
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly as FreeBSD in CMake and the sources (dragonfly/)"
 target @any
 
 mk target set dfly-patch <<'MK1'
