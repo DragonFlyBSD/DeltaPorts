@@ -1,0 +1,10 @@
+port www/oatpp
+type port
+reason "netinet/in.h for sockaddr_in, as on FreeBSD"
+target @any
+
+# ConnectionProvider.cpp includes netinet/in.h for FreeBSD only.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^  #if defined(__FreeBSD__)$$/  #if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKSRC}/src/oatpp/network/tcp/server/ConnectionProvider.cpp
+MK
