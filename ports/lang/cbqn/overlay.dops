@@ -1,0 +1,9 @@
+port lang/cbqn
+type port
+reason "perl's shasum for the build-flags hash"
+target @any
+
+# build/makefile hashes the build flags with sha256sum or shasum -a 256.
+# A sha256sum link to md5(1) computes MD5, so use perl's shasum.
+mk add USES "perl5"
+mk set USE_PERL5 "build"
