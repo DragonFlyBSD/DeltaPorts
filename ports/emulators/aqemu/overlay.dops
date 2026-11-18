@@ -1,6 +1,6 @@
 port emulators/aqemu
 type port
-reason "tinyxml2 fseeko as on FreeBSD (dragonfly/); install rules"
+reason "tinyxml2 fseeko and System_Info as on FreeBSD (dragonfly/); install rules"
 target @any
 
 # CMakeLists.txt installs the program and data for Linux and FreeBSD only.
