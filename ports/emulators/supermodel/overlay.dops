@@ -1,0 +1,3 @@
+port emulators/supermodel
+type port
+reason "include sys/types.h before the uint macro; minizip's 64-bit names as on FreeBSD (dragonfly/)"
