@@ -1,6 +1,8 @@
 port lang/mit-scheme
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "no binutils build dependency; NCURSESLIB in LIBS for findprim's link"
 target @any
 
 mk eval BUILD_DEPENDS "${BUILD_DEPENDS:N*binutils}"
+# findprim links with configure's LIBS only (-lncurses -lm).
+mk add CONFIGURE_ENV "LIBS=-L${NCURSESLIB}"
