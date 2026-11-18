@@ -1,0 +1,11 @@
+port databases/pgagroal
+type port
+reason "kqueue timers in milliseconds, without NOTE_USECONDS; no secure_getenv (dragonfly/); no -Werror"
+target @any
+
+# src/CMakeLists.txt adds -Werror, and gcc warns where clang does not
+# (sun_path strncpy, OpenSSL's BIO macros, unused variables).
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e '/^add_compile_options(-Werror)$$/d' \
+		${WRKSRC}/src/CMakeLists.txt
+MK
