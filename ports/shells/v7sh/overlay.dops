@@ -1,0 +1,7 @@
+port shells/v7sh
+type port
+reason "bsd.sys.mk's -Werror with gcc warnings on the K&R sources"
+target @any
+
+# WARNS gives -Werror, and gcc warns on the old-style definitions and casts.
+mk add MAKE_ARGS "NO_WERROR=yes"
