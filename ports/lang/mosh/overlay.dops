@@ -1,7 +1,11 @@
 port lang/mosh
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "configure as FreeBSD; port ncurses for the curses plugin"
 target @any
+
+# The curses plugin: base has no public curses, and its Makefile rule
+# passes no curses include or library path.
+mk add USES "ncurses"
 
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@\(\*freebsd\*\))@\1|*dragonfly*)@g' \
@@ -9,4 +13,6 @@ mk target set dfly-patch <<'MK1'
 			 -e 's@\(ptracestub_common\)=true@\1=false@g' \
 			 -e 's@HAVE_PTRACE_COMMON@&___@g' \
 		${WRKSRC}/configure
+	${REINPLACE_CMD} -e 's@-DMOSHEXPORT= $$< $$(CURSES_LIB)@-DMOSHEXPORT= -I${NCURSESINC} $$< -L${NCURSESLIB} $$(CURSES_LIB)@' \
+		${WRKSRC}/Makefile.in
 MK1
