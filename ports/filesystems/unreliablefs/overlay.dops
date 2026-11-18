@@ -1,0 +1,3 @@
+port filesystems/unreliablefs
+type port
+reason "the FreeBSD errno tables, without ECAPMODE and ENOTCAPABLE (dragonfly/)"
