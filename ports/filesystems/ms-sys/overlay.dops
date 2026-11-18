@@ -1,0 +1,3 @@
+port filesystems/ms-sys
+type port
+reason "DIOCGSECTORSIZE from sys/diskslice.h; aligned raw I/O as on FreeBSD (dragonfly/)"
