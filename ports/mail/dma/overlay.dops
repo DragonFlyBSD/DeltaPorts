@@ -1,6 +1,7 @@
 port mail/dma
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "gcc warnings under the build's -Werror (fallthrough, OpenSSL 3 deprecations)"
 target @any
 
-mk add CFLAGS "-Wno-error=implicit-fallthrough"
+# dma builds with -Werror; gcc warns on fallthroughs and OpenSSL 3 deprecates MD5_*.
+mk add CFLAGS "-Wno-error=implicit-fallthrough -Wno-error=deprecated-declarations"
