@@ -1,0 +1,3 @@
+port games/moonlight-embedded-devel
+type port
+reason "kqueue without NOTE_MSECONDS or kqueuex (dragonfly/)"
