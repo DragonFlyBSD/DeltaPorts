@@ -1,3 +1,15 @@
 port net-mgmt/victoria-metrics
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "lib/filestream and lib/fs without fadvise, as on OpenBSD"
+target @any
+
+# filestream_bsd.go and lib/fs/fadvise_unix.go use unix.Fadvise, which
+# x/sys/unix lacks on DragonFly; the OpenBSD files do without. lib/fs's
+# Unix files list the other BSDs.
+mk target set dfly-patch <<'MK'
+	${CP} ${WRKSRC}/lib/filestream/filestream_openbsd.go \
+		${WRKSRC}/lib/filestream/filestream_dragonfly.go
+	${CP} ${WRKSRC}/lib/fs/fadvise_openbsd.go ${WRKSRC}/lib/fs/fadvise_dragonfly.go
+	${REINPLACE_CMD} -e 's@^\(//go:build .*freebsd.*\)$$@\1 || dragonfly@' \
+		${WRKSRC}/lib/fs/fs_nix.go ${WRKSRC}/lib/fs/fs_unix.go
+MK
