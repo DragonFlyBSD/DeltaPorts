@@ -1,5 +1,13 @@
 port games/zdoom
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly paths in m_alloc, SDL and timidity code (dragonfly/); DragonFly in the __FreeBSD__ tests"
 target @any
 
+# crashcatcher.c, music_mus_midiout.cpp and fmodsound.cpp test __FreeBSD__
+# only (USES=alias defined it, dp-r65).
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -E -e 's/defined[ ]*\([ ]*__FreeBSD__[ ]*\)/(defined(__FreeBSD__) || defined(__DragonFly__))/g' \
+		-e 's/^#([[:space:]]*)ifndef[[:space:]]+__FreeBSD__/#\1if !defined(__FreeBSD__) \&\& !defined(__DragonFly__)/' \
+		${WRKSRC}/src/posix/sdl/crashcatcher.c ${WRKSRC}/src/sound/music_mus_midiout.cpp \
+		${WRKSRC}/src/sound/fmodsound.cpp
+MK
