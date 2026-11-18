@@ -1,6 +1,6 @@
 port net/sniffit
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "ncurses; the FreeBSD network device table (dragonfly/)"
 target @any
 
 mk add USES "ncurses"
