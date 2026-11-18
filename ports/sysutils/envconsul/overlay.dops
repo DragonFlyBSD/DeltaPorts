@@ -5,3 +5,10 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 # dragonfly/@<line>/patch-vendor_github.com_hashicorp_consul-template_signals_*:
 # the vendored consul-template signals package (v0.42.1) builds
 # SignalLookup for the other Unixes only; add DragonFly.
+target @any
+
+# platform_unix.go (RuntimeSig) has the same Unix list.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's|^//go:build linux .*|& \|\| dragonfly|' -e 's|^// +build linux .*|& dragonfly|' \
+		${WRKSRC}/platform_unix.go
+MK
