@@ -1,6 +1,6 @@
 port filesystems/lizardfs
 type port
-reason "DragonFly: add USES=localbase so the external spdlog headers are found"
+reason "DragonFly: USES=localbase for the external spdlog headers; FreeBSD's endian names and ENODATA (dragonfly/)"
 
 # FreeBSD's patch drops the bundled spdlog download (devel/spdlog is a
 # BUILD_DEPENDS instead), but nothing adds ${LOCALBASE}/include, and the
