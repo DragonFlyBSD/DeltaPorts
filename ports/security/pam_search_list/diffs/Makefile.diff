@@ -1,9 +1,0 @@
---- Makefile.orig	2023-07-28 19:51:19 UTC
-+++ Makefile
-@@ -21,4 +21,6 @@ OPTIONS_DEFINE=	PROFILE
- PROFILE_MAKE_ENV=	MK_PROFILE=yes
- PROFILE_PLIST_FILES=	lib/libpam_search_list_p.a
- 
-+MAKE_ARGS+=	SHLIB=pam_search_list
-+
- .include <bsd.port.mk>

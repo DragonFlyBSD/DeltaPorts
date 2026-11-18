@@ -1,4 +1,7 @@
 port security/pam_search_list
 type port
-reason "no DragonFly-specific changes needed"
+reason "pass SHLIB, which DragonFly's bsd.lib.mk does not default to LIB"
 target @any
+
+# Without it SHLIB_NAME=${SHLIB}.so.0 comes out as .so.0.
+mk add MAKE_ARGS "SHLIB=pam_search_list"
