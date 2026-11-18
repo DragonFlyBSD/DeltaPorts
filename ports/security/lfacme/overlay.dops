@@ -1,0 +1,3 @@
+port security/lfacme
+type port
+reason "install the periodic(8) script on DragonFly too (dragonfly/)"
