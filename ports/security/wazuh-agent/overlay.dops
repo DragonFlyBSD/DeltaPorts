@@ -8,3 +8,18 @@ mk set OPTIONS_EXCLUDE "INOTIFY"
 # dragonfly/@<line>/patch-src_Makefile: build as FreeBSD (every uname_S
 # FreeBSD conditional, including the epoll-shim ones), with -z origin for
 # $ORIGIN rpaths.
+
+# Bundled OpenSSL: no devcrypto engine (no crypto/cryptodev.h here).
+# data_provider's CMake picks its sources for FreeBSD by name.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^OPENSSL_FLAGS = enable-weak-ssl-ciphers no-shared /&no-devcryptoeng /' \
+		${WRKSRC}/src/Makefile
+	${REINPLACE_CMD} -e 's/^if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")$$/if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD|DragonFly")/' \
+		-e 's/^endif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")$$/endif()/' \
+		-e 's/^   CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR$$/   CMAKE_SYSTEM_NAME MATCHES "FreeBSD|DragonFly" OR/' \
+		${WRKSRC}/src/data_provider/CMakeLists.txt
+	${REINPLACE_CMD} -e 's/STREQUAL "FreeBSD"/MATCHES "FreeBSD|DragonFly"/' \
+		${WRKSRC}/src/data_provider/src/extended_sources/CMakeLists.txt \
+		${WRKSRC}/src/data_provider/src/extended_sources/groups/CMakeLists.txt \
+		${WRKSRC}/src/data_provider/src/extended_sources/users/CMakeLists.txt
+MK
