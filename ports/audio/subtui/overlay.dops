@@ -1,0 +1,12 @@
+port audio/subtui
+type port
+reason "the D-Bus media integration on DragonFly"
+target @any
+
+# The MPRIS integration (D-Bus) is built for Linux and FreeBSD only.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@^//go:build linux || freebsd$$@& || dragonfly@' \
+		${WRKSRC}/internal/integration/media_dbus.go \
+		${WRKSRC}/internal/integration/media_dbus_methods.go \
+		${WRKSRC}/internal/integration/media_dbus_props.go
+MK
