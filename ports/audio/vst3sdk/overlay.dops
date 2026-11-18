@@ -1,11 +1,10 @@
 port audio/vst3sdk
 type port
-reason "add gcc8 C++ filesystem support and patch sources for DragonFly"
+reason "build with GCC_DEFAULT for std::filesystem and with Ninja; DragonFly sources, sqlite3; CLOCK_UPTIME for CLOCK_BOOTTIME (dragonfly/)"
 target @any
 
-mk add BUILD_DEPENDS "cxxfs_gcc8>0:misc/cxxfs_gcc8"
-mk add CXXFLAGS "-isystem ${LOCALBASE}/cxxfs_gcc8"
-mk add LDFLAGS "-L${LOCALBASE}/cxxfs_gcc8"
+# compiler:c++14-lang can leave base gcc 8, which has no std::filesystem.
+mk set USE_GCC_VERSION "${GCC_DEFAULT}"
 
 mk target set dfly-patch <<'MK'
 	${REINPLACE_CMD} -e 's@__FreeBSD__@__DragonFly__@g' \
@@ -13,6 +12,10 @@ mk target set dfly-patch <<'MK'
 		${WRKSRC}/vstgui4/vstgui/lib/vstguibase.h
 	${REINPLACE_CMD} -e 's@//#include <ext@#include <ext@g' \
 		${WRKSRC}/pluginterfaces/base/funknown.cpp
-	${REINPLACE_CMD} -e 's@pthread@& stdc++fs@g' \
-                ${WRKSRC}/cmake/modules/SMTG_PlatformToolset.cmake
 MK
+
+# vstgui's CMake requires pkg-config sqlite3.
+mk add LIB_DEPENDS "libsqlite3.so:databases/sqlite3"
+
+# Resource paths with spaces break the Makefile generator's depend step.
+mk add USES "ninja"
