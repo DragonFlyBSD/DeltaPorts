@@ -1,0 +1,12 @@
+port net/cliproxyapi
+type port
+reason "the cgo plugin loader on DragonFly"
+target @any
+
+# loader_unix.go and host_callbacks_unix.go (dlopen) list Linux, macOS
+# and FreeBSD only.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@^//go:build cgo && (linux || darwin || freebsd)$$@//go:build cgo \&\& (linux || darwin || freebsd || dragonfly)@' \
+		${WRKSRC}/internal/pluginhost/loader_unix.go \
+		${WRKSRC}/internal/pluginhost/host_callbacks_unix.go
+MK
