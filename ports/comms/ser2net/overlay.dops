@@ -1,0 +1,3 @@
+port comms/ser2net
+type port
+reason "port.h: include sys/socket.h for sockaddr_storage (dragonfly/)"
