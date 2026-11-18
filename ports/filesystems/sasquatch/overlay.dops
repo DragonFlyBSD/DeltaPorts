@@ -1,0 +1,15 @@
+port filesystems/sasquatch
+type port
+reason "__BYTE_ORDER and friends as machine/endian.h has them; no -Werror"
+target @any
+
+# The sources define __BYTE_ORDER from BYTE_ORDER except on Linux;
+# machine/endian.h has it from _BYTE_ORDER, and -Werror rejects the clash.
+# The Makefile adds -Werror, and gcc warns where clang does not.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/-Wall -Werror/-Wall/' ${WRKSRC}/Makefile
+	${REINPLACE_CMD} -E -e 's/^#define (__BYTE_ORDER|__BIG_ENDIAN|__LITTLE_ENDIAN) (BYTE_ORDER|BIG_ENDIAN|LITTLE_ENDIAN)$$/#define \1 _\2/' \
+		${WRKSRC}/mksquashfs.c ${WRKSRC}/read_fs.c ${WRKSRC}/read_xattrs.c \
+		${WRKSRC}/swap.c ${WRKSRC}/gzip_wrapper.h ${WRKSRC}/lz4_wrapper.h \
+		${WRKSRC}/lzo_wrapper.h ${WRKSRC}/unsquashfs.h ${WRKSRC}/xz_wrapper.h
+MK
