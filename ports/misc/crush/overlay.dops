@@ -1,0 +1,13 @@
+port misc/crush
+type port
+reason "vendored u-root ls: the OpenBSD file info code (no birth time)"
+target @any
+
+# fileinfo_unix.go reads the FreeBSD/macOS Stat_t fields (Atimespec,
+# Birthtimespec); OpenBSD's reads only fields DragonFly has too.
+mk target set dfly-patch <<'MK'
+	${CP} ${GO_WRKSRC}/vendor/github.com/u-root/u-root/pkg/ls/fileinfo_openbsd.go \
+		${GO_WRKSRC}/vendor/github.com/u-root/u-root/pkg/ls/fileinfo_dragonfly.go
+	${REINPLACE_CMD} -e 's@^//go:build !plan9 && !windows && !tamago && !linux && !openbsd$$@& \&\& !dragonfly@' \
+		${GO_WRKSRC}/vendor/github.com/u-root/u-root/pkg/ls/fileinfo_unix.go
+MK
