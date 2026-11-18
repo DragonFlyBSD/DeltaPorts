@@ -1,0 +1,6 @@
+port filesystems/darling-dmg
+type port
+reason "USES=localbase:ldflags for devel/icu and OpenSSL; ENOATTR for ENODATA (dragonfly/)"
+target @any
+
+mk add USES "localbase:ldflags"
