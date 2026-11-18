@@ -1,0 +1,3 @@
+port games/avp
+type port
+reason "include math.h before the min/max macros (dragonfly/)"
