@@ -1,0 +1,6 @@
+port filesystems/ntfs2btrfs
+type port
+reason "build with Ninja: its C++ modules need it, and DPorts' cmake.mk uses Makefiles"
+target @any
+
+mk add USES "ninja"
