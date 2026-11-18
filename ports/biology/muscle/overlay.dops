@@ -1,0 +1,3 @@
+port biology/muscle
+type port
+reason "DragonFly takes the FreeBSD memory-use code, with kp_vm_rssize (dragonfly/)"
