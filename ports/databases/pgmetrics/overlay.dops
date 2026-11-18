@@ -1,3 +1,9 @@
 port databases/pgmetrics
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "collectSystem as on FreeBSD"
+target @any
+
+# collector has collectSystem per OS by file name only.
+mk target set dfly-patch <<'MK'
+	${CP} ${WRKSRC}/collector/system_freebsd.go ${WRKSRC}/collector/system_dragonfly.go
+MK
