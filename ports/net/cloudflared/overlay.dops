@@ -1,0 +1,13 @@
+port net/cloudflared
+type port
+reason "the diagnostic collectors as FreeBSD's files/ adds them"
+target @any
+
+# FreeBSD's patches add freebsd to collector_unix.go and a sysctl-based
+# system_collector_freebsd.go; the sysctl names exist here too.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@^//go:build darwin || linux || freebsd$$@& || dragonfly@' \
+		${WRKSRC}/diagnostic/network/collector_unix.go
+	${SED} -e 's@^//go:build freebsd$$@//go:build dragonfly@' \
+		${WRKSRC}/diagnostic/system_collector_freebsd.go > ${WRKSRC}/diagnostic/system_collector_dragonfly.go
+MK
