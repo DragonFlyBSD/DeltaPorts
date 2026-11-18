@@ -1,5 +1,12 @@
 port x11/bbrun
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "DragonFly in the sources' __FreeBSD__ tests"
 target @any
 
+# The sources test __FreeBSD__ only (USES=alias defined it, dp-r65).
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -E -e 's/defined[ ]*\([ ]*__FreeBSD__[ ]*\)/(defined(__FreeBSD__) || defined(__DragonFly__))/g' \
+		-e 's/^#([[:space:]]*)ifdef[[:space:]]+__FreeBSD__/#\1if defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		-e 's/^#([[:space:]]*)ifndef[[:space:]]+__FreeBSD__/#\1if !defined(__FreeBSD__) \&\& !defined(__DragonFly__)/' \
+		${WRKSRC}/bbrun.c
+MK
