@@ -1,0 +1,12 @@
+port net/tun2socks
+type port
+reason "vendored wireguard tun: a DragonFly backend (dragonfly/); the no-op socket options"
+target @any
+
+# dialer has setSocketOptions for the named Unixes and !unix only.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's|^\(//go:build .*\)$$|\1 \|\| dragonfly|' \
+		${WRKSRC}/vendor/golang.zx2c4.com/wireguard/tun/operateonfd.go
+	${REINPLACE_CMD} -e 's|^//go:build !unix && !windows$$|//go:build (!unix \&\& !windows) \|\| dragonfly|' \
+		${WRKSRC}/dialer/sockopt_others.go
+MK
