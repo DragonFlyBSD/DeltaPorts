@@ -1,6 +1,6 @@
 port japanese/man
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "-fcommon; the FreeBSD locale code (dragonfly/)"
 target @any
 
 mk add MAKE_ENV "CWARNFLAGS=-fcommon"
