@@ -1,0 +1,11 @@
+port www/fabio
+type port
+reason "vendored gobgp zebra: DragonFly as a BSD"
+target @any
+
+# zapi_bsd.go (intfflag2string) lists FreeBSD, NetBSD and OpenBSD.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@^//go:build freebsd || netbsd || openbsd$$@//go:build dragonfly || freebsd || netbsd || openbsd@' \
+		-e 's@^// +build freebsd netbsd openbsd$$@// +build dragonfly freebsd netbsd openbsd@' \
+		${GO_WRKSRC}/vendor/github.com/osrg/gobgp/v3/pkg/zebra/zapi_bsd.go
+MK
