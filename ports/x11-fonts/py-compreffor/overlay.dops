@@ -8,3 +8,8 @@ reason "DragonFly: regenerate the Cython module; the shipped .cpp predates Pytho
 target @2026Q4,@main
 
 mk add BUILD_DEPENDS "${PYTHON_PKGNAMEPREFIX}cython>=0.29.30:lang/cython@${PY_FLAVOR}"
+
+# Cython skips the .pyx ("up-to-date") while the shipped .cpp is newer.
+mk target set dfly-patch <<'MK'
+	${RM} ${WRKSRC}/src/cython/_compreffor.cpp
+MK
