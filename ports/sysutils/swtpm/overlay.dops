@@ -1,0 +1,7 @@
+port sysutils/swtpm
+type port
+reason "LDFLAGS for the ports OpenSSL: base's libcrypto is private here"
+target @any
+
+# configure: checking for AES_set_encrypt_key in -lcrypto... no
+mk add USES "localbase:ldflags"
