@@ -1,0 +1,3 @@
+port net/amneziawg-go
+type port
+reason "DragonFly tun backend, as for net/wireguard-go (dragonfly/)"
