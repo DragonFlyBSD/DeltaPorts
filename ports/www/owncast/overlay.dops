@@ -1,3 +1,17 @@
 port www/owncast
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "the FreeBSD rlimit code: Rlimit fields are int64 on DragonFly too"
+target @any
+
+# concurrentConnections.go assigns a uint64 to Rlimit.Cur; FreeBSD has its
+# own file for the int64 fields.
+mk target set dfly-patch <<'MK'
+	${CP} ${WRKSRC}/core/chat/concurrentConnections_freebsd.go \
+		${WRKSRC}/core/chat/concurrentConnections_dragonfly.go
+	${REINPLACE_CMD} -e 's@^//go:build freebsd$$@//go:build dragonfly@' \
+		-e 's@^// +build freebsd$$@// +build dragonfly@' \
+		${WRKSRC}/core/chat/concurrentConnections_dragonfly.go
+	${REINPLACE_CMD} -e 's@^//go:build !freebsd && !windows$$@//go:build !freebsd \&\& !dragonfly \&\& !windows@' \
+		-e 's@^// +build !freebsd,!windows$$@// +build !freebsd,!dragonfly,!windows@' \
+		${WRKSRC}/core/chat/concurrentConnections.go
+MK
