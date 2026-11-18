@@ -1,0 +1,7 @@
+port databases/pg_net
+type port
+reason "DragonFly takes kqueue as on FreeBSD, without NOTE_NSECONDS (dragonfly/); gcc -Werror"
+target @any
+
+# PG_CFLAGS has -Werror; gcc flags event.c's "int inline" as old-style.
+mk add MAKE_ARGS "COPT=-Wno-error=old-style-declaration"
