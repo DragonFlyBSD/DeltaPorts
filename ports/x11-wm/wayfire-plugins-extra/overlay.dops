@@ -1,0 +1,7 @@
+port x11-wm/wayfire-plugins-extra
+type port
+reason "<ctime> for wayfire's util.hpp"
+target @any
+
+# wayfire/util.hpp uses timespec without <ctime>, which libc++ brings in.
+mk add CXXFLAGS "-include ctime"
