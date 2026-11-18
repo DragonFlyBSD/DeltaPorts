@@ -1,6 +1,19 @@
 port audio/mumble
 type port
-reason "auto-converted from Makefile.DragonFly"
+reason "-Wno-deprecated-declarations; no 32-bit overlay; kvm process list (dragonfly/); Ninja"
 target @any
 
 mk add CXXFLAGS "-Wno-deprecated-declarations"
+
+# No 32-bit libraries or headers to build the 32-bit overlay with.
+mk add OPTIONS_EXCLUDE "OVERLAY_32BIT"
+
+# ProcessResolver takes the generic BSD kvm code (dragonfly/), which
+# CMake links with kvm for .*BSD only.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/MATCHES "\.\*BSD")$$/MATCHES ".*BSD|DragonFly")/' \
+		${WRKSRC}/src/mumble/CMakeLists.txt
+MK
+
+# Theme paths with spaces break the Makefile generator's depend step.
+mk add USES "ninja"
