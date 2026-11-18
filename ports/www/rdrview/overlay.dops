@@ -1,0 +1,10 @@
+port www/rdrview
+type port
+reason "link libiconv, as on FreeBSD"
+target @any
+
+# The Makefile adds -liconv for FreeBSD, OpenBSD and Darwin by name.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/^else ifeq (\$$(SYSTEM), FreeBSD)$$/else ifneq (,$$(filter FreeBSD DragonFly,$$(SYSTEM)))/' \
+		${WRKSRC}/Makefile
+MK
