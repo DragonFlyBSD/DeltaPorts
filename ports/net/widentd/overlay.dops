@@ -1,0 +1,7 @@
+port net/widentd
+type port
+reason "bsd.sys.mk's -Werror with gcc warnings (pointer-sign, format-truncation)"
+target @any
+
+# WARNS gives -Werror, and gcc warns where clang does not.
+mk add MAKE_ARGS "NO_WERROR=yes"
