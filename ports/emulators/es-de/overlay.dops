@@ -1,0 +1,13 @@
+port emulators/es-de
+type port
+reason "DragonFly as FreeBSD in CMake (man path, no updater); no DEINIT option"
+target @any
+
+mk add OPTIONS_EXCLUDE "DEINIT"
+
+# The man page goes to share/man and the updater is off for Linux and
+# FreeBSD only.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's/CMAKE_SYSTEM_NAME MATCHES FreeBSD/CMAKE_SYSTEM_NAME MATCHES "FreeBSD|DragonFly"/' \
+		${WRKSRC}/CMakeLists.txt ${WRKSRC}/es-app/CMakeLists.txt
+MK
