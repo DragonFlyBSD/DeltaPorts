@@ -1,0 +1,10 @@
+port www/yarr
+type port
+reason "the xdg-open launcher on DragonFly"
+target @any
+
+# open_etc.go is built for Linux and FreeBSD only.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@^//go:build linux || freebsd$$@& || dragonfly@' \
+		${WRKSRC}/src/platform/open_etc.go
+MK
