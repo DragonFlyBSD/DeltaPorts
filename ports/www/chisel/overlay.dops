@@ -1,3 +1,13 @@
 port www/chisel
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "vendored go-termutil: DragonFly as a BSD"
+target @any
+
+# go-termutil's Unix files list Linux, macOS and FreeBSD; the rest fall
+# into fallbacks that do not build.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@^// +build darwin freebsd$$@& dragonfly@' \
+		-e 's@^// +build linux darwin freebsd$$@& dragonfly@' \
+		-e 's@^// +build !windows,!linux,!darwin,!freebsd@&,!dragonfly@' \
+		${GO_WRKSRC}/vendor/github.com/andrew-d/go-termutil/*.go
+MK
