@@ -1,0 +1,11 @@
+port mail/aerc
+type port
+reason "vendored vaxis: DragonFly as a Unix"
+target @any
+
+# vaxis's tty_unix.go and vaxis_unix.go list every Unix but DragonFly.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's@^//go:build darwin || freebsd || @//go:build darwin || dragonfly || freebsd || @' \
+		${GO_WRKSRC}/vendor/go.rockorager.dev/vaxis/tty_unix.go \
+		${GO_WRKSRC}/vendor/go.rockorager.dev/vaxis/vaxis_unix.go
+MK
