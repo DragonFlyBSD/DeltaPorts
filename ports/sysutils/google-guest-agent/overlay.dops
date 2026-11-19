@@ -1,0 +1,7 @@
+port sysutils/google-guest-agent
+type port
+reason "DragonFly: agent and vendored serial, sev/tdx clients lack DragonFly"
+target @any
+
+# dragonfly/: DragonFly copies of the FreeBSD files and build tags, and the
+# agent's runtime.GOOS "freebsd" paths (PAM, sudoers, /usr/local) for DragonFly.
