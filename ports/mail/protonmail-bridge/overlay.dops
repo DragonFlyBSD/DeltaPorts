@@ -1,0 +1,7 @@
+port mail/protonmail-bridge
+type port
+reason "DragonFly: no DragonFly copies of the files FreeBSD's patches add"
+target @any
+
+# dragonfly/@2026Q4: DragonFly twins of the cert store, versioner, version
+# check and keychain files FreeBSD adds; DragonFly in fido/secretservice tags.
