@@ -1,3 +1,7 @@
 port net-mgmt/kapacitor
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: vendored x/sys dirent code does not compile"
+target @any
+
+# dragonfly/patch-vendor_golang.org_x_sys_unix_syscall__dragonfly.go: use
+# Dirent.Fileno and &^ 7, as later x/sys does.
