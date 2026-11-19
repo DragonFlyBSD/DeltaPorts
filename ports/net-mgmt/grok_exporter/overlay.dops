@@ -1,3 +1,10 @@
 port net-mgmt/grok_exporter
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: fswatcher's kqueue code is linked in for FreeBSD only"
+target @any
+
+# Link the darwin kqueue files under DragonFly names, as post-patch does
+# for FreeBSD.
+mk target set dfly-patch <<'MK'
+	for f in `${FIND} ${WRKSRC}/tailer -name '*darwin*'`; do ${LN} -sf $${f} `echo $${f} | ${SED} 's/darwin/dragonfly/g'`; done
+MK
