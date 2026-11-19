@@ -2,9 +2,7 @@ port lang/rust
 type port
 reason "DragonFly: allow OPSYS, add the avalon bootstrap, and carry the dragonfly patch lane plus the shared cargo crate patches"
 
-# Each base builds the rust its own branch ships. The DragonFly source
-# patches track the rust version, so each line has its own set in
-# dragonfly/@<line>/. Nothing here rewrites PORTVERSION.
+# Quarterly follows FreeBSD; main carries the latest DragonFly Rust release.
 
 # =======================================================================
 # Independent of the rust version.
@@ -42,15 +40,25 @@ mk add MAKE_ENV "LDVER=ld.bfd"
 mk add MAKE_ENV "LD_LIBRARY_PATH=${WRKDIR}/bootstrap/lib:/usr/lib/${DFLY_BASE_CCVER}"
 
 # =======================================================================
-# @main: rust 1.99.0, bootstrap 1.98.1.
+# @main: Rust 1.100.0, bootstrapped with Avalon 1.99.0.
 # =======================================================================
 target @main
+mk set PORTVERSION "1.100.0"
+mk set PORTREVISION "0"
+mk set BOOTSTRAPS_DATE "1.99.0"
+mk set RUST_BOOTSTRAP_VERSION "1.99.0"
+mk set LLVM_VERSION "23"
+mk set _LLVM_VERSION "23"
 
-# rustc 1.98.1 needs LLVM 22.
-mk set LLVM_VERSION "22"
-mk set _LLVM_VERSION "22"
+# Use the same upstream source archive as the tested bootstrap.
+text replace-once file Makefile from "${DISTNAME}${EXTRACT_SUFX}:src" to "${DISTNAME}.tar.gz:src"
 
-mk set BOOTSTRAPS_DATE "1.98.1"
+# LLVM now derives the allocator alignment from the target ABI.
+file remove files/patch-llvm_include_llvm_Support_Allocator.h
+# First-lane propagation moved from VPlanRecipes to VPlanUtils.
+file remove files/patch-llvm_lib_Transforms_Vectorize_VPlanRecipes.cpp
+# This workaround is only for 32-bit FreeBSD.
+file remove files/patch-vendor_openssl_crypto_threads__pthread.c
 
 # 1.98.1 and later vendor enough crates that the glob exceeds ARG_MAX.
 text replace-once file Makefile \
@@ -60,30 +68,14 @@ text replace-once file Makefile \
      from "${CARGO_VENDOR_DIR}/*/.cargo-checksum.json" \
      to "{} +"
 
-# Chained so each line anchors on the one inserted before it. The first
-# anchors on the branch's own source SIZE line, so this fails loudly if
-# the base moves rather than writing a wrong distinfo.
-text line-insert-after file distinfo \
-     anchor "SIZE (rust/rustc-1.99.0-src.tar.xz) = 265258564" \
-     line "SHA256 (rust/1.98.1/rustc-1.98.1-x86_64-unknown-dragonfly.tar.xz) = a1c6681de742ac9736d8b99e7c52033643eba64eb95c98b9527983dbc53b7ab1"
-text line-insert-after file distinfo \
-     anchor "SHA256 (rust/1.98.1/rustc-1.98.1-x86_64-unknown-dragonfly.tar.xz) = a1c6681de742ac9736d8b99e7c52033643eba64eb95c98b9527983dbc53b7ab1" \
-     line "SIZE (rust/1.98.1/rustc-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 67429280"
-text line-insert-after file distinfo \
-     anchor "SIZE (rust/1.98.1/rustc-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 67429280" \
-     line "SHA256 (rust/1.98.1/rust-std-1.98.1-x86_64-unknown-dragonfly.tar.xz) = c73df8d1c7f82984888251d7cca5eca1d18e6f5521bad67414cd53756134786a"
-text line-insert-after file distinfo \
-     anchor "SHA256 (rust/1.98.1/rust-std-1.98.1-x86_64-unknown-dragonfly.tar.xz) = c73df8d1c7f82984888251d7cca5eca1d18e6f5521bad67414cd53756134786a" \
-     line "SIZE (rust/1.98.1/rust-std-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 25129860"
-text line-insert-after file distinfo \
-     anchor "SIZE (rust/1.98.1/rust-std-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 25129860" \
-     line "SHA256 (rust/1.98.1/cargo-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 6acb8356e784a389a48ec6a3f560168c05da996f8a5a6528146397b3d0f004ba"
-text line-insert-after file distinfo \
-     anchor "SHA256 (rust/1.98.1/cargo-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 6acb8356e784a389a48ec6a3f560168c05da996f8a5a6528146397b3d0f004ba" \
-     line "SIZE (rust/1.98.1/cargo-1.98.1-x86_64-unknown-dragonfly.tar.xz) = 11510100"
-
-# This line's own patches are in dragonfly/@main/, cut against the 1.99.0
-# source.
+text replace-once file distinfo from "SHA256 (rust/rustc-1.99.1-src.tar.xz) = 6451598a99e77f07571960f6b21d577399d3a30f33e80cbd2e3a4aae6535d265" to "SHA256 (rust/rustc-1.100.0-src.tar.gz) = e8904548563117043c24a67c4967119b7c9ed304821988283e7681122ceec98b"
+text replace-once file distinfo from "SIZE (rust/rustc-1.99.1-src.tar.xz) = 265270392" to "SIZE (rust/rustc-1.100.0-src.tar.gz) = 561848646"
+text line-insert-after file distinfo anchor "SIZE (rust/rustc-1.100.0-src.tar.gz) = 561848646" line "SHA256 (rust/1.99.0/cargo-1.99.0-x86_64-unknown-dragonfly.tar.xz) = 1e8d4e4ef8d5cc8fe69d4be7cf94554935299ef9fddf84f82136c94e1c2ce280"
+text line-insert-after file distinfo anchor "SHA256 (rust/1.99.0/cargo-1.99.0-x86_64-unknown-dragonfly.tar.xz) = 1e8d4e4ef8d5cc8fe69d4be7cf94554935299ef9fddf84f82136c94e1c2ce280" line "SIZE (rust/1.99.0/cargo-1.99.0-x86_64-unknown-dragonfly.tar.xz) = 11654236"
+text line-insert-after file distinfo anchor "SIZE (rust/1.99.0/cargo-1.99.0-x86_64-unknown-dragonfly.tar.xz) = 11654236" line "SHA256 (rust/1.99.0/rust-std-1.99.0-x86_64-unknown-dragonfly.tar.xz) = da85b327e4c85e98cf08904e075d1a71514780a4498002449dfef44b48469cd6"
+text line-insert-after file distinfo anchor "SHA256 (rust/1.99.0/rust-std-1.99.0-x86_64-unknown-dragonfly.tar.xz) = da85b327e4c85e98cf08904e075d1a71514780a4498002449dfef44b48469cd6" line "SIZE (rust/1.99.0/rust-std-1.99.0-x86_64-unknown-dragonfly.tar.xz) = 26040012"
+text line-insert-after file distinfo anchor "SIZE (rust/1.99.0/rust-std-1.99.0-x86_64-unknown-dragonfly.tar.xz) = 26040012" line "SHA256 (rust/1.99.0/rustc-1.99.0-x86_64-unknown-dragonfly.tar.xz) = 82d85c615059ad124c9598fc0c8203459456fed28410bdc6bb833d2925ff617f"
+text line-insert-after file distinfo anchor "SHA256 (rust/1.99.0/rustc-1.99.0-x86_64-unknown-dragonfly.tar.xz) = 82d85c615059ad124c9598fc0c8203459456fed28410bdc6bb833d2925ff617f" line "SIZE (rust/1.99.0/rustc-1.99.0-x86_64-unknown-dragonfly.tar.xz) = 67928828"
 
 # =======================================================================
 # @2026Q4: rust 1.98.1, bootstrap 1.97.1. FreeBSD's 2026Q4 lang/rust is

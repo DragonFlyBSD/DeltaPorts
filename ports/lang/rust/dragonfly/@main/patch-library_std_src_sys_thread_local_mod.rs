@@ -1,6 +1,6 @@
 --- library/std/src/sys/thread_local/mod.rs.orig
 +++ library/std/src/sys/thread_local/mod.rs
-@@ -64,7 +64,6 @@
+@@ -77,7 +77,6 @@
              target_os = "redox",
              target_os = "hurd",
              target_os = "netbsd",
