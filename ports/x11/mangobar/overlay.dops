@@ -1,0 +1,7 @@
+port x11/mangobar
+type port
+reason "no eventfd or memfd_create on DragonFly: pipes and shm_open"
+target @any
+
+# dragonfly/patch-mangobar.c: the signal handler writes the wakeup fd, so
+# not epoll-shim (its write() takes a mutex); a pipe write is signal-safe.
