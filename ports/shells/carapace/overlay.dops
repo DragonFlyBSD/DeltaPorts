@@ -1,0 +1,7 @@
+port shells/carapace
+type port
+reason "DragonFly: completer generator and vendored go-ps lack DragonFly"
+target @any
+
+# dragonfly/@2026Q4: carapace-generate gets a DragonFly target (completers
+# were undefined); vendored go-ps gets devel/lab's DragonFly backend.
