@@ -1,0 +1,7 @@
+port www/zoraxy
+type port
+reason "DragonFly: sshprox and hardwareinfo have no DragonFly build"
+target @any
+
+# dragonfly/@2026Q4: DragonFly in sshprox's embed.go tags (as FreeBSD's
+# patch) and a sysinfo_dragonfly.go copied from the FreeBSD one.
