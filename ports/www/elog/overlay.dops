@@ -1,0 +1,10 @@
+port www/elog
+type port
+reason "OpenSSL from ports: pass its include and library dirs"
+target @any
+
+# The Makefile appends to CFLAGS and LIBS from the environment.
+mk block set condition "1" <<'MK'
+CFLAGS+=	-I${OPENSSLINC}
+LIBS+=		-L${OPENSSLLIB}
+MK
