@@ -1,0 +1,7 @@
+port security/step-certificates
+type port
+reason "DragonFly: vendored go-piv and newrelic sysinfo lack DragonFly"
+target @any
+
+# dragonfly/: go-piv's PC/SC build as in security/yubikey-agent, and a
+# memtotal_dragonfly.go copied from FreeBSD's (hw.physmem sysctl).
