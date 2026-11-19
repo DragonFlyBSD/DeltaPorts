@@ -1,0 +1,7 @@
+port sysutils/docker-compose
+type port
+reason "DragonFly: unix build tags missing DragonFly in compose and vendored code"
+target @any
+
+# dragonfly/: add DragonFly to the unix build tags of compose, containerd
+# content store and fsutil copy; moby/term and go-ps as in devel/cirrus-cli.
