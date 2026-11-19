@@ -6,3 +6,5 @@ reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 # (v0.0.0-20201110203204-bea5bbe245bf) treats DragonFly as non-BSD
 # (unix.TCGETS), and moby/sys/mount v0.2.0 defines its mount flags for
 # FreeBSD/OpenBSD only. Add DragonFly to both BSD build tags.
+# patch-vendor_github.com_docker_docker_pkg_system_*: stat_dragonfly.go and
+# mknod.go back to int dev, as in sysutils/oc.
