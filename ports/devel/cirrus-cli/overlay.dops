@@ -1,0 +1,7 @@
+port devel/cirrus-cli
+type port
+reason "DragonFly: vendored moby/term and go-ps lack DragonFly"
+target @any
+
+# dragonfly/: moby/term gets the BSD termios tags (as sysutils/viddy);
+# go-ps gets devel/lab's DragonFly backend.
