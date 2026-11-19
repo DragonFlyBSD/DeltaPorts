@@ -1,0 +1,7 @@
+port sysutils/docker-buildx
+type port
+reason "DragonFly: unix build tags missing DragonFly in vendored code"
+target @any
+
+# dragonfly/: moby/term, containerd content store and fsutil copy get
+# DragonFly in their build tags, as in sysutils/docker-compose.
