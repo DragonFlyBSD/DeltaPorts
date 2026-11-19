@@ -1,0 +1,11 @@
+port multimedia/mpvpaper
+type port
+reason "eventfd from devel/libepoll-shim"
+target @any
+
+# src/main.c includes <sys/eventfd.h>, which DragonFly lacks.
+mk add LIB_DEPENDS "libepoll-shim.so:devel/libepoll-shim"
+mk block set condition "1" <<'MK'
+CFLAGS+=	-I${LOCALBASE}/include/libepoll-shim
+LDFLAGS+=	-L${LOCALBASE}/lib -lepoll-shim
+MK
