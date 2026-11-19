@@ -1,0 +1,7 @@
+port dns/bind920
+type port
+reason "DragonFly: no RTM_DESYNC in the route socket message filter"
+target @any
+
+# dragonfly/patch-lib_isc_netmgr_udp.c: DragonFly has OpenBSD's
+# ROUTE_MSGFILTER but not RTM_DESYNC. Also used by dns/bind-tools.
