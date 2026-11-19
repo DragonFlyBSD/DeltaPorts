@@ -7,3 +7,7 @@ reason "DragonFly: C++20 with the ports GCC"
 target @2026Q4,@main
 
 mk set USE_GCC_VERSION "${GCC_DEFAULT}"
+
+# dragonfly/patch-src_Wt_WDocRootDataInfo.C, upstream ad9905b7ed: with
+# STDFS libwt.so used boost::filesystem without linking it.
+mk bump PORTREVISION
