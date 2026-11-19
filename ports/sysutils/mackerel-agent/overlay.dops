@@ -1,3 +1,7 @@
 port sysutils/mackerel-agent
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: no DragonFly command wiring; FreeBSD collectors tagged freebsd"
+target @any
+
+# dragonfly/@2026Q4: command_dragonfly.go uses the FreeBSD spec/metrics
+# collectors, tagged for DragonFly too; top's memory line is "Memory:" here.
