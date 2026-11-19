@@ -1,3 +1,7 @@
 port misc/slides
 type port
-reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
+reason "DragonFly: vendored containerd/console has no DragonFly support"
+target @any
+
+# dragonfly/patch-vendor_github.com_containerd_console_*: add DragonFly
+# termios/pty code to containerd/console v1.0.3, as in textproc/mdtt.
