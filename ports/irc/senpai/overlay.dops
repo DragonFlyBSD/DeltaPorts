@@ -1,0 +1,7 @@
+port irc/senpai
+type port
+reason "DragonFly: vendored vaxis's tty code is not built for DragonFly"
+target @any
+
+# dragonfly/patch-vendor_git.sr.ht_~rockorager_vaxis_vaxis__unix.go: add
+# DragonFly to the build tag (reportWinsize, setupSignals were undefined).
