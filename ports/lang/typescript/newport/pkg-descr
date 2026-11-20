@@ -1,0 +1,2 @@
+TypeScript is a typed superset of JavaScript that compiles to JavaScript.
+This port provides the TypeScript compiler and language server.
