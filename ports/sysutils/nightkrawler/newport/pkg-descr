@@ -1,0 +1,5 @@
+Nightkrawler is a duplicate file finder and removal tool for Unix-like systems.
+
+It scans files by size and content, groups true duplicates, and supports safe cleanup workflows through quarantine, trash, or permanent deletion. It can protect sensitive filesystem locations, recognize generated files, prefer selected keeper paths, and restore files from quarantine when needed.
+
+Nightkrawler is designed to make duplicate cleanup predictable, inspectable, and safer than ad-hoc deletion.
