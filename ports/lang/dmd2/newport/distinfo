@@ -1,0 +1,7 @@
+TIMESTAMP = 1574148869
+SHA256 (dlang-dmd-v2.089.0_GH0.tar.gz) = e86b147c356788299794088bac6d872fd844c74551b4a09411b0408b03e59524
+SIZE (dlang-dmd-v2.089.0_GH0.tar.gz) = 3323343
+SHA256 (dlang-druntime-v2.089.0_GH0.tar.gz) = 1ad3bdaebe0957a2678453bd9bb3eddbebae6babc564544c6f3ad07026e4bff3
+SIZE (dlang-druntime-v2.089.0_GH0.tar.gz) = 1746634
+SHA256 (dlang-phobos-v2.089.0_GH0.tar.gz) = 42c0a1581c8d66980aee4a73fc37d6b60d110a2139d8c00944a66bfa4868eafe
+SIZE (dlang-phobos-v2.089.0_GH0.tar.gz) = 2376909
