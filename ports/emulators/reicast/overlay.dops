@@ -1,0 +1,9 @@
+port emulators/reicast
+type port
+reason "DragonFly: take the FreeBSD code paths"
+target @any
+
+# dragonfly/patch-reicast_cmake_config.cmake: HOST_OS is OS_FREEBSD on
+# DragonFly too, so FreeBSD's files/ patches apply. picoppp.cpp and
+# linux_common.cpp as in emulators/libretro-reicast; evdev.cpp takes
+# <dev/misc/evdev/input.h>.
