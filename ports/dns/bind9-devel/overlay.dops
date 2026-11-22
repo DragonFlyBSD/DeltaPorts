@@ -6,3 +6,6 @@ target @any
 mk target set dfly-install <<'MK1'
 	${RM} -rfv ${STAGEDIR}/construction
 MK1
+
+# dragonfly/patch-lib_isc_netmgr_udp.c: DragonFly has OpenBSD's
+# ROUTE_MSGFILTER but not RTM_DESYNC (as in dns/bind920).
