@@ -1,0 +1,6 @@
+port games/mirrormagic
+type port
+reason "parallel make builds src/game_sp twice at once"
+target @any
+
+mk set MAKE_JOBS_UNSAFE "yes"
