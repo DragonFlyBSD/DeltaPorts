@@ -6,5 +6,5 @@ reason "DragonFly: Statfs_t field types; mmap index files on DragonFly"
 #  - internal/disk_stats: unix.Statfs_t's Blocks/Bfree are int64 on
 #    DragonFly; convert them before multiplying by Bsize.
 #  - vendor/github.com/sourcegraph/zoekt/index/indexfile.go: the mmap
-#    NewIndexFile() is built only for linux, darwin, freebsd and netbsd;
+#    NewIndexFile() is built only for the OSes in its go:build line;
 #    add dragonfly (golang.org/x/sys/unix has Mmap there).
