@@ -62,6 +62,13 @@ SJTUG: {
 	enabled		: no
 }
 
+# China, Nanjing
+# eScience Center, Nanjing University
+NJU: {
+	url		: https://mirror.nju.edu.cn/dragonflybsd/dports/${ABI}/LATEST,
+	enabled		: no
+}
+
 # Hong Kong
 # KoDDoS HK
 KoDDoS_HK: {
