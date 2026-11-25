@@ -1,0 +1,6 @@
+port textproc/xmlppm
+type port
+reason "DragonFly: gcc rejects references to fields of the packed PPM_MODEL"
+target @any
+
+# dragonfly/: PPM_MODEL itself is not packed; the structs it holds still are.
