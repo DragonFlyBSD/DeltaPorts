@@ -1,0 +1,12 @@
+--- Uses/electronfix.mk.orig
++++ Uses/electronfix.mk
+@@ -56,6 +56,9 @@
+ .  endfor
+ .  ifdef ELECTRONFIX_MAIN_EXECUTABLE
+ # We have to copy the electron binary instead of symlinking
++# Remove the staged file first: cp onto it keeps the 0644 mode
++# COPYTREE_SHARE gave it.
++	${RM} ${STAGEDIR}${DATADIR}/${ELECTRONFIX_MAIN_EXECUTABLE}
+ 	${CP} ${LOCALBASE}/share/electron${electronfix_ARGS}/electron ${STAGEDIR}${DATADIR}/${ELECTRONFIX_MAIN_EXECUTABLE}
+ .  endif
+ 
