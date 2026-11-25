@@ -14,3 +14,15 @@
  .    elif defined(_INCLUDE_USES_CARGO_MK)
     CARGO_ENV+=	CARGO_PROFILE_RELEASE_LTO="true" \
  		CARGO_PROFILE_RELEASE_PANIC="abort" \
+@@ -32,6 +39,11 @@
+ .  else
+ .    if defined(_INCLUDE_USES_CARGO_MK)
+    RUSTFLAGS+=	-C lto=no
++.      if "${OPSYS}" == "DragonFly"
++# A release profile with lto still makes cargo build the dependencies
++# as bitcode only, which ld.bfd cannot link.
++   CARGO_ENV+=	CARGO_PROFILE_RELEASE_LTO="false"
++.      endif
+ .    endif
+ .  endif
+ .endif
