@@ -1,0 +1,11 @@
+--- Uses/npm.mk.orig
++++ Uses/npm.mk
+@@ -78,7 +78,7 @@
+ .include "${USESDIR}/nodejs.mk"
+ _NODEJS_PKGNAME=node${NODEJS_VERSION}
+ _NODEJS_PORT=	www/node${NODEJS_VERSION}
+-_NPM_NODEJS_ARCH_CONV_STR=	S/aarch64/arm64/:S/amd64/x64/:S/i386/ia32/
++_NPM_NODEJS_ARCH_CONV_STR=	S/aarch64/arm64/:S/amd64/x64/:S/x86_64/x64/:S/i386/ia32/
+ NPM_NODEJS_ARCH=		${ARCH:${_NPM_NODEJS_ARCH_CONV_STR}}
+ 
+ _VALID_NPM_NAMES=npm yarn1 yarn2 yarn4 pnpm

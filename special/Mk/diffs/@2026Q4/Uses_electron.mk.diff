@@ -1,0 +1,20 @@
+--- Uses/electron.mk.orig
++++ Uses/electron.mk
+@@ -212,7 +212,7 @@
+ BUILD_DEPENDS+=	app-builder:devel/app-builder-devel
+ .  endif
+ 
+-ELECTRON_ARCH=		${ARCH:S/aarch64/arm64/:S/amd64/x64/:S/i386/ia32/}
++ELECTRON_ARCH=		${ARCH:S/aarch64/arm64/:S/amd64/x64/:S/x86_64/x64/:S/i386/ia32/}
+ ELECTRON_REBUILD_WRKSRC_NODEJS?=	${WRKSRC}
+ ELECTRON_REBUILD_WRKSRC_ELECTRON?=	${WRKSRC}
+ 
+@@ -407,7 +407,7 @@
+ 			--config.electronVersion=${ELECTRON_VER} \
+ 			--config.electronDist=${WRKDIR}/electron-dist
+ DO_MAKE_BUILD=		${SETENV} ${MAKE_ENV} ${ELECTRON_MAKE_CMD} ${ELECTRON_MAKE_FLAGS}
+-ELECTRON_BUILDER_APP_OUT_DIR=	linux-${ARCH:S/aarch64/arm64-/:S/amd64//:S/i386/ia32-/}unpacked
++ELECTRON_BUILDER_APP_OUT_DIR=	linux-${ARCH:S/aarch64/arm64-/:S/amd64//:S/x86_64//:S/i386/ia32-/}unpacked
+ .    elif ${_ELECTRON_FEATURE_BUILD} == packager
+ ELECTRON_MAKE_CMD?=	${NPM_EXEC_CMD} ${NPM_EXEC_FLAGS} electron-packager
+ ELECTRON_MAKE_FLAGS+=	--platform=linux \
