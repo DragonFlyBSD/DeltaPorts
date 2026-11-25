@@ -1,0 +1,9 @@
+port graphics/realsr-ncnn-vulkan
+type port
+reason "DragonFly: no AVX-512 or AVX-VNNI kernels in the bundled ncnn"
+target @any
+
+# The kernel enables no AVX-512 state, and base as(1) cannot assemble the
+# AVX512-FP16 or AVX-VNNI kernels gcc 12 now compiles (dp-shs.15). The VNNI
+# ones are int8 code, and realsr builds ncnn without NCNN_INT8.
+mk add CMAKE_OFF "NCNN_AVX512 NCNN_AVXVNNI"
