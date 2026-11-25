@@ -2,8 +2,3 @@ port graphics/jpeg-turbo
 type port
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
-
-# -ffp-model=strict is an Intel/clang-only flag; DragonFly's base GCC 8.3
-# rejects it (unrecognized command line option), breaking the CMake compiler
-# sanity check. Drop it from CFLAGS.
-mk remove CFLAGS "-ffp-model=strict"
