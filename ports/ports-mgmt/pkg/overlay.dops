@@ -37,6 +37,7 @@ mk replace-if from "!exists(/usr/include/jail.h)" to "!exists(/usr/include/sys/j
 text line-remove file pkg-plist exact "@sample etc/pkg/repos/df-latest.conf.sample" on-missing noop
 text line-insert-after file pkg-plist anchor "@sample etc/pkg.conf.sample" line "@sample etc/pkg/repos/df-latest.conf.sample" on-missing warn
 file remove files/patch-src_Makefile.autosetup on-missing noop
+mk bump PORTREVISION
 
 # =======================================================================
 # @main: pkg 2.8.4 renamed auto.def to configure.def and rewrote it from
