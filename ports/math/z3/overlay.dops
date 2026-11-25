@@ -3,6 +3,4 @@ type lock
 reason "auto-converted from compat (Makefile.DragonFly + dragonfly/)"
 target @any
 
-mk add CONFIGURE_ENV "USE_OPENMP=0"
-mk add MAKE_ENV "USE_OPENMP=0"
-mk add BUILD_DEPENDS "${PYTHON_PKGNAMEPREFIX}setuptools>=63:devel/py-setuptools@${PY_FLAVOR}"
+# DPorts master's copy has had this overlay's edits since 91731d0e53e.

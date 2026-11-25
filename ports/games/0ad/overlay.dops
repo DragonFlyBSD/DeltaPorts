@@ -3,10 +3,4 @@ type lock
 reason "manual package build guard + MAKE env; drop DPorts' USES=alias"
 target @any
 
-mk block set condition "!defined(DPORTS_BUILDER)" <<'MK'
-MANUAL_PACKAGE_BUILD=	570M package (too big for mirrors)
-MK
-
-# FreeBSD removed Mk/Uses/alias.mk; DPorts' Makefile.DragonFly still adds it.
-text line-remove file Makefile.DragonFly exact "USES+=\t\talias"
-mk add MAKE_ENV "MAKE=${MAKE_CMD}"
+# DPorts master's copy has had this overlay's edits since 91731d0e53e.
