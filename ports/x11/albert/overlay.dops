@@ -7,3 +7,9 @@ mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e 's@FreeBSD@DragonFly@g' \
 		${WRKSRC}/CMakeLists.txt
 MK1
+
+# Qt's Linguist tools, as FreeBSD main has since d3063c8392f0; 2026Q4
+# doesn't yet.
+target @2026Q4
+
+mk add USE_QT "tools"
