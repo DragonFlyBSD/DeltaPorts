@@ -1,14 +1,52 @@
 port misc/ollama
 type port
-reason "DragonFly: build ggml with ports GCC, whose assembler knows AMX"
-
-# pre-build-CPU-on runs cmake with no environment, so the bundled llama.cpp
-# is built by the system's plain cc. DragonFly's base compilers use base
-# binutils 2.34, whose assembler lacks the AMX instructions GCC emits for the
-# sapphirerapids ggml CPU variant ("no such instruction: tileloadd"). Use
-# GCC_DEFAULT, which assembles with ports binutils, and hand its compilers to
-# cmake explicitly.
+reason "DragonFly: no AVX-512/AMX ggml CPU variants; the bundled llama.cpp gets misc/llama-cpp's DragonFly cases"
 target @2026Q4,@main
 
-mk set USE_GCC_VERSION "${GCC_DEFAULT}"
-mk add _CMAKE_FLAGS "-DCMAKE_C_COMPILER=${CC} -DCMAKE_CXX_COMPILER=${CXX}"
+# The kernel enables no AVX-512 or AMX state, and ggml picks its CPU variant
+# from CPUID alone, so those variants would SIGILL on such CPUs. Base as(1)
+# cannot assemble the AMX one, nor alderlake's AVX-VNNI (dp-shs.15); haswell
+# covers those CPUs.
+text replace-once file Makefile \
+     from "CPU_PLIST_FILES+=\tlib/ollama/libggml-cpu-alderlake.so" \
+     to   "CPU_PLIST_FILES+="
+text line-remove file Makefile exact "\t\t\tlib/ollama/libggml-cpu-cannonlake.so \\"
+text line-remove file Makefile exact "\t\t\tlib/ollama/libggml-cpu-cascadelake.so \\"
+text line-remove file Makefile exact "\t\t\tlib/ollama/libggml-cpu-cooperlake.so \\"
+text line-remove file Makefile exact "\t\t\tlib/ollama/libggml-cpu-icelake.so \\"
+text line-remove file Makefile exact "\t\t\tlib/ollama/libggml-cpu-sapphirerapids.so \\"
+text line-remove file Makefile exact "\t\t\tlib/ollama/libggml-cpu-skylakex.so \\"
+text replace-once file Makefile \
+     from "\t\t\tlib/ollama/libggml-cpu-x64.so \\" \
+     to   "\t\t\tlib/ollama/libggml-cpu-x64.so"
+text line-remove file Makefile exact "\t\t\tlib/ollama/libggml-cpu-zen4.so"
+
+# The bundled llama.cpp, as misc/llama-cpp: the XDG cache/config lookups
+# #error on unlisted systems, and subprocess.h needs the fork() fallback.
+# MLX's jit_compiler.cpp takes FreeBSD's pclose() status (no WEXITSTATUS).
+# Go: readline's BSD termios, the vendored containerd/console with its
+# POSIX cgo pty code (OpenBSD's ptsname/grantpt, FreeBSD's posix_openpt),
+# and llm's SysProcAttr from FreeBSD's llm_freebsd.go. dragonfly/ adds
+# discover's GetCPUMem.
+mk target set dfly-patch <<'MK'
+	${REINPLACE_CMD} -e 's,^//go:build darwin || freebsd ,//go:build darwin || dragonfly || freebsd ,' \
+		${WRKSRC}/readline/term_bsd.go
+	${REINPLACE_CMD} -e 's,^// +build darwin freebsd ,// +build darwin dragonfly freebsd ,' \
+		${WRKSRC}/vendor/github.com/containerd/console/console_unix.go \
+		${WRKSRC}/vendor/github.com/containerd/console/tc_unix.go
+	${REINPLACE_CMD} -e 's|^// +build freebsd,cgo$$|// +build dragonfly,cgo freebsd,cgo|' \
+		${WRKSRC}/vendor/github.com/containerd/console/pty_freebsd_cgo.go
+	${REINPLACE_CMD} -e 's|^// +build openbsd,cgo$$|// +build dragonfly,cgo openbsd,cgo|' \
+		${WRKSRC}/vendor/github.com/containerd/console/tc_openbsd_cgo.go
+	${CP} ${FILESDIR}/llm_freebsd.go ${WRKSRC}/llm/llm_dragonfly.go
+	${REINPLACE_CMD} -e '/ggml_add_cpu_backend_variant(.*AVX512/d' \
+		-e '/ggml_add_cpu_backend_variant(.*AVX_VNNI/d' \
+		${WRKDIR}/llama.cpp-${LLAMA_CPP_VERSION}/ggml/src/CMakeLists.txt
+	${REINPLACE_CMD} -e 's/^#if defined(__linux__) || defined(__FreeBSD__) || defined(_AIX) ||/#if defined(__linux__) || defined(__FreeBSD__) || defined(__DragonFly__) || defined(_AIX) ||/' \
+		${WRKDIR}/llama.cpp-${LLAMA_CPP_VERSION}/common/common.cpp
+	${REINPLACE_CMD} -e 's/^#if defined(_AIX) || defined(__OpenBSD__) ||/#if defined(_AIX) || defined(__OpenBSD__) || defined(__DragonFly__) ||/' \
+		${WRKDIR}/llama.cpp-${LLAMA_CPP_VERSION}/vendor/sheredom/subprocess.h
+	@if [ -f ${WRKDIR}/mlx-${MLX_CORE_VERSION}/mlx/backend/cpu/jit_compiler.cpp ]; then \
+		${REINPLACE_CMD} -e 's/^#if defined(_WIN32) || defined(__FreeBSD__)$$/#if defined(_WIN32) || defined(__FreeBSD__) || defined(__DragonFly__)/' \
+		${WRKDIR}/mlx-${MLX_CORE_VERSION}/mlx/backend/cpu/jit_compiler.cpp; fi
+MK
