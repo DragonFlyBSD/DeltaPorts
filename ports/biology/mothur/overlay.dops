@@ -1,0 +1,6 @@
+port biology/mothur
+type port
+reason "DragonFly: gcc 12's libstdc++ needs an explicit <memory> for std::shared_ptr"
+target @any
+
+# dragonfly/: include <memory> in source/writer.h.
