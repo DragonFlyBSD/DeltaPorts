@@ -4,7 +4,10 @@ reason "auto-converted from Makefile.DragonFly"
 target @any
 
 mk eval LDFLAGS "${LDFLAGS:N-lroken}"
+# main_init1 is a plain C99 inline definition, which gcc 12 does not
+# always inline and never emits out of line.
 mk target set dfly-patch <<'MK1'
 	${REINPLACE_CMD} -e '/roken.h/d'	\
+		-e 's/^inline void$$/static inline void/'	\
 		${WRKSRC}/dupmerge.c
 MK1
