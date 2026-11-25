@@ -9,3 +9,18 @@
  NPM_NODEJS_ARCH=		${ARCH:${_NPM_NODEJS_ARCH_CONV_STR}}
  
  _VALID_NPM_NAMES=npm yarn1 yarn2 yarn4 pnpm
+@@ -241,6 +241,14 @@
+ NPM_PREFETCH?=		${_NPM_EXISTS_PKGFILE}
+ NPM_PREFETCH_ARCHS?=
+ NPM_EXTRACT?=		${NPM_PREFETCH}
++
++# Fetching with node (corepack, prefetched node modules) checks the
++# registry's certificate, which finds nothing in a DragonFly build jail
++# without ca_root_nss.
++.  if ${_NPM_NAME} == yarn2 || ${_NPM_NAME} == yarn4 || \
++    ${_NPM_NAME} == pnpm || ${NPM_PREFETCH:tl} == yes
++FETCH_DEPENDS+=	${LOCALBASE}/share/certs/ca-root-nss.crt:security/ca_root_nss
++.  endif
+ 
+ # Bootstrap node package manager for yarn >2 or pnpm
+ .  if ${_NPM_NAME} == yarn2 || ${_NPM_NAME} == yarn4 || ${_NPM_NAME} == pnpm
