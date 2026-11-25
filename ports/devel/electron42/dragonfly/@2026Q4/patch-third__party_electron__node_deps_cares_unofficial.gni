@@ -1,0 +1,20 @@
+--- third_party/electron_node/deps/cares/unofficial.gni.orig
++++ third_party/electron_node/deps/cares/unofficial.gni
+@@ -48,7 +48,7 @@
+       include_dirs += [ "config/linux" ]
+     } else if (is_mac) {
+       include_dirs += [ "config/darwin" ]
+-    } else if (is_freebsd) {
++    } else if (is_freebsd || is_dragonfly) {
+       include_dirs += [ "config/freebsd" ]
+     }
+ 
+@@ -66,7 +66,7 @@
+     if (is_mac) {
+       sources += gypi_values.cares_sources_mac
+     }
+-    if (is_freebsd) {
++    if (is_freebsd || is_dragonfly) {
+       sources += [ "config/freebsd/ares_config.h" ]
+     }
+ 

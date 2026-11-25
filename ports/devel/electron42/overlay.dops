@@ -1,0 +1,119 @@
+port devel/electron42
+type port
+reason "DragonFly electron42: www/chromium's DragonFly setup on Chromium 148 (libc++ via the libcxx dport, sandbox/ffmpeg/buildtools, GN args); esbuild from devel/esbuild"
+target @2026Q4
+
+# As www/chromium: no PulseAudio; krb5 does not build shared here.
+mk eval OPTIONS_DEFAULT "${OPTIONS_DEFAULT:NPULSEAUDIO:NKERBEROS}"
+
+# libc++ from the libcxx dport, as www/chromium.
+mk block set condition "${OPSYS} == DragonFly" <<'MK'
+CXXFLAGS+=	-nostdlib++ -stdlib=libc++ -I${LOCALBASE}/include
+CXXFLAGS+=	-cxx-isystem ${LOCALBASE}/llvm${LLVM_DEFAULT}/include/c++/v1
+LDFLAGS+=	-L${LOCALBASE}/llvm${LLVM_DEFAULT}/lib -L /lib -L /usr/lib -lpthread
+LDFLAGS+=	-stdlib=libc++ -lc++ -lc++abi -Wl,-rpath,${LOCALBASE}/llvm${LLVM_DEFAULT}/lib
+LIB_DIRS+=	${PREFIX}/llvm${LLVM_DEFAULT}/lib
+LIB_DEPENDS+=	libc++.so.1:devel/libcxx${LLVM_DEFAULT}
+# rustc links with ld.bfd, which rejects this lld-only flag; re-added
+# to extra_ldflags below.
+LDFLAGS:=	${LDFLAGS:N-Wl,--undefined-version}
+MK
+
+# rollup's mimalloc-sys2 installs into STAGEDIR during the build.
+mk target set dfly-install <<'MKI'
+	${RM} -rfv ${STAGEDIR}/construction
+MKI
+
+mk target set dfly-patch <<'MK'
+	@${MKDIR} ${WRKSRC}/sandbox/policy/dragonfly
+	@${CP} ${WRKSRC}/sandbox/policy/freebsd/sandbox_freebsd.h ${WRKSRC}/sandbox/policy/dragonfly/sandbox_dragonfly.h
+	@${CP} ${WRKSRC}/sandbox/policy/freebsd/sandbox_freebsd.cc ${WRKSRC}/sandbox/policy/dragonfly/sandbox_dragonfly.cc
+	${REINPLACE_CMD} -e "s|FreeBSD|DragonFly|g" \
+		-e "s|freebsd\/sandbox_freebsd.h|dragonfly\/sandbox_dragonfly.h|g" \
+		${WRKSRC}/sandbox/policy/dragonfly/sandbox_dragonfly.h \
+		${WRKSRC}/sandbox/policy/dragonfly/sandbox_dragonfly.cc
+	${CP} -R ${WRKSRC}/third_party/ffmpeg/chromium/config/Chrome/linux/ \
+		${WRKSRC}/third_party/ffmpeg/chromium/config/Chrome/dragonfly
+	@${MKDIR} ${WRKSRC}/buildtools/dragonfly
+	${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/dragonfly
+	${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/dragonfly
+	${REINPLACE_CMD} -e "s|clang60|clang${LLVM_DEFAULT}|g" \
+		-e "s|clang\+\+60|clang++${LLVM_DEFAULT}|g" \
+		-e "s|llvm-ar|llvm-ar${LLVM_DEFAULT}|g" \
+		-e "s|llvm-nm|llvm-nm${LLVM_DEFAULT}|g" \
+		${WRKSRC}/build/toolchain/gcc_toolchain.gni
+MK
+
+# GN args and toolchain, as www/chromium.
+text replace-once file Makefile \
+     from "use_custom_libcxx=true" to "use_custom_libcxx=false"
+text replace-once file Makefile \
+     from "use_custom_libunwind=true" to "use_custom_libunwind=false"
+mk add    GN_ARGS "v8_enable_sandbox=false"
+text replace-once file Makefile \
+     from "ld=${LOCALBASE}/bin/ld.lld${LLVM_DEFAULT}" \
+     to   "clang=${LOCALBASE}/bin/clang${LLVM_DEFAULT}"
+text replace-once file Makefile \
+     from "extra_ldflags=\"${LDFLAGS}\"" \
+     to   "extra_ldflags=\"${LDFLAGS} -Wl,--undefined-version\""
+text replace-once file Makefile \
+     from "\t\tREADELF=${READELF} AR=${AR} NM=${NM} ${PYTHON_CMD} \\" \
+     to   "\t\tREADELF=${READELF} AR=${AR} NM=${NM} \\\n\t\tCFLAGS=\"${CFLAGS:N-flto*}\" CXXFLAGS=\"${CXXFLAGS:N-flto*}\" LDFLAGS=\"${LDFLAGS:N-flto*}\" \\\n\t\t${PYTHON_CMD} \\"
+mk set LTO_UNSAFE "yes" on-missing noop
+
+# ffmpeg, node and buildtools are named after the OS.
+mk set FFMPEG_BDIR "${WRKSRC}/third_party/ffmpeg/build.${FFMPEG_TARGET}.${OPSYS:tl}/${FFMPEG_BRAND}"
+mk set FFMPEG_CDIR "${WRKSRC}/third_party/ffmpeg/chromium/config/${FFMPEG_BRAND}/${OPSYS:tl}/${FFMPEG_TARGET}"
+text replace-once file Makefile \
+     from "scripts/build_ffmpeg.py freebsd ${FFMPEG_TARGET}" \
+     to   "scripts/build_ffmpeg.py dragonfly ${FFMPEG_TARGET}"
+text replace-once file Makefile \
+     from "@${MKDIR} ${WRKSRC}/third_party/node/freebsd/node-freebsd/bin" \
+     to   "@${MKDIR} ${WRKSRC}/third_party/node/${OPSYS:tl}/node-${OPSYS:tl}/bin"
+text replace-once file Makefile \
+     from "${LN} -sf ${LOCALBASE}/bin/node ${WRKSRC}/third_party/node/freebsd/node-freebsd/bin/node" \
+     to   "${LN} -sf ${LOCALBASE}/bin/node ${WRKSRC}/third_party/node/${OPSYS:tl}/node-${OPSYS:tl}/bin/node"
+text replace-once file Makefile \
+     from "@${MKDIR} ${WRKSRC}/buildtools/freebsd" \
+     to   "@${MKDIR} ${WRKSRC}/buildtools/${OPSYS:tl}"
+text replace-once file Makefile \
+     from "${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/freebsd" \
+     to   "${LN} -sf ${WRKSRC}/buildtools/linux64/clang-format ${WRKSRC}/buildtools/${OPSYS:tl}"
+text replace-once file Makefile \
+     from "${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/freebsd" \
+     to   "${LN} -sf ${WRKSRC}/out/${BUILDTYPE}/gn ${WRKSRC}/buildtools/${OPSYS:tl}"
+text replace-once file Makefile \
+     from "${LN} -sf /usr/bin/strip ${WRKSRC}/buildtools/freebsd/strip" \
+     to   "${LN} -sf /usr/bin/strip ${WRKSRC}/buildtools/${OPSYS:tl}/strip"
+
+# dri.pc is in graphics/mesa-dri in the locked mesa.
+text replace-once file Makefile \
+     from "${LOCALBASE}/libdata/pkgconfig/dri.pc:graphics/mesa-libs" \
+     to   "${LOCALBASE}/libdata/pkgconfig/dri.pc:graphics/mesa-dri"
+
+# The prebuilt FreeBSD esbuild cannot run here: use devel/esbuild and
+# build its npm package from the same version's source, as www/chromium.
+mk set _ESBUILD_VERSION "${MAKE} -C ${PORTSDIR}/devel/esbuild -V DISTVERSION"
+mk add GH_TUPLE "evanw:esbuild:v${_ESBUILD_VERSION:sh}:esbuild"
+mk add BUILD_DEPENDS "esbuild:devel/esbuild"
+text replace-once file Makefile \
+     from "MASTER_SITES+=\thttps://registry.npmjs.org/@esbuild/freebsd-${GO_ARCH}/-/freebsd-${GO_ARCH}-${ESBUILD_VER}.tgz?dummy=/:esbuild_${GO_ARCH}" \
+     to   "# esbuild: GH_TUPLE and devel/esbuild"
+text replace-once file Makefile \
+     from "DISTFILES+=\tesbuild-freebsd-${GO_ARCH}-${ESBUILD_VER}.tgz:esbuild_${GO_ARCH}" \
+     to   ""
+text replace-once file Makefile \
+     from "${MV} ${WRKDIR}/package ${WRKSRC}/esbuild" \
+     to   "${MV} ${WRKDIR}/${GH_PROJECT_esbuild}-${_ESBUILD_VERSION:sh} ${WRKSRC}/esbuild"
+text replace-once file Makefile \
+     from "\t# GN generator bootstrapping and generating ninja files" \
+     to   "\tcd ${WRKSRC}/esbuild && ${LOCALBASE}/bin/node scripts/esbuild.js \\\n\t\t${LOCALBASE}/bin/esbuild --neutral\n\t${RM} -r ${WRKSRC}/third_party/devtools-frontend/src/node_modules/esbuild\n\t${LN} -sf ${WRKSRC}/esbuild/npm/esbuild \\\n\t\t${WRKSRC}/third_party/devtools-frontend/src/node_modules/esbuild\n\t# GN generator bootstrapping and generating ninja files"
+text replace-once file Makefile \
+     from "${LN} -sf ${WRKSRC}/esbuild/bin/esbuild ${WRKSRC}/third_party/devtools-frontend/src/third_party/esbuild/esbuild" \
+     to   "${LN} -sf ${LOCALBASE}/bin/esbuild ${WRKSRC}/third_party/devtools-frontend/src/third_party/esbuild/esbuild"
+text line-insert-after file distinfo \
+     anchor "SIZE (electron/esbuild-freebsd-x64-0.25.1.tgz) = 4343765" \
+     line   "SHA256 (electron/evanw-esbuild-v0.28.1_GH0.tar.gz) = 65c756fa87d43178ac4a5242454c2bd0fde325f8ecf77997f8fa4b88f94d5cd2"
+text line-insert-after file distinfo \
+     anchor "SHA256 (electron/evanw-esbuild-v0.28.1_GH0.tar.gz) = 65c756fa87d43178ac4a5242454c2bd0fde325f8ecf77997f8fa4b88f94d5cd2" \
+     line   "SIZE (electron/evanw-esbuild-v0.28.1_GH0.tar.gz) = 1997481"

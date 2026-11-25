@@ -1,0 +1,16 @@
+--- third_party/electron_node/deps/uv/unofficial.gni.orig
++++ third_party/electron_node/deps/uv/unofficial.gni
+@@ -121,5 +121,13 @@
+       ]
+       sources -= [ "src/unix/proctitle.c" ]
+     }
++    if (is_dragonfly) {
++      sources += gypi_values.uv_sources_bsd_common + [
++        "src/unix/freebsd.c",
++        "src/unix/posix-hrtime.c",
++        "src/unix/bsd-proctitle.c",
++      ]
++      sources -= [ "src/unix/proctitle.c" ]
++    }
+   }
+ }

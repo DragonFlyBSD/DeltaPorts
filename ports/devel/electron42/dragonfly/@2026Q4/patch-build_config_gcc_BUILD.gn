@@ -1,0 +1,11 @@
+--- build/config/gcc/BUILD.gn.orig
++++ build/config/gcc/BUILD.gn
+@@ -70,7 +70,7 @@
+     if (current_toolchain != default_toolchain || gcc_target_rpath == "") {
+       ldflags = [
+         # Want to pass "\$". GN will re-escape as required for ninja.
+-        "-Wl,-rpath=\$ORIGIN",
++        "-Wl,-rpath=\$ORIGIN", "-Wl,-z,origin",
+       ]
+     } else {
+       ldflags = [ "-Wl,-rpath=${gcc_target_rpath}" ]
