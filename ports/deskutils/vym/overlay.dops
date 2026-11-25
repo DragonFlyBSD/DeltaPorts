@@ -1,0 +1,7 @@
+port deskutils/vym
+type port
+reason "Qt Linguist build dependency, from FreeBSD main"
+target @2026Q4
+
+# FreeBSD main has this since f7bf7ceadf36; 2026Q4 doesn't yet.
+mk add USE_QT "tools:build"
