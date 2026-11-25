@@ -1,0 +1,54 @@
+port editors/vscode
+type port
+reason "DragonFly vscode: electron42's clang + libc++ for the native modules it loads, dragonfly-x64 helper dirs and DragonFly in the platform checks"
+target @2026Q4
+
+# Native modules that load into electron42 need its toolchain: clang22 and
+# the libcxx dport's libc++. The build/ and remote/ ones load into node24
+# and keep gcc.
+mk block set condition "${OPSYS} == DragonFly" <<'MK'
+BUILD_DEPENDS+=	clang22:devel/llvm22
+LIB_DEPENDS+=	libc++.so.1:devel/libcxx22
+LIB_DIRS+=	${LOCALBASE}/llvm22/lib
+_DFLY_NGYP_ENV=	CC=${WRKDIR}/dfly-bin/cc CXX=${WRKDIR}/dfly-bin/c++
+# node24 reports itself as freebsd, so the build tools pick the npm
+# freebsd-x64 binaries, which cannot run here: devel/esbuild serves every
+# esbuild package (build/ gets extensions' copy of its version) and
+# lang/typescript-go replaces tsgo.
+BUILD_DEPENDS+=	esbuild:devel/esbuild \
+		tsc:lang/typescript-go
+MAKE_ENV+=	ESBUILD_BINARY_PATH=${LOCALBASE}/bin/esbuild
+MK
+text line-insert-after file Makefile \
+     anchor "\t\tnpm_env=\"npm_config_runtime=electron \\" \
+     line   "\t\t\t${_DFLY_NGYP_ENV} \\"
+text line-insert-after file Makefile \
+     anchor "\t\t\t\tnpm_env=\"npm_config_runtime=electron \\" \
+     line   "\t\t\t\t\t${_DFLY_NGYP_ENV} \\"
+
+mk target set dfly-patch <<'MK'
+	@${MKDIR} ${WRKDIR}/dfly-bin
+	@${PRINTF} '#!/bin/sh\nexec ${LOCALBASE}/bin/clang22 "$$@"\n' > ${WRKDIR}/dfly-bin/cc
+	@${PRINTF} '#!/bin/sh\ncase " $$* " in\n*" -c "*) exec ${LOCALBASE}/bin/clang++22 -stdlib=libc++ -cxx-isystem ${LOCALBASE}/llvm22/include/c++/v1 "$$@" ;;\nesac\nexec ${LOCALBASE}/bin/clang++22 -stdlib=libc++ -nostdlib++ "$$@" -L${LOCALBASE}/llvm22/lib -lc++ -lc++abi -lpthread -Wl,-rpath,${LOCALBASE}/llvm22/lib\n' > ${WRKDIR}/dfly-bin/c++
+	@${CHMOD} 755 ${WRKDIR}/dfly-bin/cc ${WRKDIR}/dfly-bin/c++
+	@${RM} -r ${WRKSRC}/build/node_modules/esbuild
+	@${CP} -Rp ${WRKSRC}/extensions/node_modules/esbuild ${WRKSRC}/build/node_modules/esbuild
+MK
+
+# Electron's node reports dragonfly and looks ripgrep up by that name.
+mk target append pre-build <<'MK'
+	${CP} ${LOCALBASE}/bin/tsc ${WRKSRC}/node_modules/@typescript/typescript-freebsd-${ELECTRON_ARCH}/lib/tsc
+.for d in node_modules build/node_modules remote/node_modules
+	@${MKDIR} ${WRKSRC}/${d}/@vscode/ripgrep-universal/bin/${OPSYS:tl}-${ELECTRON_ARCH}
+	${CP} ${LOCALBASE}/bin/rg ${WRKSRC}/${d}/@vscode/ripgrep-universal/bin/${OPSYS:tl}-${ELECTRON_ARCH}
+.endfor
+MK
+
+text line-insert-after file pkg-plist \
+     anchor "%%DATADIR%%/resources/app/node_modules.asar.unpacked/@vscode/ripgrep-universal/bin/freebsd-x64/rg" \
+     line   "%%DATADIR%%/resources/app/node_modules.asar.unpacked/@vscode/ripgrep-universal/bin/dragonfly-x64/rg"
+
+# Strip the bundled ELF files built here, not only FreeBSD ones.
+text replace-once file Makefile \
+     from "${GREP} 'ELF.*FreeBSD'" \
+     to   "${GREP} 'ELF.*${OPSYS}'"
