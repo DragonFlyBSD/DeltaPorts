@@ -1,6 +1,6 @@
 --- compiler/rustc_codegen_ssa/src/back/linker.rs.orig
 +++ compiler/rustc_codegen_ssa/src/back/linker.rs
-@@ -886,7 +886,10 @@
+@@ -884,7 +884,10 @@
              } else {
                  let mut arg = OsString::from("--version-script=");
                  arg.push(path);
